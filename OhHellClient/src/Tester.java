@@ -25,20 +25,24 @@ public class Tester {
 		System.out.println("READY");
 		Scanner sc = new Scanner(System.in);
 		
-		if (instantBid) s="bid";
+		if (instantBid) {
+		    s = "bid";
+		}
 		
-		while(true) {
-			if (s.equals("")) s = sc.nextLine();
+		while (true) {
+			if (s.equals("")) {
+			    s = sc.nextLine();
+			}
 			if (s.equals("close")) {
 				sc.close();
-				for(int i=1;i<numPlayers;i++) {
+				for (int i = 1; i < numPlayers; i++) {
 					gcs[i].close();
 					sleep(100);
 				}
 				gcs[0].dispatchEvent(new WindowEvent(gcs[0], WindowEvent.WINDOW_CLOSING));
-			} else if(s.equals("bid")) {
-				for(int i=0;i<numPlayers;i++) {
-					int j = (i+1)%numPlayers;
+			} else if (s.equals("bid")) {
+				for (int i = 0; i < numPlayers; i++) {
+					int j = (i + 1) % numPlayers;
 					
 					int x = 380;//800/2-(Math.min(52/numPlayers, 10)-1)*40/2;
 					int y = 353;//600-210;
