@@ -11,7 +11,7 @@ public class Tester {
 		GameClient[] gcs = new GameClient[numPlayers];
 		String s = "";
 		
-		for(int i=0;i<numPlayers;i++) {
+		for (int i = 0; i < numPlayers; i++) {
 			gcs[i] = new GameClient();
 			gcs[i].execute();
 			gcs[i].connect();
