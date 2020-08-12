@@ -1,6 +1,8 @@
 # OhHell
 An online Oh Hell card game
 
+Head on over to the <a href="https://github.com/campbellsoup37/OhHell/releases">Releases</a> section to download the binaries.
+
 
 
 <br></br>
