@@ -11,7 +11,9 @@ public class ClientReadThread extends Thread {
         this.client = client;
         
         try {
-            reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            reader = new BufferedReader(
+                        new InputStreamReader(
+                                socket.getInputStream(), "UTF8"));
         } catch (IOException e) {
             client.getKicked();
             e.printStackTrace();

@@ -24,6 +24,8 @@ import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
@@ -45,7 +47,12 @@ public class GameClient extends JFrame {
 
     private long currentCommandId = 0;
     
+    private NotificationFrame notificationFrame;
     private DisconnectFrame dcFrame;
+    
+    private JMenuBar menuBar = new JMenuBar();
+    private JMenu optionsItem = new JMenu("Options");
+    private JCheckBox soundOption = new JCheckBox("Sound");
     
     private JLabel hostLabel = new JLabel("Host name:");
     private JTextField hostField = new JTextField(hostName);
@@ -341,8 +348,8 @@ public class GameClient extends JFrame {
         chatScrollPane.setVisible(false);
         chatField.setVisible(false);
 
-        setMinimumSize(new Dimension(685, 480));
-        setSize(685, 480);
+        setMinimumSize(new Dimension(685, 500));
+        setSize(685, 500);
         setResizable(false);
     }
     
@@ -369,7 +376,11 @@ public class GameClient extends JFrame {
     }
     
     public void notify(String text) {
-        NotificationFrame notificationFrame = new NotificationFrame(text);
+        if (notificationFrame != null) {
+            notificationFrame.close();
+            notificationFrame = null;
+        }
+        notificationFrame = new NotificationFrame(text);
         notificationFrame.setLocationRelativeTo(this);
         notificationFrame.execute();
     }
@@ -575,7 +586,7 @@ public class GameClient extends JFrame {
                     if (e.getButton() == MouseEvent.BUTTON1) {
                         canvas.mouseReleased(e.getX(), e.getY());
                     }
-                }                
+                }
             });
             canvas.addMouseMotionListener(new MouseMotionListener() {
                 @Override
@@ -613,11 +624,18 @@ public class GameClient extends JFrame {
 
                 @Override
                 public void keyReleased(KeyEvent e) {
-                    if (e.getKeyCode() == KeyEvent.VK_ENTER 
-                            && !chatField.getText().trim().isEmpty()) {
-                        String text = name + ": " + chatField.getText().trim();
-                        sendCommand("CHAT:STRING " + text.length() + ":" + text);
-                        chatField.setText("");
+                    try {
+                        if (e.getKeyCode() == KeyEvent.VK_ENTER 
+                                && !chatField.getText().trim().isEmpty()) {
+                            String text = name + ": " + chatField.getText().trim();
+                            String command = "CHAT:STRING " 
+                                    + text.toCharArray().length + ":" 
+                                    + text;
+                            sendCommand(command);
+                            chatField.setText("");
+                        }
+                    } catch (Exception exc) {
+                        exc.printStackTrace();
                     }
                 }
 
@@ -637,7 +655,19 @@ public class GameClient extends JFrame {
             });
             showButton.setVisible(false);
             
-            setSize(685,480);
+            menuBar.add(optionsItem);
+            soundOption.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    canvas.setPlaySoundSelected(soundOption.isSelected());
+                }
+            });
+            
+            soundOption.setPreferredSize(new Dimension(80, 25));
+            optionsItem.add(soundOption);
+            setJMenuBar(menuBar);
+            
+            setSize(685, 500);
             setResizable(false);
             setVisible(true);
             

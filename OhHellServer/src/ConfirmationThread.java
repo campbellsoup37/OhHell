@@ -19,7 +19,7 @@ public class ConfirmationThread extends Thread {
                 if (count>0) {
                     playerThread.write(command.toString());
                 }
-                sleep(2000);
+                sleep(1000);
                 count++;
                 if (count == maxNumberOfTries) {
                     playerThread.handleDisconnect();

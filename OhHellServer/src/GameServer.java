@@ -580,7 +580,7 @@ public class GameServer extends JFrame {
         }
     }
     
-    public static void main(String[] args) {        
+    public static void main(String[] args) {
         GameServer server = new GameServer(-1);
         server.execute();
     }

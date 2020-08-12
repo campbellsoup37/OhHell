@@ -1,4 +1,4 @@
-import java.awt.event.*;
+import java.awt.event.WindowEvent;
 import java.util.Scanner;
 
 public class Tester {

@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 
@@ -8,7 +9,10 @@ public class ClientWriteThread extends Thread {
     
     public ClientWriteThread(Socket socket, GameClient client) {
         try {
-            writer = new PrintWriter(socket.getOutputStream(), true);
+            writer = new PrintWriter(
+                        new OutputStreamWriter(
+                                socket.getOutputStream(), "UTF8"), 
+                        true);
             connected = true;
         } catch (IOException e) {
             client.getKicked();

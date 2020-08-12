@@ -6,9 +6,6 @@ import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-//import java.awt.Graphics2D;
-//import java.awt.Rectangle;
-//import java.awt.TexturePaint;
 import java.net.URL;
 import java.util.LinkedList;
 import java.util.List;
@@ -32,6 +29,7 @@ public class GameCanvas extends JPanel {
     private final double trickCardScale = 1;
     private final int handYOffset = 85;
     private final int scoreVSpacing = 20;
+    private final int scoreMargin = 10;
     private final int trickStayTime = 1500;
     private final int animationTime = 150;
     private final int messageTime = 2000;
@@ -61,7 +59,7 @@ public class GameCanvas extends JPanel {
     
     private String message = "";
     
-    private LinkedList<Timer> timerQueue = new LinkedList<Timer>();
+    private LinkedList<Timer> actionQueue = new LinkedList<Timer>();
     private int cardJustPlayed = 0;
     private boolean animatingTaken = false;
     private double takenTimer = 1;
@@ -79,11 +77,12 @@ public class GameCanvas extends JPanel {
     private BufferedImage deckImgSmall;
     private BufferedImage deckImgSmallDark;
     private BufferedImage tableImg;
-    //private TexturePaint paint;
     private double cardHeight;
     private double cardWidth;
     private double cardWidthSmall;
     
+    private boolean playSoundSelected = false;
+    private LinkedList<Timer> audioQueue = new LinkedList<Timer>();
     private Clip cardPlayClip;
     
     private Random random = new Random();
@@ -108,10 +107,7 @@ public class GameCanvas extends JPanel {
         cardHeight = (double) deckImg.getHeight() / 6;
         cardWidthSmall = cardWidth * smallCardScale;
         
-        cardPlayClip = loadSound("resources/Card play 2 edited.wav");
-        
-        //paint = new TexturePaint(tableImg, 
-        //        new Rectangle(0, 0, tableImg.getWidth(), tableImg.getHeight()));
+        cardPlayClip = loadSound("resources/Card play.wav");
     }
     
     public BufferedImage loadImage(String file) {
@@ -136,8 +132,10 @@ public class GameCanvas extends JPanel {
             URL soundUrl = getClass().getResource("/" + file);
             if (soundUrl != null) {
                 clip.open(AudioSystem.getAudioInputStream(soundUrl));
-            } else clip.open(AudioSystem.getAudioInputStream(new File(file)));
-            playSound(clip);
+            } else {
+                clip.open(AudioSystem.getAudioInputStream(new File(file)));
+            }
+            //playSound(clip);
             return clip;
         } catch (Exception e) {
             e.printStackTrace();
@@ -148,10 +146,6 @@ public class GameCanvas extends JPanel {
     @Override
     public void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
-        //graphics.drawImage(tableImg, 0, 0, null);
-        //Graphics2D g2d = (Graphics2D) graphics;
-        //g2d.setPaint(paint);
-        //g2d.fillRect(0, 0, getWidth(), getHeight());
         graphics.drawImage(tableImg, 
                 0, 0, 
                 Math.max(getWidth()-450, tableImg.getWidth()), 
@@ -179,7 +173,7 @@ public class GameCanvas extends JPanel {
         if (paintTrickMarker) {
             paintTrick(graphics);
         }
-        paintChat();
+        paintChat(graphics);
         
         getComponents()[0].setBounds((getWidth() - 450) / 2 - 50, getHeight() - 100, 100, 30);
         getComponents()[3].setBounds((getWidth() - 450) / 2 + 100, getHeight() - 100, 70, 30);
@@ -233,7 +227,7 @@ public class GameCanvas extends JPanel {
     }
     
     public void paintBidding(Graphics graphics) {
-        if (timerQueue.isEmpty()) {
+        if (actionQueue.isEmpty()) {
             graphics.setColor(Color.BLACK);
             if (myPlayer.getBidding() != 0) {
                 for (int i = 0; i <= myPlayer.getHand().size(); i++) {
@@ -472,24 +466,42 @@ public class GameCanvas extends JPanel {
     }
     
     public void paintScores(Graphics graphics) {
-        graphics.setColor(Color.WHITE);
+        graphics.setColor(Color.LIGHT_GRAY);
         graphics.fillRect(getWidth() - 450, 0, 450, getHeight());
         
         List<int[]> rounds = client.getRounds();
-
-        double wid = (double) 400 / players.size();
+        int numRounds = rounds.size();
+        
+        graphics.setColor(Color.WHITE);
+        graphics.fillRect(
+                getWidth() - (450 - scoreMargin), 
+                scoreMargin, 
+                450 - 2 * scoreMargin, 
+                scoreVSpacing * (numRounds + 1) + 5);
+        graphics.setColor(Color.BLACK);
+        graphics.drawRect(
+                getWidth() - (450 - scoreMargin), 
+                scoreMargin, 
+                450 - 2 * scoreMargin, 
+                scoreVSpacing * (numRounds + 1) + 5);
+        
+        double wid = (double) (450 - 2 * scoreMargin - 50) / players.size();
 
         graphics.setColor(Color.BLACK);
-        graphics.drawLine(getWidth() - 400, scoreVSpacing, getWidth(), scoreVSpacing);
+        graphics.drawLine(
+                getWidth() - (450 - scoreMargin - 45), 
+                scoreMargin + scoreVSpacing, 
+                getWidth() - scoreMargin - 5, 
+                scoreMargin + scoreVSpacing);
         for (Player player : players) {
             int index = player.getIndex();
             graphics.setColor(Color.BLACK);
             if (index > 0) {
                 graphics.drawLine(
-                        (int) (getWidth() - 400 + index * wid), 
-                        0, 
-                        (int) (getWidth() - 400 + index * wid), 
-                        scoreVSpacing * (rounds.size() + 1));
+                        (int) (getWidth() - (450 - scoreMargin - 45) + index * wid), 
+                        scoreMargin + 5, 
+                        (int) (getWidth() - (450 - scoreMargin - 45) + index * wid), 
+                        scoreMargin + scoreVSpacing * (numRounds + 1));
             }
             
             graphics.setColor(Color.BLACK);
@@ -499,30 +511,30 @@ public class GameCanvas extends JPanel {
             if (player.equals(myPlayer)) {
                 drawStringJustifiedBold(graphics, 
                         fitString(graphics, player.getName(), wid - 2), 
-                        (int) (getWidth() - 400 + index * wid + wid / 2), 
-                        15, 
+                        (int) (getWidth() - (450 - scoreMargin - 45) + index * wid + wid / 2), 
+                        scoreMargin + 15, 
                         1, 0);
             } else {
                 drawStringJustified(graphics, 
                         fitString(graphics, player.getName(), wid - 2), 
-                        (int) (getWidth() - 400 + index * wid + wid / 2), 
-                        15, 
+                        (int) (getWidth() - (450 - scoreMargin - 45) + index * wid + wid / 2), 
+                        scoreMargin + 15, 
                         1, 0);
             }
         }
         
         graphics.setColor(Color.BLACK);
-        for (int i = 0; i < rounds.size(); i++) {
+        for (int i = 0; i < numRounds; i++) {
             int[] round = rounds.get(i);
             drawStringJustified(graphics, 
                     players.get(round[0]).getName().substring(0, 1), 
-                    getWidth() - 440, 
-                    scoreVSpacing * (i + 2), 
+                    getWidth() - (450 - scoreMargin - 5), 
+                    scoreMargin + scoreVSpacing * (i + 2), 
                     0, 0);
             drawStringJustified(graphics, 
                     "" + round[1], 
-                    getWidth() - 420, 
-                    scoreVSpacing * (i + 2), 
+                    getWidth() - (450 - scoreMargin - 25), 
+                    scoreMargin + scoreVSpacing * (i + 2), 
                     0, 0);
         }
     
@@ -531,29 +543,39 @@ public class GameCanvas extends JPanel {
             for (int j = 0; j < player.getBids().size(); j++) {
                 drawStringJustified(graphics, 
                         Integer.toString(player.getBids().get(j)), 
-                        (int) (getWidth() - 400 + (index + 1) * wid - 10), 
-                        scoreVSpacing * (2 + j), 
+                        (int) (getWidth() - (450 - scoreMargin - 45) + (index + 1) * wid - 10), 
+                        scoreMargin + scoreVSpacing * (2 + j), 
                         1, 0);
                 graphics.drawOval(
-                        (int) (getWidth() - 400 + (index + 1) * wid - 18), 
-                        5 + scoreVSpacing * (1 + j) + 2, 
+                        (int) (getWidth() - (450 - scoreMargin - 45) + (index + 1) * wid - 18), 
+                        scoreMargin + 5 + scoreVSpacing * (1 + j) + 2, 
                         16, 16);
             }
             for (int j = 0; j < player.getScores().size(); j++) {
                 drawStringJustified(graphics, 
                         Integer.toString(player.getScores().get(j)), 
-                        (int) (getWidth() - 400 + index * wid + 10), 
-                        scoreVSpacing * (2 + j), 
+                        (int) (getWidth() - (450 - scoreMargin - 45) + index * wid + 10), 
+                        scoreMargin + scoreVSpacing * (2 + j), 
                         0, 0);
             }
         }
     }
     
-    public void paintChat() {
+    public void paintChat(Graphics graphics) {
         int numRounds = client.getRounds().size();
-        int y = Math.max(scoreVSpacing * (numRounds + 2), getHeight() - 300);
-        getComponents()[1].setBounds(getWidth() - 440, y, 430, getHeight() - y - 50);
-        getComponents()[2].setBounds(getWidth() - 440, getHeight() - 45, 430, 30);
+        int chatY = Math.max(
+                2 * scoreMargin + scoreVSpacing * (numRounds + 1) + 5, 
+                getHeight() - 300);
+        getComponents()[1].setBounds(
+                getWidth() - 450 + scoreMargin, 
+                chatY, 
+                450 - 2 * scoreMargin, 
+                getHeight() - chatY - 40 - scoreMargin);
+        getComponents()[2].setBounds(
+                getWidth() - 450 + scoreMargin, 
+                getHeight() - 35 - scoreMargin, 
+                450 - 2 * scoreMargin, 
+                30);
     }
     
     public void drawStringJustified(Graphics graphics, String text, int x, int y, int posX, 
@@ -651,7 +673,7 @@ public class GameCanvas extends JPanel {
     }
     
     public void mouseReleased(int x, int y) {
-        if (timerQueue.size() == 0) {
+        if (actionQueue.size() == 0) {
             if (myPlayer.getBidding() != 0) {
                 int bid = bidClick(x, y);
                 if (bid != -1 && !cannotBid(bid) && bid == currentClick) {
@@ -662,7 +684,6 @@ public class GameCanvas extends JPanel {
             } else if (myPlayer.isPlaying()) {
                 int cardIndex = cardClick(x, y);
                 if (cardIndex != -1 && canPlayThis(cardIndex) && cardIndex == currentClick) {
-                    playSound(cardPlayClip);
                     myPlayer.setPlaying(false);
                     cardJustPlayed = cardIndex;
                     Card card = myPlayer.getHand().get(cardIndex);
@@ -674,24 +695,27 @@ public class GameCanvas extends JPanel {
         }
     }
     
+    public void setPlaySoundSelected(boolean playSoundSelected) {
+        this.playSoundSelected = playSoundSelected;
+    }
+    
     public void playSound(Clip clip) {
-        /*double length = (double) clip.getFrameLength() / 44.1;
+        double length = (double) clip.getFrameLength() / 44.1;
         clip.start();
-        new Timer(0, new ActionListener() {
-            long startTime = System.currentTimeMillis();
-            
-            public void actionPerformed(ActionEvent e) {
-                long elapsedTime = System.currentTimeMillis() - startTime;
-                if (elapsedTime >= length) {
-                    clip.stop();
-                    clip.setFramePosition(0);
-                    ((Timer) e.getSource()).stop();
-                }
+        new CanvasTimerEntry((long) length, this, audioQueue) {
+            @Override
+            public void onLastAction() {
+                clip.stop();
+                clip.setFramePosition(0);
             }
-        }).start();*/
+        };
     }
     
     public void mouseMoved(int x, int y) {
+        int oldBidMoused = bidMoused;
+        int oldCardMoused = cardMoused;
+        boolean oldLastTrickMoused = lastTrickMoused;
+        
         if (myPlayer.getBidding() != 0) {
             bidMoused = bidClick(x, y);
         } else {
@@ -711,7 +735,12 @@ public class GameCanvas extends JPanel {
         } else {
             setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
         }
-        repaint();
+        
+        if (oldBidMoused != bidMoused 
+                || oldCardMoused != cardMoused 
+                || oldLastTrickMoused != lastTrickMoused) {
+            repaint();
+        }
     }
     
     public int bidClick(int x, int y) {
@@ -775,17 +804,17 @@ public class GameCanvas extends JPanel {
                 || myPlayer.getHand().stream().noneMatch(c -> c.getSuit().equals(ledSuit));
     }
     
-    public LinkedList<Timer> getTimerQueue() {
-        return timerQueue;
+    public LinkedList<Timer> getactionQueue() {
+        return actionQueue;
     }
     
     public void animateCardPlay(int index) {
-        new CanvasTimerActionListener(animationTime, this) {
+        new CanvasTimerEntry(animationTime, this, actionQueue) {
             @Override
             public void onFirstAction() {
-                /*if (index != myPlayer.getIndex()) {
+                if (playSoundSelected) {
                     playSound(cardPlayClip);
-                }*/
+                }
                 players.get(index).setTrickTimer(0);
             }
             
@@ -799,7 +828,7 @@ public class GameCanvas extends JPanel {
     }
     
     public void animateTrickTake(int index) {
-        new CanvasTimerActionListener(trickStayTime, this) {
+        new CanvasTimerEntry(trickStayTime, this, actionQueue) {
             @Override
             public void onLastAction() {
                 for (Player player : players) {
@@ -808,7 +837,7 @@ public class GameCanvas extends JPanel {
                 }
             }
         };
-        new CanvasTimerActionListener(animationTime, this) {
+        new CanvasTimerEntry(animationTime, this, actionQueue) {
             @Override
             public void onFirstAction() {
                 players.get(index).incrementTaken();
@@ -830,7 +859,7 @@ public class GameCanvas extends JPanel {
     }
     
     public void showMessageOnTimer(String text) {
-        new CanvasTimerActionListener(messageTime, this) {
+        new CanvasTimerEntry(messageTime, this, actionQueue) {
             @Override
             public void onFirstAction() {
                 message = text;
@@ -851,7 +880,7 @@ public class GameCanvas extends JPanel {
     }
     
     public void showResultMessageOnTimer() {
-        new CanvasTimerActionListener(messageTime, this) {
+        new CanvasTimerEntry(messageTime, this, actionQueue) {
             @Override
             public void onFirstAction() {
                 if (myPlayer.getBid() == myPlayer.getTaken()) {
@@ -877,7 +906,7 @@ public class GameCanvas extends JPanel {
     }
     
     public void resetPlayersOnTimer() {
-        new CanvasTimerActionListener(0, this) {
+        new CanvasTimerEntry(0, this, actionQueue) {
             @Override
             public void onFirstAction() {
                 for (Player player : players) {
@@ -889,7 +918,7 @@ public class GameCanvas extends JPanel {
     }
     
     public void setHandOnTimer(int index, List<Card> hand) {
-        new CanvasTimerActionListener(0, this) {
+        new CanvasTimerEntry(0, this, actionQueue) {
             @Override
             public void onFirstAction() {
                 players.get(index).setHand(hand);
@@ -905,7 +934,7 @@ public class GameCanvas extends JPanel {
     }
     
     public void setLeaderOnTimer(int leaderI) {
-        new CanvasTimerActionListener(0, this) {
+        new CanvasTimerEntry(0, this, actionQueue) {
             @Override
             public void onFirstAction() {
                 leader = leaderI;
@@ -914,7 +943,7 @@ public class GameCanvas extends JPanel {
     }
     
     public void setTrumpOnTimer(Card card) {
-        new CanvasTimerActionListener(0, this) {
+        new CanvasTimerEntry(0, this, actionQueue) {
             @Override
             public void onFirstAction() {
                 trump = card;
@@ -923,7 +952,7 @@ public class GameCanvas extends JPanel {
     }
     
     public void setFinalScoresOnTimer(LinkedList<String> scores) {
-        new CanvasTimerActionListener(0, this) {
+        new CanvasTimerEntry(0, this, actionQueue) {
             @Override
             public void onFirstAction() {
                 paintHandMarker = false;

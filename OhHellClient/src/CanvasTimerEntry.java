@@ -3,22 +3,22 @@ import java.awt.event.ActionListener;
 import java.util.LinkedList;
 import javax.swing.Timer;
 
-public class CanvasTimerActionListener implements ActionListener {
+public class CanvasTimerEntry implements ActionListener {
     private long startTime;
     private long elapsedTime = 0;
     private long endTime;
     private boolean firstAction = true;
     private GameCanvas canvas;
-    private LinkedList<Timer> timerQueue;
+    private LinkedList<Timer> queue;
     
-    public CanvasTimerActionListener(long endTime, GameCanvas canvas) {
+    public CanvasTimerEntry(long endTime, GameCanvas canvas, LinkedList<Timer> queue) {
         this.endTime = endTime;
         this.canvas = canvas;
-        timerQueue = canvas.getTimerQueue();
+        this.queue = queue;
         
-        boolean wasEmpty = timerQueue.isEmpty();
+        boolean wasEmpty = queue.isEmpty();
         Timer timer = new Timer(0, this);
-        timerQueue.add(timer);
+        queue.add(timer);
         if (wasEmpty) {
             timer.start();
         }
@@ -38,9 +38,9 @@ public class CanvasTimerActionListener implements ActionListener {
         
         if (elapsedTime >= endTime) {
             onLastAction();
-            timerQueue.remove().stop();
-            if (!timerQueue.isEmpty()) {
-                timerQueue.getFirst().start();
+            queue.remove().stop();
+            if (!queue.isEmpty()) {
+                queue.getFirst().start();
             }
             canvas.repaint();
         }

@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.LinkedList;
@@ -33,9 +34,14 @@ public class PlayerThread extends Thread {
     @Override
     public void run() {
         try {
-            reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            reader = new BufferedReader(
+                        new InputStreamReader(
+                                socket.getInputStream(), "UTF8"));
             
-            writer = new PrintWriter(socket.getOutputStream(), true);
+            writer = new PrintWriter(
+                        new OutputStreamWriter(
+                                socket.getOutputStream(), "UTF8"), 
+                        true);
             
             if (!dcPlayersAtAddress.isEmpty()) {
                 String command = dcPlayersAtAddress.stream()
