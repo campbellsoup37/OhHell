@@ -181,20 +181,26 @@ public class GameCanvas extends JPanel {
         if (end) {
             graphics.setColor(Color.WHITE);
             graphics.fillRoundRect(
-                    (getWidth() - 450) / 2 - 125, 
+                    (getWidth() - 450) / 2 - 150, 
                     getHeight() / 2 - (players.size() + 1) * 15 / 2 - 56, 
-                    250, 
+                    300, 
                     (players.size() + 1) * 15 + 100, 20, 20);
             
             graphics.setColor(Color.BLACK);
-            drawStringJustified(graphics, 
+            drawStringJustifiedBold(graphics, 
                     "Final scores: ", 
                     (getWidth() - 450) / 2, 
                     getHeight() / 2 - (players.size() + 1) * 15 / 2,
                     1, 1);
-            for (int i = 0; i < players.size(); i++) { 
+            for (int i = 0; i < players.size(); i++) {
                 drawStringJustified(graphics, 
-                        (i + 1) + ". " + endscores[2 * i] + ", " + endscores[2 * i + 1] + " points", 
+                        fitString(
+                                graphics, 
+                                (i + 1) + ". " 
+                                + endscores[2 * i], 
+                                200) + ", " 
+                            + endscores[2 * i + 1] 
+                            + " points",
                         (getWidth() - 450) / 2, 
                         getHeight() / 2 - (players.size() + 1) * 15 / 2 + 15 * (i + 1), 
                         1, 1);
@@ -203,16 +209,16 @@ public class GameCanvas extends JPanel {
         
     }
     
-    public String fitString(Graphics graphics, String s, double wid) {
+    public String fitString(Graphics graphics, String text, double wid) {
         graphics.setFont(fontBold);
         FontMetrics m = graphics.getFontMetrics();
-        for (int i = 0; i < s.length(); i++) {
-            String s0 = s.substring(0, s.length() - i).trim();
+        for (int i = 0; i < text.length(); i++) {
+            String s0 = text.substring(0, text.length() - i).trim();
             if (m.stringWidth(s0) < wid) {
                 return s0;
             }
         }
-        return s.charAt(0) + "";
+        return text.charAt(0) + "";
     }
     
     public void paintTrump(Graphics graphics) {
@@ -841,6 +847,7 @@ public class GameCanvas extends JPanel {
             @Override
             public void onFirstAction() {
                 players.get(index).incrementTaken();
+                lastTrickMoused = false;
                 takenTimer = 0;
                 animatingTaken = true;
             }

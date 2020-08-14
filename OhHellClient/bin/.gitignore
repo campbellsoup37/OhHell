@@ -1,4 +1,4 @@
-/CanvasTimerActionListener.class
+/CanvasTimerEntry.class
 /Card.class
 /ClientReadThread.class
 /ClientWriteThread.class
@@ -6,6 +6,7 @@
 /DisconnectFrame.class
 /GameCanvas$1.class
 /GameCanvas$10.class
+/GameCanvas$11.class
 /GameCanvas$2.class
 /GameCanvas$3.class
 /GameCanvas$4.class
@@ -21,6 +22,7 @@
 /GameClient$12.class
 /GameClient$13.class
 /GameClient$14.class
+/GameClient$15.class
 /GameClient$2.class
 /GameClient$3.class
 /GameClient$4.class
