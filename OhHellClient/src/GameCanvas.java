@@ -179,32 +179,7 @@ public class GameCanvas extends JPanel {
         getComponents()[3].setBounds((getWidth() - 450) / 2 + 100, getHeight() - 100, 70, 30);
         
         if (end) {
-            graphics.setColor(Color.WHITE);
-            graphics.fillRoundRect(
-                    (getWidth() - 450) / 2 - 150, 
-                    getHeight() / 2 - (players.size() + 1) * 15 / 2 - 56, 
-                    300, 
-                    (players.size() + 1) * 15 + 100, 20, 20);
-            
-            graphics.setColor(Color.BLACK);
-            drawStringJustifiedBold(graphics, 
-                    "Final scores: ", 
-                    (getWidth() - 450) / 2, 
-                    getHeight() / 2 - (players.size() + 1) * 15 / 2,
-                    1, 1);
-            for (int i = 0; i < players.size(); i++) {
-                drawStringJustified(graphics, 
-                        fitString(
-                                graphics, 
-                                (i + 1) + ". " 
-                                + endscores[2 * i], 
-                                200) + ", " 
-                            + endscores[2 * i + 1] 
-                            + " points",
-                        (getWidth() - 450) / 2, 
-                        getHeight() / 2 - (players.size() + 1) * 15 / 2 + 15 * (i + 1), 
-                        1, 1);
-            }
+            paintFinalScores(graphics);
         }
         
     }
@@ -582,6 +557,35 @@ public class GameCanvas extends JPanel {
                 getHeight() - 35 - scoreMargin, 
                 450 - 2 * scoreMargin, 
                 30);
+    }
+    
+    public void paintFinalScores(Graphics graphics) {
+        graphics.setColor(Color.WHITE);
+        graphics.fillRoundRect(
+                (getWidth() - 450) / 2 - 150, 
+                getHeight() / 2 - (players.size() + 1) * 15 / 2 - 56, 
+                300, 
+                (players.size() + 1) * 15 + 100, 20, 20);
+        
+        graphics.setColor(Color.BLACK);
+        drawStringJustifiedBold(graphics, 
+                "Final scores: ", 
+                (getWidth() - 450) / 2, 
+                getHeight() / 2 - (players.size() + 1) * 15 / 2,
+                1, 1);
+        for (int i = 0; i < players.size(); i++) {
+            drawStringJustified(graphics, 
+                    fitString(
+                            graphics, 
+                            (i + 1) + ". " 
+                            + endscores[2 * i], 
+                            200) + ", " 
+                        + endscores[2 * i + 1] 
+                        + " points",
+                    (getWidth() - 450) / 2, 
+                    getHeight() / 2 - (players.size() + 1) * 15 / 2 + 15 * (i + 1), 
+                    1, 1);
+        }
     }
     
     public void drawStringJustified(Graphics graphics, String text, int x, int y, int posX, 

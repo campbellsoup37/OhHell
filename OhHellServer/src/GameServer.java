@@ -305,7 +305,7 @@ public class GameServer extends JFrame {
         roundNumber = 0;
 
         //rounds.add(new RoundDetails(1));
-        //rounds.add(new RoundDetails(1));
+        //rounds.add(new RoundDetails(2));
         
         int maxHand = Math.min(10, 52 / players.size());
         for (int i = maxHand; i >= 2; i--) {
