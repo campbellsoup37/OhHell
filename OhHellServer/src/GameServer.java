@@ -52,6 +52,8 @@ public class GameServer extends JFrame {
     private int leader;
     private int turn;
     
+    private Recorder recorder;
+    
     public GameServer(int port) {
         this.port = port;
     }
@@ -90,6 +92,8 @@ public class GameServer extends JFrame {
             }
         });
         add(kickButton);
+        
+        recorder = new Recorder();
         
         setSize(640, 480);
         setResizable(false);
@@ -289,6 +293,12 @@ public class GameServer extends JFrame {
     public void startGame() {
         gameStarted = true;
         randomizePlayerOrder();
+
+        recorder.start();
+        recorder.recordPlayers(
+                players.stream()
+                .map(p -> p.getThread().getSocket().getInetAddress().toString())
+                .collect(Collectors.toList()));
         
         for (int i = 0; i < players.size(); i++) {
             Player player = players.get(i);
@@ -353,6 +363,7 @@ public class GameServer extends JFrame {
         if (!gameStarted) {
             players.removeIf(p -> p.isKicked() || p.isDisconnected());
         }
+        recorder.stop();
     }
     
     public void deal() {
@@ -364,8 +375,14 @@ public class GameServer extends JFrame {
         }
         trump = hands.get(players.size()).get(0);
         
-        turn = nextUnkicked(rounds.get(roundNumber).getDealer().getIndex());
+        recorder.recordTrump(trump);
+        
+        int dealer = rounds.get(roundNumber).getDealer().getIndex();
+        
+        turn = nextUnkicked(dealer);
         leader = turn;
+        
+        recorder.recordDealer(dealer);
         
         for (Player player : players) {
             player.resetBid();
@@ -416,6 +433,11 @@ public class GameServer extends JFrame {
         turn = nextUnkicked(turn);
         
         if (players.stream().filter(p -> !p.isKicked()).noneMatch(p -> !p.hasBid())) {
+            recorder.recordBids(
+                    players.stream()
+                    .filter(p -> !p.isKicked())
+                    .map(p -> (Integer) p.getBid())
+                    .collect(Collectors.toList()));
             state = "PLAYING";
         }
         communicateTurn();
@@ -456,6 +478,13 @@ public class GameServer extends JFrame {
             communicateTurn();
         } else {
             turn = trickWinner();
+            
+            recorder.recordTrick(
+                    players.stream()
+                        .map(Player::getTrick)
+                        .collect(Collectors.toList()),
+                    turn);
+            
             players.get(turn).incTaken();
             for (Player p : players) {
                 p.getThread().sendCommand("TRICKWINNER:" + turn);
@@ -493,6 +522,11 @@ public class GameServer extends JFrame {
                 for (Player p : kibitzers) {
                     p.getThread().sendCommand(command);
                 }
+                
+                recorder.recordResults(
+                        players.stream()
+                        .map(p -> (Integer) (p.getTaken() - p.getBid()))
+                        .collect(Collectors.toList()));
                 
                 rounds.get(roundNumber).setRoundOver();
                 roundNumber++;
@@ -566,6 +600,7 @@ public class GameServer extends JFrame {
         updatePlayersList();
         
         if (gameStarted && !player.isKibitzer()) {
+            recorder.recordKick(player.getIndex());
             updateRounds();
             restartRound();
         }

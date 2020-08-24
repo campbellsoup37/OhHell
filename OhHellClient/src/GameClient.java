@@ -157,7 +157,11 @@ public class GameClient extends JFrame {
                     .map(Integer::parseInt)
                     .collect(Collectors.toList()));
         } else if (command.equals("CHAT")) {
-            chatArea.setText(chatArea.getText() + parsedContent.get(0) + "\n");
+            SwingUtilities.invokeLater(new Runnable() {
+                public void run() {
+                    chatArea.setText(chatArea.getText() + parsedContent.get(0) + "\n");
+                }
+            });
         }
     }
     
@@ -232,7 +236,11 @@ public class GameClient extends JFrame {
                 myPlayer = player;
                 name = iname;
                 if (nameField.getText().isEmpty()) {
-                    nameField.setText(iname);
+                    SwingUtilities.invokeLater(new Runnable() {
+                        public void run() {
+                            nameField.setText(iname);
+                        }
+                    });
                 }
             }
         }
@@ -632,7 +640,11 @@ public class GameClient extends JFrame {
                                     + text.toCharArray().length + ":" 
                                     + text;
                             sendCommand(command);
-                            chatField.setText("");
+                            SwingUtilities.invokeLater(new Runnable() {
+                                public void run() {
+                                    chatField.setText("");
+                                }
+                            });
                         }
                     } catch (Exception exc) {
                         exc.printStackTrace();
