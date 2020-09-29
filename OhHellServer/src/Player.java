@@ -197,4 +197,11 @@ public class Player {
     public void resetKickVotes() {
         kickVotes = new ArrayList<Player>();
     }
+    
+    public void reset() {
+        score = 0;
+        clearTrick();
+        bids = new ArrayList<Integer>();
+        scores = new ArrayList<Integer>();
+    }
 }

@@ -303,8 +303,7 @@ public class GameServer extends JFrame {
         for (int i = 0; i < players.size(); i++) {
             Player player = players.get(i);
             player.setIndex(i);
-            player.setScore(0);
-            player.clearTrick();
+            player.reset();
             player.getThread().sendCommand("START");
         }
         for (Player player : kibitzers) {
