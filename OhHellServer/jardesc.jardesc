@@ -12,7 +12,12 @@
     </manifest>
     <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
         <javaElement handleIdentifier="=OhHellServer/src"/>
+        <folder path="/OhHellServer/resources"/>
         <file path="/OhHellServer/.classpath"/>
+        <folder path="/OhHellServer/OhHellServerStats"/>
+        <folder path="/OhHellCore/.settings"/>
+        <file path="/OhHellServer/jardesc.jardesc"/>
+        <javaElement handleIdentifier="=OhHellCore/src"/>
         <file path="/OhHellServer/.project"/>
     </selectedElements>
 </jardesc>

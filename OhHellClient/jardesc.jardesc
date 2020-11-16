@@ -11,9 +11,12 @@
         </sealing>
     </manifest>
     <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
-        <file path="/OhHellClient/.classpath"/>
         <file path="/OhHellClient/.project"/>
         <javaElement handleIdentifier="=OhHellClient/src"/>
         <folder path="/OhHellClient/resources"/>
+        <folder path="/OhHellCore/.settings"/>
+        <file path="/OhHellClient/.classpath"/>
+        <javaElement handleIdentifier="=OhHellCore/src"/>
+        <file path="/OhHellClient/jardesc.jardesc"/>
     </selectedElements>
 </jardesc>

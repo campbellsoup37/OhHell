@@ -13,7 +13,7 @@ public class PlayerThread extends Thread {
     private GameServer server;
     private PrintWriter writer;
     private BufferedReader reader;
-    private Player player;
+    private HumanPlayer player;
     
     private List<Player> dcPlayersAtAddress;
     private boolean running = true;
@@ -94,15 +94,15 @@ public class PlayerThread extends Thread {
                         server.updatePlayersList();
                     } else if (command.equals("START")) {
                         if (player.isHost()) {
-                            server.startGame();
+                            server.startGame(Integer.parseInt(parsedContent.get(0)));
                         }
                     } else if (command.equals("BID")) {
-                        server.incomingBid(player, Integer.parseInt(parsedContent.get(0)));
+                        server.makeBid(player, Integer.parseInt(parsedContent.get(0)));
                     } else if (command.equals("PLAY")) {
-                        server.incomingPlay(player, new Card(parsedContent.get(0)));
+                        server.makePlay(player, new Card(parsedContent.get(0)));
                     } else if (command.equals("RECONNECT")) {
                         server.reconnectPlayer(player, 
-                                dcPlayersAtAddress.get(Integer.parseInt(parsedContent.get(0))));
+                                (HumanPlayer) dcPlayersAtAddress.get(Integer.parseInt(parsedContent.get(0))));
                     } else if (command.equals("VOTEKICK")) {
                         server.addKickVote(Integer.parseInt(parsedContent.get(0)), player);
                     } else if (command.equals("CHAT")) {
@@ -149,7 +149,7 @@ public class PlayerThread extends Thread {
         return confThread;
     }
     
-    public void setPlayer(Player player) {
+    public void setPlayer(HumanPlayer player) {
         this.player = player;
     }
     
@@ -177,7 +177,7 @@ public class PlayerThread extends Thread {
     }
     
     public void handleDisconnect() {
-        if (server.getGameStarted() && player.isJoined() && !player.isKibitzer()) {
+        if (server.gameStarted() && player.isJoined() && !player.isKibitzer()) {
             player.setDisconnected(true);
             server.updatePlayersList();
         } else {

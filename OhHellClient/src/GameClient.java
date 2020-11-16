@@ -1,3 +1,4 @@
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -26,9 +27,12 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.text.DefaultCaret;
 
@@ -36,7 +40,6 @@ public class GameClient extends JFrame {
     private static final long serialVersionUID = 1L;
     
     private boolean connected = false;
-    private boolean gameStarted = false;
     private Socket socket;
     private String hostName = "localhost";
     private int port = 6066;
@@ -44,8 +47,6 @@ public class GameClient extends JFrame {
     
     private ClientReadThread readThread;
     private ClientWriteThread writeThread;
-
-    private long currentCommandId = 0;
     
     private NotificationFrame notificationFrame;
     private DisconnectFrame dcFrame;
@@ -53,192 +54,186 @@ public class GameClient extends JFrame {
     private JMenuBar menuBar = new JMenuBar();
     private JMenu optionsItem = new JMenu("Options");
     private JCheckBox soundOption = new JCheckBox("Sound");
+    private JCheckBox aiHelpOption = new JCheckBox("AI Help (single player only)");
+    private JMenuItem backOption = new JMenuItem("Back to menu");
     
+    // MAIN_MENU
+    private JButton singlePlayerButton = new JButton("Single Player");
+    private JButton multiplayerButton = new JButton("Multiplayer");
+    private Component[] mainMenuComponents = {
+                singlePlayerButton, multiplayerButton
+            };
+    
+    // SINGLE_PLAYER_MENU
+    private JLabel spRobotsLabel = new JLabel("Robots:");
+    private JSpinner spRobotsSpinner = new JSpinner(new SpinnerNumberModel(4, 1, 6, 1));
+    private JButton spStartButton = new JButton("Start!");
+    private JButton spBackButton = new JButton("Back");
+    private Component[] singlePlayerMenuComponents = {
+                spRobotsLabel, spRobotsSpinner, spStartButton, spBackButton
+            };
+    
+    private OhHellCore core = new OhHellCore();
+    private SinglePlayerPlayer spPlayer;
+    
+    // MULTIPLAYER_MENU
     private JLabel hostLabel = new JLabel("Host name:");
     private JTextField hostField = new JTextField(hostName);
     private JLabel portLabel = new JLabel("Port:");
-    private JTextField portField = new JTextField(port+"");
+    private JTextField portField = new JTextField(port + "");
     private JButton connectButton = new JButton("Connect");
     private JLabel nameLabel = new JLabel("Name:");
     private JTextField nameField = new JTextField();
     private JButton nameButton = new JButton("Change name");
     private JCheckBox kibitzerCheckBox = new JCheckBox("Join as kibitzer");
-    private JButton readyButton = new JButton("Start!");
+    private JLabel mpRobotsLabel = new JLabel("Robots:");
+    private JSpinner mpRobotsSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 6, 1));
+    private JButton mpStartButton = new JButton("Start!");
+    private JLabel playersLabel = new JLabel("Players:");
     private DefaultListModel<String> playersListModel = new DefaultListModel<String>();
     private JList<String> playersJList = new JList<String>(playersListModel);
     private JScrollPane playersScrollPane = new JScrollPane(playersJList);
-    private GameCanvas canvas;
-    private JButton backButton = new JButton("Back");
+    private JButton mpBackButton = new JButton("Back");
+    private Component[] multiplayerMenuComponents = {
+                hostLabel, hostField, portLabel, portField, connectButton,
+                nameLabel, nameField, nameButton, kibitzerCheckBox, mpRobotsLabel, 
+                mpRobotsSpinner, mpStartButton, playersLabel, playersJList, playersScrollPane,
+                mpBackButton
+            };
+    
+    // IN_GAME
+    private GameCanvas canvas = new GameCanvas(this);
     private JTextArea chatArea = new JTextArea();
     private JScrollPane chatScrollPane = new JScrollPane(chatArea,
             JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
             JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
     private JTextField chatField = new JTextField();
     private JButton showButton = new JButton("Show");
+    private Component[] inGameComponents = {
+                canvas, chatArea, chatScrollPane, chatField
+            };
     
-    private List<Player> players = new ArrayList<Player>();
-    private List<Player> kibitzers = new ArrayList<Player>();
-    private Player myPlayer;
+    // POST_GAME
+    private JButton pgBackButton = new JButton("Back");
+    private Component[] postGameComponents = {
+                canvas, pgBackButton, chatArea, chatScrollPane, chatField
+            };
+    
+    private Component[][] allComponents = {
+                mainMenuComponents, singlePlayerMenuComponents, multiplayerMenuComponents, inGameComponents, postGameComponents
+            };
+    
+    private List<ClientPlayer> players = new ArrayList<ClientPlayer>();
+    private List<ClientPlayer> kibitzers = new ArrayList<ClientPlayer>();
+    private ClientPlayer myPlayer;
     private List<int[]> rounds = new ArrayList<int[]>();
     private int roundNumber = 0;
     
     private Random random = new Random();
     
+    private ClientState state;
+    
     public GameClient() {}
     
-    public void receiveCommand(String line) {
-        String[] splitLine = line.split(":", 3);
-        long id = Long.parseLong(splitLine[0]);
-        String command = splitLine[1];
-        String content = "";
-        if (splitLine.length >= 3) {
-            content = splitLine[2];
+    public void changeState(ClientState newState) {
+        Component[] toShow = {};
+        
+        switch(newState) {
+        case MAIN_MENU:
+            toShow = mainMenuComponents;
+            setMinimumSize(new Dimension(685, 500));
+            setSize(685, 540);
+            setResizable(false);
+            break;
+        case SINGLE_PLAYER_MENU:
+            toShow = singlePlayerMenuComponents;
+            name = "";
+            setMinimumSize(new Dimension(685, 500));
+            setSize(685, 540);
+            setResizable(false);
+            break;
+        case IN_SINGLE_PLAYER_GAME:
+            toShow = inGameComponents;
+            setMinimumSize(new Dimension(1200, 800));
+            setSize(1200, 800);
+            setResizable(true);
+            break;
+        case SINGLE_PLAYER_POST_GAME:
+            toShow = postGameComponents;
+            break;
+        case MULTIPLAYER_MENU:
+            toShow = multiplayerMenuComponents;
+            setMinimumSize(new Dimension(685, 500));
+            setSize(685, 540);
+            setResizable(false);
+            break;
+        case IN_MULTIPLAYER_GAME:
+            toShow = inGameComponents;
+            setMinimumSize(new Dimension(1200, 800));
+            setSize(1200, 800);
+            setResizable(true);
+            break;
+        case MULTIPLAYER_POST_GAME:
+            toShow = postGameComponents;
+            break;
         }
         
-        sendCommand("CONFIRMED:" + id);
-        if (currentCommandId == id) {
-            return;
-        }
-        
-        currentCommandId = id;
-        LinkedList<String> parsedContent = parseCommandContent(content);
-        
-        if (command.equals("UPDATEPLAYERS")) {
-            updatePlayersList(parsedContent);
-        } else if (command.equals("UPDATEROUNDS")) {
-            updateRounds(parsedContent);
-        } else if (command.equals("KICK")) {
-            getKicked();
-        } else if (command.equals("START")) {
-            startGame();
-        } else if (command.equals("REDEAL")) {
-            restartRound(parsedContent);
-        } else if (command.equals("DEAL")) {
-            setHand(parsedContent);
-        } else if (command.equals("TRUMP")) {
-            setTrump(new Card(parsedContent.get(0)));
-        } else if (command.equals("BID")) {
-            bid(Integer.parseInt(parsedContent.get(0)));
-        } else if (command.equals("BIDREPORT")) {
-            bidReport(Integer.parseInt(parsedContent.get(0)), 
-                    Integer.parseInt(parsedContent.get(1)));
-        } else if (command.equals("PLAY")) {
-            play(Integer.parseInt(parsedContent.get(0)));
-        } else if (command.equals("PLAYREPORT")) {
-            playReport(Integer.parseInt(parsedContent.get(0)), 
-                    new Card(parsedContent.get(1)));
-        } else if (command.equals("TRICKWINNER")) {
-            trickWinnerReport(Integer.parseInt(parsedContent.get(0)));
-        } else if (command.equals("REPORTSCORES")) {
-            reportScores(parsedContent);
-        } else if (command.equals("FINALSCORES")) {
-            finalScores(parsedContent);
-        } else if (command.equals("RECONNECT")) {
-            ReconnectFrame reconnectFrame = new ReconnectFrame(parsedContent, this);
-            reconnectFrame.setLocationRelativeTo(this);
-            reconnectFrame.execute();
-        } else if (command.equals("STATEDEALERLEADER")) {
-            canvas.setDealer(Integer.parseInt(parsedContent.get(0)));
-            canvas.setLeaderOnTimer(Integer.parseInt(parsedContent.get(1)));
-        } else if (command.equals("STATEPLAYER")) {
-            Player player = players.get(Integer.parseInt(parsedContent.get(0)));
-            player.setBid(Integer.parseInt(parsedContent.get(1)));
-            player.setTaken(Integer.parseInt(parsedContent.get(2)));
-            player.setLastTrick(new Card(parsedContent.get(3)));
-            player.setTrick(new Card(parsedContent.get(4)));
-        } else if (command.equals("STATEPLAYERBIDS")) {
-            Player player = players.get(Integer.parseInt(parsedContent.get(0)));
-            player.setBids(parsedContent.subList(1, parsedContent.size()).stream()
-                    .map(Integer::parseInt)
-                    .collect(Collectors.toList()));
-        } else if (command.equals("STATEPLAYERSCORES")) {
-            Player player = players.get(Integer.parseInt(parsedContent.get(0)));
-            player.setScores(parsedContent.subList(1, parsedContent.size()).stream()
-                    .map(Integer::parseInt)
-                    .collect(Collectors.toList()));
-        } else if (command.equals("CHAT")) {
-            SwingUtilities.invokeLater(new Runnable() {
-                public void run() {
-                    chatArea.setText(chatArea.getText() + parsedContent.get(0) + "\n");
-                }
-            });
-        }
-    }
-    
-    public LinkedList<String> parseCommandContent(String content) {
-        if (content.isEmpty()) {
-            return new LinkedList<String>();
-        } else {
-            String piece = "";
-            String rest = "";
-            if (content.startsWith("STRING ")) {
-                int startIndex = content.indexOf(":") + 1;
-                int length = Integer.parseInt(content.substring(7, startIndex - 1));
-                piece = content.substring(startIndex, startIndex + length);
-                if (content.length() > startIndex + length) {
-                    rest = content.substring(startIndex + length + 1);
-                }
-            } else {
-                String[] split = content.split(":", 2);
-                piece = split[0];
-                if (split.length >= 2) {
-                    rest = split[1];
+        for (Component[] compsList : allComponents) {
+            if (compsList != toShow) {
+                for (Component comp : compsList) {
+                    comp.setVisible(false);
                 }
             }
-            LinkedList<String> out = parseCommandContent(rest);
-            out.addFirst(piece);
-            return out;
         }
+        for (Component comp : toShow) {
+            comp.setVisible(true);
+        }
+        state = newState;
     }
     
-    public void updatePlayersList(LinkedList<String> parsedContent) {
+    public void updatePlayersList(List<ClientPlayer> newPlayers, int myIndex) {
         playersListModel.clear();
-        if (!gameStarted) {
+        if (state != ClientState.IN_MULTIPLAYER_GAME) {
             players.clear();
         }
         kibitzers.clear();
 
         boolean anyDc = false;
         
-        int params = 6;
-        int numPlayers = parsedContent.size() / params;
-        for (int i = 0; i < numPlayers; i++) {
-            String iname = parsedContent.get(params * i);
-            boolean ihost = parsedContent.get(params * i + 1).equals("true");
-            boolean idced = parsedContent.get(params * i + 2).equals("true");
-            boolean ikicked = parsedContent.get(params * i + 3).equals("true");
-            if (idced && !ikicked) {
+        for (int i = 0; i < newPlayers.size(); i++) {
+            ClientPlayer player = newPlayers.get(i);
+            if (player.isDisconnected() && !player.isKicked()) {
                 anyDc = true;
             }
-            boolean ikibitzer = parsedContent.get(params * i + 4).equals("true");
-            boolean imy = parsedContent.get(params * i + 5).equals("true");
-            Player player = new Player();
-            playersListModel.addElement(
-                    iname
-                    + (ihost ? " (host)" : "")
-                    + (ikibitzer ? " (kibitzer)" : ""));
-            if (!ikibitzer) {
-                if (!gameStarted) {
+            if (connected) {
+                playersListModel.addElement(
+                        player.getName()
+                        + (player.isHost() ? " (host)" : "")
+                        + (player.isKibitzer() ? " (kibitzer)" : ""));
+            }
+            if (!player.isKibitzer()) {
+                if (state != ClientState.IN_MULTIPLAYER_GAME) {
                     players.add(player);
                 } else {
-                    player = players.get(i);
+                    ClientPlayer oldPlayer = players.get(i);
+                    oldPlayer.setIndex(player.getIndex());
+                    oldPlayer.setName(player.getName());
+                    oldPlayer.setHost(player.isHost());
+                    oldPlayer.setDisconnected(player.isDisconnected());
+                    oldPlayer.setKicked(player.isKicked());
+                    oldPlayer.setKibitzer(player.isKibitzer());
+                    player = oldPlayer;
                 }
             } else {
                 kibitzers.add(player);
             }
-            player.setIndex(i);
-            player.setName(iname);
-            player.setHost(ihost);
-            player.setDisconnected(idced);
-            player.setKicked(ikicked);
-            player.setKibitzer(ikibitzer);
-            if (imy) {
+            if (i == myIndex) {
                 myPlayer = player;
-                name = iname;
+                name = player.getName();
                 if (nameField.getText().isEmpty()) {
                     SwingUtilities.invokeLater(new Runnable() {
                         public void run() {
-                            nameField.setText(iname);
+                            nameField.setText(name);
                         }
                     });
                 }
@@ -254,7 +249,7 @@ public class GameClient extends JFrame {
             dcFrame.setDcList(
                     players.stream()
                         .filter(p -> p.isDisconnected() && !p.isKicked())
-                        .map(Player::getName)
+                        .map(ClientPlayer::getName)
                         .collect(Collectors.toList()));
         } else {
             if (dcFrame != null) {
@@ -274,17 +269,9 @@ public class GameClient extends JFrame {
         });
     }
     
-    public void updateRounds(LinkedList<String> parsedContent) {
-        rounds = new ArrayList<int[]>();
-        roundNumber = Integer.parseInt(parsedContent.remove());
-        
-        int params = 2;
-        int numRounds = parsedContent.size() / params;
-        for (int i = 0; i < numRounds; i++) {
-            int[] round = {Integer.parseInt(parsedContent.get(params * i)),
-                    Integer.parseInt(parsedContent.get(params * i + 1))};
-            rounds.add(round);
-        }
+    public void updateRounds(List<int[]> rounds, int roundNumber) {
+        this.rounds = rounds;
+        this.roundNumber = roundNumber;
     }
     
     public boolean isOneRound() {
@@ -295,38 +282,22 @@ public class GameClient extends JFrame {
         return rounds;
     }
     
+    public int[] thisRound() {
+        return rounds.get(roundNumber);
+    }
+    
     public void reconnectAs(int index) {
-        sendCommand("RECONNECT:" + index);
+        sendCommandToServer("RECONNECT:" + index);
     }
     
     public void voteKick(int index) {
-        sendCommand("VOTEKICK:" + index);
+        sendCommandToServer("VOTEKICK:" + index);
     }
     
     public void startGame() {
-        gameStarted = true;
         roundNumber = 0;
-        
-        hostLabel.setVisible(false);
-        hostField.setVisible(false);
-        portLabel.setVisible(false);
-        portField.setVisible(false);
-        connectButton.setVisible(false);
-        playersScrollPane.setVisible(false);
-        nameLabel.setVisible(false);
-        nameField.setVisible(false);
-        nameButton.setVisible(false);
-        kibitzerCheckBox.setVisible(false);
-        readyButton.setVisible(false);
-        backButton.setVisible(false);
-        chatScrollPane.setVisible(true);
-        chatField.setVisible(true);
 
-        setMinimumSize(new Dimension(1200, 800));
-        setSize(1200, 800);
-        setResizable(true);
-
-        for (Player player : players) {
+        for (ClientPlayer player : players) {
             player.reset();
         }
         if (myPlayer.isKibitzer()) {
@@ -334,43 +305,32 @@ public class GameClient extends JFrame {
         }
         canvas.reset();
         
-        canvas.setVisible(true);
+        switch(state) {
+        case SINGLE_PLAYER_MENU:
+            changeState(ClientState.IN_SINGLE_PLAYER_GAME);
+            break;
+        case MULTIPLAYER_MENU:
+            changeState(ClientState.IN_MULTIPLAYER_GAME);
+            break;
+        case MULTIPLAYER_POST_GAME:
+            changeState(ClientState.IN_MULTIPLAYER_GAME);
+            break;
+        default:
+            break;
+        }
         canvas.repaint();
     }
     
-    public void backToLobby() {
-        hostLabel.setVisible(true);
-        hostField.setVisible(true);
-        portLabel.setVisible(true);
-        portField.setVisible(true);
-        connectButton.setVisible(true);
-        playersScrollPane.setVisible(true);
-        nameLabel.setVisible(true);
-        nameField.setVisible(true);
-        nameButton.setVisible(true);
-        kibitzerCheckBox.setVisible(true);
-        readyButton.setVisible(true);
-
-        canvas.setVisible(false);
-        backButton.setVisible(false);
-        chatScrollPane.setVisible(false);
-        chatField.setVisible(false);
-
-        setMinimumSize(new Dimension(685, 500));
-        setSize(685, 500);
-        setResizable(false);
-    }
-    
-    public List<Player> getPlayers() {
+    public List<ClientPlayer> getPlayers() {
         return players;
     }
     
-    public Player getMyPlayer() {
+    public ClientPlayer getMyPlayer() {
         return myPlayer;
     }
     
-    public void restartRound(LinkedList<String> content) {
-        for (Player player : players) {
+    public void restartRound() {
+        for (ClientPlayer player : players) {
             player.setBid(0);
             player.setTaken(0);
             player.resetTrick();
@@ -393,13 +353,8 @@ public class GameClient extends JFrame {
         notificationFrame.execute();
     }
     
-    public void setHand(LinkedList<String> parsedContent) {
-        int index = Integer.parseInt(parsedContent.get(0));
-        canvas.setHandOnTimer(index, 
-                parsedContent.subList(1, parsedContent.size())
-                .stream()
-                .map(s -> new Card(s))
-                .collect(Collectors.toList()));
+    public void setHand(int index, List<Card> hand) {
+        canvas.setHandOnTimer(index, hand);
     }
     
     public void setTrump(Card card) {
@@ -407,34 +362,28 @@ public class GameClient extends JFrame {
         canvas.repaint();
     }
     
+    public void setDealerLeader(int dealer, int leader) {
+        canvas.setDealerOnTimer(dealer);
+        canvas.setLeaderOnTimer(leader);
+    }
+    
     public void bid(int index) {
-        for (Player player : players) {
-            player.setBidding(player.getIndex() == index ? 1 : 0);
-        }
-        for (Player player : players) {
-            player.setPlaying(false);
-        }
+        canvas.setBiddingOnTimer(index);
         canvas.repaint();
     }
     
     public void play(int index) {
-        for (Player player : players) {
-            player.setBidding(0);
-        }
-        for (Player player : players) {
-            player.setPlaying(player.getIndex() == index);
-        }
+        canvas.setPlayingOnTimer(index);
         canvas.repaint();
     }
     
     public void bidReport(int index, int bid) {
-        players.get(index).addBid(bid);
+        canvas.setBidOnTimer(index, bid);
         canvas.repaint();
     }
     
     public void playReport(int index, Card card) {
-        players.get(index).setTrick(card);
-        players.get(index).removeCard(card);
+        canvas.setPlayOnTimer(index, card);
         canvas.animateCardPlay(index);
     }
     
@@ -442,27 +391,100 @@ public class GameClient extends JFrame {
         canvas.animateTrickTake(index);
     }
     
-    public void reportScores(LinkedList<String> scores) {
-        for (int i = 0; i < players.size(); i++) {
-            if (!scores.get(i).equals("-")) {
-                players.get(i).addScore(Integer.parseInt(scores.get(i)));
-            }
-        }
+    public void reportScores(List<Integer> scores) {
+        canvas.setScoresOnTimer(scores);
 
         if (!myPlayer.isKibitzer()) {
             canvas.showResultMessageOnTimer();
         }
-        roundNumber++;
 
         canvas.resetPlayersOnTimer();
         
         canvas.repaint();
     }
     
+    public void incrementRoundNumber() {
+        roundNumber++;
+    }
+    
+    public void chat(String text) {
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                chatArea.setText(chatArea.getText() + text + "\n");
+            }
+        });
+    }
+    
+    public void setStatePlayer(int index, int bid, int taken, Card lastTrick, Card trick) {
+        ClientPlayer player = players.get(index);
+        player.setBid(bid);
+        player.setTaken(taken);
+        player.setLastTrick(lastTrick);
+        player.setTrick(trick);
+    }
+    
+    public void setStatePlayerBids(int index, List<Integer> bids) {
+        players.get(index).setBids(bids);
+    }
+    
+    public void setStatePlayerScores(int index, List<Integer> scores) {
+        players.get(index).setScores(scores);
+        
+    }
+    
     public void execute() {
         try {
             setTitle("Oh Hell");
             //setExtendedState(getExtendedState() | JFrame.MAXIMIZED_BOTH);
+            
+            singlePlayerButton.setBounds(267, 180, 151, 40);
+            singlePlayerButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    changeState(ClientState.SINGLE_PLAYER_MENU);
+                }
+            });
+            add(singlePlayerButton);
+            
+            multiplayerButton.setBounds(267, 280, 151, 40);
+            multiplayerButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    changeState(ClientState.MULTIPLAYER_MENU);
+                }
+            });
+            add(multiplayerButton);
+            
+            spRobotsLabel.setBounds(256, 150, 200, 40);
+            add(spRobotsLabel);
+            
+            spRobotsSpinner.setBounds(328, 150, 100, 40);
+            add(spRobotsSpinner);
+            
+            spStartButton.setBounds(267, 250, 150, 40);
+            GameClient thisClient = this;
+            spStartButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    int robotCount = (int) spRobotsSpinner.getValue();
+                    spPlayer = new SinglePlayerPlayer(thisClient);
+                    List<Player> players = new ArrayList<>();
+                    players.add(spPlayer);
+                    core.setPlayers(players);
+                    spPlayer.setCore(core);
+                    core.startGame(robotCount, false, null, null);
+                }
+            });
+            add(spStartButton);
+            
+            spBackButton.setBounds(267, 350, 150, 40);
+            spBackButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    changeState(ClientState.MAIN_MENU);
+                }
+            });
+            add(spBackButton);
             
             hostLabel.setBounds(20, 20, 200, 40);
             add(hostLabel);
@@ -513,7 +535,10 @@ public class GameClient extends JFrame {
             });
             add(connectButton);
             
-            playersScrollPane.setBounds(350, 20, 300, 400);
+            playersLabel.setBounds(350, 20, 200, 40);
+            add(playersLabel);
+            
+            playersScrollPane.setBounds(350, 70, 300, 320);
             add(playersScrollPane);
             
             nameLabel.setBounds(48, 200, 200, 40);
@@ -553,14 +578,20 @@ public class GameClient extends JFrame {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     if (connected) {
-                        sendCommand("KIBITZER:" + kibitzerCheckBox.isSelected());
+                        sendCommandToServer("KIBITZER:" + kibitzerCheckBox.isSelected());
                     }
                 }
             });
             add(kibitzerCheckBox);
             
-            readyButton.setBounds(120, 370, 150, 40);
-            readyButton.addActionListener(new ActionListener() {
+            mpRobotsLabel.setBounds(48, 350, 200, 40);
+            add(mpRobotsLabel);
+            
+            mpRobotsSpinner.setBounds(120, 350, 100, 40);
+            add(mpRobotsSpinner);
+            
+            mpStartButton.setBounds(120, 410, 150, 40);
+            mpStartButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     if (connected) {
@@ -568,10 +599,20 @@ public class GameClient extends JFrame {
                     }
                 }
             });
-            add(readyButton);
+            add(mpStartButton);
             
-            canvas = new GameCanvas(this);
-            canvas.setVisible(false);
+            mpBackButton.setBounds(500, 410, 150, 40);
+            mpBackButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if (connected) {
+                        disconnect();
+                    }
+                    changeState(ClientState.MAIN_MENU);
+                }
+            });
+            add(mpBackButton);
+            
             canvas.addMouseListener(new MouseListener() {
                 @Override
                 public void mouseClicked(MouseEvent e) {}
@@ -608,14 +649,22 @@ public class GameClient extends JFrame {
             add(canvas);
             canvas.setLayout(null);
             
-            backButton.addActionListener(new ActionListener() {
+            pgBackButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    backToLobby();
+                    switch (state) {
+                    case SINGLE_PLAYER_POST_GAME:
+                        changeState(ClientState.SINGLE_PLAYER_MENU);
+                        break;
+                    case MULTIPLAYER_POST_GAME:
+                        changeState(ClientState.MULTIPLAYER_MENU);
+                        break;
+                    default:
+                        break;
+                    }
                 }
             });
-            canvas.add(backButton);
-            backButton.setVisible(false);
+            canvas.add(pgBackButton);
             
             chatArea.setLineWrap(true);
             chatArea.setWrapStyleWord(true);
@@ -636,10 +685,19 @@ public class GameClient extends JFrame {
                         if (e.getKeyCode() == KeyEvent.VK_ENTER 
                                 && !chatField.getText().trim().isEmpty()) {
                             String text = name + ": " + chatField.getText().trim();
-                            String command = "CHAT:STRING " 
-                                    + text.toCharArray().length + ":" 
-                                    + text;
-                            sendCommand(command);
+                            switch (state) {
+                            case IN_SINGLE_PLAYER_GAME:
+                                core.sendChat(text);
+                                break;
+                            case IN_MULTIPLAYER_GAME:
+                                String command = "CHAT:STRING " 
+                                        + text.toCharArray().length + ":" 
+                                        + text;
+                                sendCommandToServer(command);
+                                break;
+                            default:
+                                    break;
+                            }
                             SwingUtilities.invokeLater(new Runnable() {
                                 public void run() {
                                     chatField.setText("");
@@ -654,7 +712,6 @@ public class GameClient extends JFrame {
                 @Override
                 public void keyTyped(KeyEvent e) {}
             });
-            chatField.setVisible(false);
             
             canvas.add(showButton);
             showButton.addActionListener(new ActionListener() {
@@ -667,21 +724,58 @@ public class GameClient extends JFrame {
             });
             showButton.setVisible(false);
             
-            menuBar.add(optionsItem);
             soundOption.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     canvas.setPlaySoundSelected(soundOption.isSelected());
                 }
             });
-            
-            soundOption.setPreferredSize(new Dimension(80, 25));
+            //soundOption.setPreferredSize(new Dimension(80, 25));
             optionsItem.add(soundOption);
-            setJMenuBar(menuBar);
             
-            setSize(685, 500);
-            setResizable(false);
-            setVisible(true);
+            aiHelpOption.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    canvas.setAiHelp(aiHelpOption.isSelected());
+                }
+            });
+            optionsItem.add(aiHelpOption);
+            
+            backOption.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    switch (state) {
+                    case SINGLE_PLAYER_MENU:
+                        changeState(ClientState.MAIN_MENU);
+                        break;
+                    case MULTIPLAYER_MENU:
+                        changeState(ClientState.MAIN_MENU);
+                        break;
+                    case IN_SINGLE_PLAYER_GAME:
+                        core.stopGame();
+                        changeState(ClientState.SINGLE_PLAYER_MENU);
+                        break;
+                    case SINGLE_PLAYER_POST_GAME:
+                        changeState(ClientState.SINGLE_PLAYER_MENU);
+                        break;
+                    case IN_MULTIPLAYER_GAME:
+                        if (connected) {
+                            disconnect();
+                        }
+                        changeState(ClientState.MULTIPLAYER_MENU);
+                        break;
+                    case MULTIPLAYER_POST_GAME:
+                        changeState(ClientState.MULTIPLAYER_MENU);
+                        break;
+                    default:
+                        break;
+                    }
+                }
+            });
+            optionsItem.add(backOption);
+
+            menuBar.add(optionsItem);
+            setJMenuBar(menuBar);
             
             addWindowListener(new WindowListener() {
                 @Override
@@ -709,22 +803,68 @@ public class GameClient extends JFrame {
                     }
                 }
             });
-            
             setDefaultCloseOperation(EXIT_ON_CLOSE);
+
+            changeState(ClientState.MAIN_MENU);
+            setVisible(true);
+            
+            core.execute(false);
         } catch(Exception e) {
             e.printStackTrace();
         }
     }
     
+    public String getOvlProb(int index) {
+        switch (state) {
+        case IN_SINGLE_PLAYER_GAME:
+            return String.format("%.2f", spPlayer.getOvlProb(index));
+        default:
+            return "";
+        }
+    }
+    
+    public String getAiBid() {
+        switch (state) {
+        case IN_SINGLE_PLAYER_GAME:
+            int bid = spPlayer.getAiBid();
+            return bid == -1 ? "" : bid + "";
+        default:
+            return "";
+        }
+    }
+    
+    public String getAiPlay() {
+        switch (state) {
+        case IN_SINGLE_PLAYER_GAME:
+            Card card = spPlayer.getAiPlay();
+            return card == null ? "" : card + "";
+        default:
+            return "";
+        }
+    }
+    
+    public void goToPostGame() {
+        switch (state) {
+        case IN_SINGLE_PLAYER_GAME:
+            changeState(ClientState.SINGLE_PLAYER_POST_GAME);
+            break;
+        case IN_MULTIPLAYER_GAME:
+            changeState(ClientState.MULTIPLAYER_POST_GAME);
+            break;
+        default:
+            break;
+        }
+    }
+    
     public void rename() {
         name = nameField.getText();
-        sendCommand("RENAME:STRING " + name.length() + ":" + name);
+        sendCommandToServer("RENAME:STRING " + name.length() + ":" + name);
     }
     
     public void readyPressed() {
         if (myPlayer.isHost()) {
-            if (!players.isEmpty()) {
-                sendCommand("START");
+            if (!players.isEmpty() || Integer.parseInt(mpRobotsSpinner.getValue().toString()) > 0) {
+                sendCommandToServer("START:" + mpRobotsSpinner.getValue());
             } else {
                 notify("There are no players.");
             }
@@ -734,11 +874,37 @@ public class GameClient extends JFrame {
     }
     
     public void close() {
-        sendCommand("CLOSE");
+        sendCommandToServer("CLOSE");
     }
     
-    public void sendCommand(String text) {
+    public void sendCommandToServer(String text) {
         writeThread.write(text);
+    }
+    
+    public void makeBid(int bid) {
+        switch (state) {
+        case IN_SINGLE_PLAYER_GAME:
+            core.incomingBid(spPlayer, bid);
+            break;
+        case IN_MULTIPLAYER_GAME:
+            sendCommandToServer("BID:" + bid);
+            break;
+        default:
+            break;
+        }
+    }
+    
+    public void makePlay(Card card) {
+        switch (state) {
+        case IN_SINGLE_PLAYER_GAME:
+            core.incomingPlay(spPlayer, card);
+            break;
+        case IN_MULTIPLAYER_GAME:
+            sendCommandToServer("PLAY:" + card);
+            break;
+        default:
+            break;
+        }
     }
     
     public void connect() {
@@ -773,16 +939,27 @@ public class GameClient extends JFrame {
         }
     }
     
-    public void getKicked() {
-        notify("You were disconnected from the server.");
+    public void disconnect() {
+        readThread.disconnect();
+        sendCommandToServer("CLOSE");
         connected = false;
         writeThread.disconnect();
         playersListModel.clear();
-        backToLobby();
+    }
+    
+    public void reconnect(LinkedList<String> parsedContent) {
+        ReconnectFrame reconnectFrame = new ReconnectFrame(parsedContent, this);
+        reconnectFrame.setLocationRelativeTo(this);
+        reconnectFrame.execute();
+    }
+    
+    public void getKicked() {
+        notify("You were disconnected from the server.");
+        disconnect();
+        changeState(ClientState.MULTIPLAYER_MENU);
     }
     
     public void finalScores(LinkedList<String> s) {
-        gameStarted = false;
         canvas.setFinalScoresOnTimer(s);
     }
     
