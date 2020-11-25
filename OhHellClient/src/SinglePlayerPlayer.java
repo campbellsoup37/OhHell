@@ -64,17 +64,17 @@ public class SinglePlayerPlayer extends Player {
     }
     
     public void calculateOvls(boolean withBid) {
-        ovlProbs = core.getAiThread().getOvlPs(this);
+        ovlProbs = core.getAiKernel().getOvlPs(this);
         
         if (withBid) {
-            aiBid = core.getAiThread().getMyBid(ovlProbs);
+            aiBid = core.getAiKernel().getMyBid(ovlProbs);
         } else {
             aiBid = -1;
         }
     }
     
     public void calculateIvls() {
-        aiPlay = core.getAiThread().getMyPlay(this);
+        aiPlay = core.getAiKernel().getMyPlay(this);
     }
     
     public int getAiBid() {

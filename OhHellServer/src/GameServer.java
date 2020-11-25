@@ -118,8 +118,8 @@ public class GameServer extends JFrame {
         return core.getGameStarted();
     }
     
-    public void startGame(int robotCount) {
-        core.startGame(robotCount, false, null, null);
+    public void startGame(int robotCount, boolean doubleDeck) {
+        core.startGame(robotCount, doubleDeck, null, null);
     }
     
     public void updatePlayersList() {
@@ -200,7 +200,9 @@ public class GameServer extends JFrame {
                 .get(index);
         player.addKickVote(fromPlayer);
         if (player.getNumberOfKickVotes() * 2
-                >= players.stream().filter(p -> !p.isDisconnected() && !p.isKicked() && p.isHuman()).count()) { 
+                >= players.stream()
+                .filter(p -> !p.isDisconnected() && !p.isKicked() && p.isHuman())
+                .count()) { 
             kickPlayer(player);
         }
     }

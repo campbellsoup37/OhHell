@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -15,9 +15,8 @@ public class OhHellCore {
     private List<Player> kibitzers = new ArrayList<Player>();
     
     private List<String> firstNames;
-    private AiThread aiThread;
+    private AiKernel aiKernel;
     
-    private boolean training;
     private AiTrainer aiTrainer;
     
     private Random random = new Random();
@@ -40,6 +39,10 @@ public class OhHellCore {
     
     public void setPlayers(List<Player> players) {
         this.players = players;
+    }
+    
+    public List<Player> getPlayers() {
+        return players;
     }
     
     public void setKibitzers(List<Player> kibitzers) {
@@ -121,17 +124,17 @@ public class OhHellCore {
         return gameStarted;
     }
     
-    public void startGame(int robotCount, boolean training, OverallValueLearner ovl, ImmediateValueLearner ivl) {
+    public void startGame(int robotCount, boolean doubleDeck,  
+            OverallValueLearner ovl, ImmediateValueLearner ivl) {
         if (robotCount > 0) {
-            int N = (int) players.stream().filter(p -> !p.isKicked()).count() + robotCount;
-            aiThread = new AiThread(this, N, training, ovl, ivl);
+            aiKernel = new AiKernel(this, deck, aiTrainer, ovl, ivl);
             for (int i = 0; i < robotCount; i++) {
-                players.add(new AiPlayer(firstNames.get(random.nextInt(firstNames.size())) + " Bot", aiThread));
+                players.add(new AiPlayer(firstNames.get(random.nextInt(firstNames.size())) + " Bot", aiKernel));
             }
-            aiThread.start();
+            aiKernel.start();
         }
-        //deck = new Deck(-4258269598777096215L);
-        this.training = training;
+        deck.setDoubleDeck(doubleDeck);
+        //deck.setSeed(-4258269598777096215L);
         
         gameStarted = true;
         randomizePlayerOrder();
@@ -157,7 +160,10 @@ public class OhHellCore {
         rounds = new ArrayList<RoundDetails>();
         roundNumber = 0;
         
-        int maxHand = Math.min(10, 52 / players.size());
+        //rounds.add(new RoundDetails(2));
+        
+        int numDecks = doubleDeck ? 2 : 1;
+        int maxHand = Math.min(10, (numDecks * 52 - 1) / players.size());
         for (int i = maxHand; i >= 2; i--) {
             rounds.add(new RoundDetails(i));
         }
@@ -195,14 +201,12 @@ public class OhHellCore {
     
     public void stopGame() {
         gameStarted = false;
-        if (!gameStarted) {
-            players.removeIf(p -> p.isKicked() || p.isDisconnected() || !p.isHuman());
-        }
+        players.removeIf(p -> p.isKicked() || p.isDisconnected() || !p.isHuman());
         if (record) {
             recorder.stop();
         }
-        if (aiThread != null && aiThread.isRunning()) {
-            aiThread.end();
+        if (aiKernel != null && aiKernel.isRunning()) {
+            aiKernel.end();
         }
     }
     
@@ -281,88 +285,12 @@ public class OhHellCore {
         this.aiTrainer = aiTrainer;
     }
     
-    public void addOvlInput(BinaryLayerVector in, Card card, int hOffSet, int voidsOffset) {
-        int maxH = Math.min(10, 51 / players.size());
-        int numOfVoids = voids(players.get(turn).getHand()) + voidsOffset;
-        List<List<Card>> split = splitBySuit(players.get(turn).getHand());
-        List<Card> trick = players.stream().map(Player::getTrick).filter(c -> !c.isEmpty()).collect(Collectors.toList());
-        
-        in.addOneHot(players.get(turn).getHand().size() - hOffSet, maxH);
-        if (state.equals("BIDDING")) {
-            for (int j = 0; j < players.size(); j++) {
-                if ((turn - leader + players.size()) % players.size() + j >= players.size()) {
-                    in.addOneHot(players.get((turn + j) % players.size()).getBid() + 1, maxH + 1);
-                } else {
-                    in.addZeros(maxH + 1);
-                }
-            }
-        } else {
-            for (int j = 0; j < players.size(); j++) {
-                in.addOneHot(Math.max(players.get((turn + j) % players.size()).getBid() - players.get((turn + j) % players.size()).getTaken(), 0) + 1, maxH + 1);
-            }
-        }
-        in.addOneHot(numOfVoids + 1, 4);
-        in.addOneHot(deck.cardsLeftOfSuit(trump, Arrays.asList(split.get(trump.getSuitNumber() - 1), trick)) + 1, 13);
-        
-        in.addOneHot(card.getSuit().equals(trump.getSuit()) ? 2 : 1, 2);
-        in.addOneHot(deck.cardsLeftOfSuit(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)) + 1, 13);
-        
-        in.addOneHot(deck.adjustedCardValueSmall(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)) + 1, 13);
+    public int getLeader() {
+        return leader;
     }
     
-    public void addIvlInput(BinaryLayerVector in, Card card) {
-        int maxH = Math.min(10, 51 / players.size());
-        List<List<Card>> split = splitBySuit(players.get(turn).getHand());
-        List<Card> trick = players.stream().map(Player::getTrick).filter(c -> !c.isEmpty()).collect(Collectors.toList());
-        
-        for (int k = 1; k < players.size(); k++) {
-            if ((turn - leader + players.size()) % players.size() + k < players.size()) {
-                in.addOneHot(Math.max(players.get((turn + k) % players.size()).getBid() - players.get((turn + k) % players.size()).getTaken(), 0) + 1, maxH + 1);
-            } else {
-                in.addZeros(maxH + 1);
-            }
-        }
-        in.addOneHot(deck.cardsLeftOfSuit(trump, Arrays.asList(split.get(trump.getSuitNumber() - 1), trick)) + 1, 13);
-
-        Card led = players.get(leader).getTrick().isEmpty() ? card : players.get(leader).getTrick();
-        in.addOneHot(led.getSuit().equals(trump.getSuit()) ? 2 : 1, 2);
-        in.addOneHot(deck.cardsLeftOfSuit(led, Arrays.asList(split.get(led.getSuitNumber() - 1), trick)) + 1, 13);
-        
-        in.addOneHot(card.getSuit().equals(trump.getSuit()) ? 2 : 1, 2);
-        in.addOneHot(deck.adjustedCardValueSmall(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)) + 1, 13);
-    }
-    
-    public static int voids(List<Card> hand) {
-        boolean[] notVoid = new boolean[4];
-        for (Card c : hand) {
-            notVoid[c.getSuitNumber() - 1] = true;
-        }
-        int count = 0;
-        for (boolean nv : notVoid) {
-            if (!nv) {
-                count++;
-            }
-        }
-        return count;
-    }
-    
-    public static int[] suitLengths(List<Card> hand) {
-        int[] counts = new int[4];
-        for (Card c : hand) {
-            counts[c.getSuitNumber() - 1]++;
-        }
-        return counts;
-    }
-    
-    public static List<List<Card>> splitBySuit(List<Card> hand) {
-        List<List<Card>> out = new ArrayList<>(4);
-        for (int i = 0; i < 4; i++) {
-            out.add(new LinkedList<>());
-        }
-        for (Card c : hand) {
-            out.get(c.getSuitNumber() - 1).add(c);
-        }
-        return out;
+    public Card getTrump() {
+        return trump;
     }
     
     public int whatCanINotBid() {
@@ -384,15 +312,6 @@ public class OhHellCore {
             canPlay = player.getHand();
         }
         return canPlay;
-    }
-    
-    public boolean cardIsWinning(Card card) {
-        for (Player p : players) {
-            if (!card.isGreaterThan(p.getTrick(), trump.getSuit())) {
-                return false;
-            }
-        }
-        return true;
     }
     
     // ---------------------------------------------------------------------------------------------
@@ -471,6 +390,7 @@ public class OhHellCore {
                     if (p.isKicked()) {
                         newScores.add(null);
                     } else {
+                        p.addTaken();
                         int b = p.getBid();
                         int d = Math.abs(p.getTaken() - b);
                         if (d == 0) {
@@ -515,28 +435,39 @@ public class OhHellCore {
                     for (Player p : kibitzers) {
                         p.commandFinalScores(playersSorted);
                     }
-                    if (training) {
+                    if (aiTrainer != null) {
+                        int[] roundSizes = new int[rounds.size()];
+                        int[][] bids = new int[players.size()][rounds.size()];
+                        int[][] takens = new int[players.size()][rounds.size()];
                         int[] scores = new int[players.size()];
-                        int i = 0;
-                        for (Player p : players) {
-                            scores[i] = p.getScore();
-                            i++;
+                        for (int j = 0; j < rounds.size(); j++) {
+                            roundSizes[j] = rounds.get(j).getHandSize();
                         }
-                        aiTrainer.notifyGameDone(scores);
+                        for (int i = 0; i < players.size(); i++) {
+                            for (int j = 0; j < rounds.size(); j++) {
+                                bids[i][j] = players.get(i).getBids().get(j);
+                                takens[i][j] = players.get(i).getTakens().get(j);
+                            }
+                            scores[i] = players.get(i).getScore();
+                        }
+                        stopGame();
+                        aiTrainer.notifyGameDone(roundSizes, bids, takens, scores);
+                    } else {
+                        stopGame();
                     }
-                    stopGame();
                 }
             }
         }
     }
     
-    public AiThread getAiThread() {
-        return aiThread;
+    public AiKernel getAiKernel() {
+        return aiKernel;
     }
     
     public void restartRound() {
-        if (aiThread != null && aiThread.isRunning()) {
-            aiThread.loadOvlIvl((int) players.stream().filter(p -> !p.isKicked()).count());
+        if (aiKernel != null && aiKernel.isRunning()) {
+            aiKernel.loadPlayers();
+            aiKernel.loadOvlIvl();
         }
         for (Player player : players) {
             player.commandRedeal();
@@ -548,9 +479,21 @@ public class OhHellCore {
     }
     
     public int trickWinner() {
+        Hashtable<String, Integer> counts = new Hashtable<>();
+        for (Player player : players) {
+            String cardName = player.getTrick().toString();
+            if (counts.get(cardName) == null) {
+                counts.put(cardName, 1);
+            } else {
+                counts.put(cardName, counts.get(cardName) + 1);
+            }
+        }
+
         int out = turn;
-        for (Player player : players) { 
-            if (player.getTrick().isGreaterThan(players.get(out).getTrick(), trump.getSuit())) {
+        for (Player player : players) {
+            if (counts.get(player.getTrick().toString()) == 1 && 
+                    (player.getTrick().isGreaterThan(players.get(out).getTrick(), trump.getSuit())
+                            || counts.get(players.get(out).getTrick().toString()) == 2)) {
                 out = player.getIndex();
             }
         }

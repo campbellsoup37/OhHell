@@ -146,6 +146,8 @@ public class GameCanvas extends JPanel {
     
     @Override
     public void paintComponent(Graphics graphics) {
+        maxHand = Math.max(maxHand, myPlayer.getHand().size());
+        
         super.paintComponent(graphics);
         graphics.drawImage(tableImg, 
                 0, 0, 
@@ -330,7 +332,7 @@ public class GameCanvas extends JPanel {
                 }
             }
             
-            if (player.getBidding()==1 || player.isPlaying()) {
+            if (player.getBidding() == 1 || player.isPlaying()) {
                 graphics.setColor(new Color(255, 255, 0));
             } else {
                 graphics.setColor(Color.WHITE);
@@ -473,7 +475,7 @@ public class GameCanvas extends JPanel {
                                 unkickedPlayers.get(k).getLastTrick(), 
                                 takenX + 10 * j + 50 + 20*k, 
                                 takenY + 5 * j, 
-                                1, true, false);
+                                trickCardScale, true, false);
                     }
                 }
             }
@@ -563,8 +565,12 @@ public class GameCanvas extends JPanel {
             }
             
             graphics.setColor(Color.BLACK);
-            if (player.isDisconnected()) graphics.setColor(Color.GRAY);
-            if (player.isKicked()) graphics.setColor(Color.RED);
+            if (player.isDisconnected()) {
+                graphics.setColor(Color.GRAY);
+            }
+            if (player.isKicked()) {
+                graphics.setColor(Color.RED);
+            }
             
             if (player.equals(myPlayer)) {
                 drawStringJustifiedBold(graphics, 
@@ -731,7 +737,7 @@ public class GameCanvas extends JPanel {
         myPlayer = client.getMyPlayer();
         trump = new Card();
         
-        maxHand = Math.min(10, 52 / players.size());
+        maxHand = Math.min(10, 51 / players.size());
         message = "";
         paintHandMarker = true;
         paintBiddingMarker = true;
@@ -1011,7 +1017,6 @@ public class GameCanvas extends JPanel {
         new CanvasTimerEntry(0, this, actionQueue) {
             @Override
             public void onFirstAction() {
-                players.get(index).setHand(hand);
                 if (index == client.thisRound()[0] 
                         && index == myPlayer.getIndex() 
                         && !myPlayer.isKibitzer() 
@@ -1019,6 +1024,7 @@ public class GameCanvas extends JPanel {
                     getComponents()[3].setVisible(true);
                     showOneCard = false;
                 }
+                players.get(index).setHand(hand);
             }
         };
     }

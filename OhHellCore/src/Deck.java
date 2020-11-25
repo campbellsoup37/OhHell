@@ -5,28 +5,36 @@ import java.util.Random;
 
 public class Deck {
     private List<Card> deck = new ArrayList<Card>();
+    private boolean doubleDeck = false;
+    
     private List<List<Card>> played = new ArrayList<>();
     Random random = new Random();
     
     public Deck() {}
     
-    public Deck(long seed) {
+    public void setSeed(long seed) {
         random.setSeed(seed);
+    }
+    
+    public void setDoubleDeck(boolean doubleDeck) {
+        this.doubleDeck = doubleDeck;
     }
     
     public void initialize() {
         deck = new ArrayList<Card>();
-        for (int i = 2; i <= 14; i++) {
-            deck.add(new Card(i, "clubs"));
-        }
-        for (int i = 2; i <= 14; i++) {
-            deck.add(new Card(i, "diamonds"));
-        }
-        for (int i = 2; i <= 14; i++) {
-            deck.add(new Card(i, "hearts"));
-        }
-        for (int i = 2; i <= 14; i++) {
-            deck.add(new Card(i, "spades"));
+        for (int d = 1; d <= (doubleDeck ? 2 : 1); d++) {
+            for (int i = 2; i <= 14; i++) {
+                deck.add(new Card(i, "clubs"));
+            }
+            for (int i = 2; i <= 14; i++) {
+                deck.add(new Card(i, "diamonds"));
+            }
+            for (int i = 2; i <= 14; i++) {
+                deck.add(new Card(i, "hearts"));
+            }
+            for (int i = 2; i <= 14; i++) {
+                deck.add(new Card(i, "spades"));
+            }
         }
         
         played = new ArrayList<>();

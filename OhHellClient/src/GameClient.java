@@ -86,20 +86,21 @@ public class GameClient extends JFrame {
     private JTextField nameField = new JTextField();
     private JButton nameButton = new JButton("Change name");
     private JCheckBox kibitzerCheckBox = new JCheckBox("Join as kibitzer");
-    private JLabel mpRobotsLabel = new JLabel("Robots:");
-    private JSpinner mpRobotsSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 6, 1));
+    private JButton mpOptionsButton = new JButton("Game options");
     private JButton mpStartButton = new JButton("Start!");
     private JLabel playersLabel = new JLabel("Players:");
-    private DefaultListModel<String> playersListModel = new DefaultListModel<String>();
-    private JList<String> playersJList = new JList<String>(playersListModel);
+    private DefaultListModel<String> playersListModel = new DefaultListModel<>();
+    private JList<String> playersJList = new JList<>(playersListModel);
     private JScrollPane playersScrollPane = new JScrollPane(playersJList);
     private JButton mpBackButton = new JButton("Back");
     private Component[] multiplayerMenuComponents = {
                 hostLabel, hostField, portLabel, portField, connectButton,
-                nameLabel, nameField, nameButton, kibitzerCheckBox, mpRobotsLabel, 
-                mpRobotsSpinner, mpStartButton, playersLabel, playersJList, playersScrollPane,
-                mpBackButton
+                nameLabel, nameField, nameButton, kibitzerCheckBox, mpOptionsButton,
+                mpStartButton, playersLabel, playersJList, playersScrollPane, mpBackButton
             };
+    
+    private int mpNumRobots = 0;
+    private boolean mpDoubleDeck = false;
     
     // IN_GAME
     private GameCanvas canvas = new GameCanvas(this);
@@ -123,10 +124,10 @@ public class GameClient extends JFrame {
                 mainMenuComponents, singlePlayerMenuComponents, multiplayerMenuComponents, inGameComponents, postGameComponents
             };
     
-    private List<ClientPlayer> players = new ArrayList<ClientPlayer>();
-    private List<ClientPlayer> kibitzers = new ArrayList<ClientPlayer>();
+    private List<ClientPlayer> players = new ArrayList<>();
+    private List<ClientPlayer> kibitzers = new ArrayList<>();
     private ClientPlayer myPlayer;
-    private List<int[]> rounds = new ArrayList<int[]>();
+    private List<int[]> rounds = new ArrayList<>();
     private int roundNumber = 0;
     
     private Random random = new Random();
@@ -138,7 +139,7 @@ public class GameClient extends JFrame {
     public void changeState(ClientState newState) {
         Component[] toShow = {};
         
-        switch(newState) {
+        switch (newState) {
         case MAIN_MENU:
             toShow = mainMenuComponents;
             setMinimumSize(new Dimension(685, 500));
@@ -421,6 +422,9 @@ public class GameClient extends JFrame {
         player.setTaken(taken);
         player.setLastTrick(lastTrick);
         player.setTrick(trick);
+        if (!trick.isEmpty()) {
+            player.setTimerStarted(true);
+        }
     }
     
     public void setStatePlayerBids(int index, List<Integer> bids) {
@@ -429,7 +433,6 @@ public class GameClient extends JFrame {
     
     public void setStatePlayerScores(int index, List<Integer> scores) {
         players.get(index).setScores(scores);
-        
     }
     
     public void execute() {
@@ -584,11 +587,22 @@ public class GameClient extends JFrame {
             });
             add(kibitzerCheckBox);
             
-            mpRobotsLabel.setBounds(48, 350, 200, 40);
+            mpOptionsButton.setBounds(120, 350, 150, 40);
+            mpOptionsButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    GameOptionsFrame mpOptionsFrame = new GameOptionsFrame(thisClient, mpNumRobots, mpDoubleDeck);
+                    mpOptionsFrame.setLocationRelativeTo(thisClient);
+                    mpOptionsFrame.execute();
+                }
+            });
+            add(mpOptionsButton);
+            
+            /*mpRobotsLabel.setBounds(48, 350, 200, 40);
             add(mpRobotsLabel);
             
             mpRobotsSpinner.setBounds(120, 350, 100, 40);
-            add(mpRobotsSpinner);
+            add(mpRobotsSpinner);*/
             
             mpStartButton.setBounds(120, 410, 150, 40);
             mpStartButton.addActionListener(new ActionListener() {
@@ -814,6 +828,14 @@ public class GameClient extends JFrame {
         }
     }
     
+    public void setMpNumRobots(int mpNumRobots) {
+        this.mpNumRobots = mpNumRobots;
+    }
+    
+    public void setMpDoubleDeck(boolean mpDoubleDeck) {
+        this.mpDoubleDeck = mpDoubleDeck;
+    }
+    
     public String getOvlProb(int index) {
         switch (state) {
         case IN_SINGLE_PLAYER_GAME:
@@ -863,8 +885,8 @@ public class GameClient extends JFrame {
     
     public void readyPressed() {
         if (myPlayer.isHost()) {
-            if (!players.isEmpty() || Integer.parseInt(mpRobotsSpinner.getValue().toString()) > 0) {
-                sendCommandToServer("START:" + mpRobotsSpinner.getValue());
+            if (!players.isEmpty() || mpNumRobots > 0) {
+                sendCommandToServer("START:" + mpNumRobots + ":" + mpDoubleDeck);
             } else {
                 notify("There are no players.");
             }

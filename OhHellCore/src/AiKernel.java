@@ -1,16 +1,25 @@
 import java.util.Hashtable;
+import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 //import java.util.Random;
+import java.util.stream.Collectors;
 
-public class AiThread extends Thread {
+public class AiKernel extends Thread {
     OhHellCore core;
+    Deck deck;
+    AiTrainer aiTrainer;
+    
+    List<Player> players;
+    int N;
+    int maxH;
+    
     OverallValueLearner ovl;
     ImmediateValueLearner ivl;
-    boolean training;
     
     boolean running = true;
-    
     private enum Task {
         BID,
         PLAY,
@@ -20,20 +29,26 @@ public class AiThread extends Thread {
     Task task;
     AiPlayer player;
     
-    public AiThread(OhHellCore core, int N, boolean training, OverallValueLearner ovl, ImmediateValueLearner ivl) {
+    public AiKernel(OhHellCore core, Deck deck, AiTrainer aiTrainer, 
+            OverallValueLearner ovl, ImmediateValueLearner ivl) {
         this.core = core;
-        this.training = training;
-        if (training) {
+        this.deck = deck;
+        this.aiTrainer = aiTrainer;
+        if (aiTrainer != null) {
             this.ovl = ovl;
             this.ivl = ivl;
-        } else {
-            loadOvlIvl(N);
         }
     }
     
-    public void loadOvlIvl(int N) {
-        int maxH = Math.min(10, 51 / N);
-        
+    public void loadPlayers() {
+        players = core.getPlayers();
+        N = (int) players.stream()
+                .filter(p -> !p.isKicked())
+                .count();
+        maxH = Math.min(10, 51 / N);
+    }
+    
+    public void loadOvlIvl() {
         ovl = new OverallValueLearner(new int[] {
                 maxH              // Cards left in hand
                 + (maxH + 1) * N  // Bids - takens
@@ -72,6 +87,11 @@ public class AiThread extends Thread {
     }
     
     public void run() {
+        loadPlayers();
+        if (ovl == null) {
+            loadOvlIvl();
+        }
+        
         while (running) {
             try {
                 while (true) {
@@ -109,15 +129,130 @@ public class AiThread extends Thread {
         }
     }
     
+    public void makeBid(AiPlayer player) {
+        task = Task.BID;
+        this.player = player;
+        interrupt();
+    }
+    
+    public void makePlay(AiPlayer player) {
+        task = Task.PLAY;
+        this.player = player;
+        interrupt();
+    }
+    
+    public void addOvlInput(Player player, BinaryLayerVector in, Card card, int hOffSet, int voidsOffset) {
+        int turn = player.getIndex();
+        int M = players.size();
+        Card trump = core.getTrump();
+        
+        int numOfVoids = voids(player.getHand()) + voidsOffset;
+        List<List<Card>> split = splitBySuit(player.getHand());
+        List<Card> trick = players.stream()
+                .map(Player::getTrick)
+                .filter(c -> !c.isEmpty())
+                .collect(Collectors.toList());
+        
+        in.addOneHot(player.getHand().size() - hOffSet, maxH);
+        if (task == Task.BID) {
+            for (int j = 0; j < M; j++) {
+                Player iterPlayer = players.get((turn + j) % M);
+                if (!iterPlayer.isKicked()) {
+                    if ((turn - core.getLeader() + M) % M + j >= M) {
+                        in.addOneHot(iterPlayer.getBid() + 1, maxH + 1);
+                    } else {
+                        in.addZeros(maxH + 1);
+                    }
+                }
+            }
+        } else {
+            for (int j = 0; j < M; j++) {
+                Player iterPlayer = players.get((turn + j) % M);
+                if (!iterPlayer.isKicked()) {
+                    in.addOneHot(Math.max(iterPlayer.getBid() - iterPlayer.getTaken(), 0) + 1, maxH + 1);
+                }
+            }
+        }
+        in.addOneHot(numOfVoids + 1, 4);
+        in.addOneHot(deck.cardsLeftOfSuit(trump, Arrays.asList(split.get(trump.getSuitNumber() - 1), trick)) + 1, 13);
+        
+        in.addOneHot(card.getSuit().equals(trump.getSuit()) ? 2 : 1, 2);
+        in.addOneHot(deck.cardsLeftOfSuit(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)) + 1, 13);
+        
+        in.addOneHot(deck.adjustedCardValueSmall(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)) + 1, 13);
+    }
+    
+    public void addIvlInput(Player player, BinaryLayerVector in, Card card) {
+        int turn = player.getIndex();
+        int M = players.size();
+        Card trump = core.getTrump();
+
+        List<List<Card>> split = splitBySuit(players.get(turn).getHand());
+        List<Card> trick = players.stream().map(Player::getTrick).filter(c -> !c.isEmpty()).collect(Collectors.toList());
+        
+        for (int k = 1; k < players.size(); k++) {
+            Player iterPlayer = players.get((turn + k) % M);
+            if (!iterPlayer.isKicked()) {
+                if ((turn - core.getLeader() + M) % M + k < M) {
+                    in.addOneHot(Math.max(iterPlayer.getBid() - iterPlayer.getTaken(), 0) + 1, maxH + 1);
+                } else {
+                    in.addZeros(maxH + 1);
+                }
+            }
+        }
+        in.addOneHot(deck.cardsLeftOfSuit(trump, Arrays.asList(split.get(trump.getSuitNumber() - 1), trick)) + 1, 13);
+
+        Card led = players.get(core.getLeader()).getTrick().isEmpty() ? card : players.get(core.getLeader()).getTrick();
+        in.addOneHot(led.getSuit().equals(trump.getSuit()) ? 2 : 1, 2);
+        in.addOneHot(deck.cardsLeftOfSuit(led, Arrays.asList(split.get(led.getSuitNumber() - 1), trick)) + 1, 13);
+        
+        in.addOneHot(card.getSuit().equals(trump.getSuit()) ? 2 : 1, 2);
+        in.addOneHot(deck.adjustedCardValueSmall(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)) + 1, 13);
+    }
+    
+    public static int voids(List<Card> hand) {
+        boolean[] notVoid = new boolean[4];
+        for (Card c : hand) {
+            notVoid[c.getSuitNumber() - 1] = true;
+        }
+        int count = 0;
+        for (boolean nv : notVoid) {
+            if (!nv) {
+                count++;
+            }
+        }
+        return count;
+    }
+    
+    public static List<List<Card>> splitBySuit(List<Card> hand) {
+        List<List<Card>> out = new ArrayList<>(4);
+        for (int i = 0; i < 4; i++) {
+            out.add(new LinkedList<>());
+        }
+        for (Card c : hand) {
+            out.get(c.getSuitNumber() - 1).add(c);
+        }
+        return out;
+    }
+    
+    public boolean cardIsWinning(Card card) {
+        for (Player p : players) {
+            if (!p.isKicked() && !card.isGreaterThan(p.getTrick(), core.getTrump().getSuit())) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
     public double[] getOvlPs(Player player) {
         double[] ps = new double[player.getHand().size()];
         int l = 0;
         for (Card c : player.getHand()) {
             BinaryLayerVector in = new BinaryLayerVector();
-            core.addOvlInput(in, c, 0, 0);
+            addOvlInput(player, in, c, 0, 0);
             ps[l] = ovl.testValue(in).get(1).get(0);
             
-            if (training) {
+            if (aiTrainer != null && aiTrainer.backprop()) {
                 ovl.putIn(c, in);
             }
             
@@ -134,7 +269,7 @@ public class AiThread extends Thread {
     
     public Card getMyPlay(Player player) {
         List<Card> canPlay = core.whatCanIPlay(player);
-        List<List<Card>> split = OhHellCore.splitBySuit(player.getHand());
+        List<List<Card>> split = splitBySuit(player.getHand());
         
         boolean singleton = false;
         for (List<Card> suits : split) {
@@ -153,7 +288,7 @@ public class AiThread extends Thread {
         if (player.getHand().size() > 1) {
             for (Card card : player.getHand()) {
                 BinaryLayerVector in = new BinaryLayerVector();
-                core.addOvlInput(in, card, 1, 0);
+                addOvlInput(player, in, card, 1, 0);
                 ovlValsNonsingleton.put(card, ovl.testValue(in).get(1).get(0));
                 ovlInsNonsingleton.put(card, in);
                 
@@ -163,7 +298,7 @@ public class AiThread extends Thread {
                 
                 if (canPlaySingleton) {
                     BinaryLayerVector inS = new BinaryLayerVector();
-                    core.addOvlInput(inS, card, 1, 1);
+                    addOvlInput(player, inS, card, 1, 1);
                     ovlValsSingleton.put(card, ovl.testValue(inS).get(1).get(0));
                     ovlInsSingleton.put(card, inS);
                 }
@@ -179,9 +314,9 @@ public class AiThread extends Thread {
             double probOfWinning = 0;
             
             //System.out.println(card);
-            if (core.cardIsWinning(card)) {
+            if (cardIsWinning(card)) {
                 in = new BinaryLayerVector();
-                core.addIvlInput(in, card);
+                addIvlInput(player, in, card);
                 
                 probOfWinning = ivl.testValue(in).get(1).get(0);
                 
@@ -210,7 +345,7 @@ public class AiThread extends Thread {
         Card cardToPlay = chooseBestCard(adjustedProbs);
         LayerVector inToPlay = ivlIns.get(cardToPlay);
         
-        if (training) {
+        if (aiTrainer != null && aiTrainer.backprop()) {
             for (Card card : player.getHand()) {
                 if (card != cardToPlay) {
                     if (split.get(cardToPlay.getSuitNumber() - 1).size() == 1) {
@@ -262,24 +397,12 @@ public class AiThread extends Thread {
     }
     
     public void addOuts(Card winner, List<Card> trick) {
-        if (training) {
+        if (aiTrainer != null && aiTrainer.backprop()) {
             for (Card card : trick) {
                 ovl.putOut(card, card == winner ? 1 : 0);
                 ivl.putOut(card, card == winner ? 1 : 0);
             }
         }
-    }
-    
-    public void makeBid(AiPlayer player) {
-        task = Task.BID;
-        this.player = player;
-        interrupt();
-    }
-    
-    public void makePlay(AiPlayer player) {
-        task = Task.PLAY;
-        this.player = player;
-        interrupt();
     }
     
     /**

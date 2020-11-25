@@ -2,11 +2,11 @@ import java.util.List;
 
 public class AiPlayer extends Player {
     OhHellCore core;
-    AiThread aiThread;
+    AiKernel aiKernel;
     
-    public AiPlayer(String name, AiThread aiThread) {
+    public AiPlayer(String name, AiKernel aiKernel) {
         setName(name);
-        this.aiThread = aiThread;
+        this.aiKernel = aiKernel;
     }
     
     public boolean isHuman() {
@@ -20,19 +20,19 @@ public class AiPlayer extends Player {
     @Override
     public void commandBid(int index) {
         if (index == getIndex()) {
-            aiThread.makeBid(this);
+            aiKernel.makeBid(this);
         }
     }
     
     @Override
     public void commandPlay(int index) {
         if (index == getIndex()) {
-            aiThread.makePlay(this);
+            aiKernel.makePlay(this);
         }
     }
     
     @Override
     public void commandTrickWinner(int index, List<Card> trick) {
-        aiThread.addOuts(trick.get(index), trick);
+        aiKernel.addOuts(trick.get(index), trick);
     }
 }

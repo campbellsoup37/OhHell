@@ -9,8 +9,9 @@ public class Player {
     private int taken;
     
     private List<Card> hand;
-    private List<Integer> bids = new ArrayList<Integer>();
-    private List<Integer> scores = new ArrayList<Integer>();
+    private List<Integer> bids = new ArrayList<>();
+    private List<Integer> takens = new ArrayList<>();
+    private List<Integer> scores = new ArrayList<>();
     
     private boolean bidded = false;
     private Card lastTrick;
@@ -23,7 +24,7 @@ public class Player {
     private boolean kicked = false;
     private boolean kibitzer = false;
 
-    private List<Player> kickVotes = new ArrayList<Player>();
+    private List<Player> kickVotes = new ArrayList<>();
     
     public Player() {
         name = "";
@@ -104,6 +105,10 @@ public class Player {
     public int getTaken() {
         return taken;
     }
+    
+    public void addTaken() {
+        takens.add(taken);
+    }
 
     public List<Card> getHand() {
         return hand;
@@ -119,6 +124,10 @@ public class Player {
     
     public List<Integer> getBids() {
         return bids;
+    }
+    
+    public List<Integer> getTakens() {
+        return takens;
     }
     
     public List<Integer> getScores() {

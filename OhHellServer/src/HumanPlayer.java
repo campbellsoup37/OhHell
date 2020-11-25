@@ -115,7 +115,7 @@ public class HumanPlayer extends Player {
         thread.sendCommand("PLAYREPORT:" + index + ":" + card);
     }
     
-    public void commandTrickWinner(int index) {
+    public void commandTrickWinner(int index, List<Card> trick) {
         thread.sendCommand("TRICKWINNER:" + index);
     }
     

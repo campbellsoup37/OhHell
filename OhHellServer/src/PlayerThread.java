@@ -94,7 +94,9 @@ public class PlayerThread extends Thread {
                         server.updatePlayersList();
                     } else if (command.equals("START")) {
                         if (player.isHost()) {
-                            server.startGame(Integer.parseInt(parsedContent.get(0)));
+                            server.startGame(
+                                    Integer.parseInt(parsedContent.get(0)), 
+                                    Boolean.parseBoolean(parsedContent.get(1)));
                         }
                     } else if (command.equals("BID")) {
                         server.makeBid(player, Integer.parseInt(parsedContent.get(0)));

@@ -163,10 +163,11 @@ public class ClientPlayer {
     }
     
     public void removeCard(Card card) {
-        if (hand.get(0).isEmpty()) {
-            hand = hand.subList(1, hand.size());
-        } else {
-            hand.removeIf(c -> c.equals(card));
+        for (int i = 0; i < hand.size(); i++) {
+            if (hand.get(i).equals(card) || i == hand.size() - 1) {
+                hand.remove(i);
+                return;
+            }
         }
     }
 

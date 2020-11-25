@@ -1,6 +1,7 @@
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.LinkedList;
+import java.util.NoSuchElementException;
 import javax.swing.Timer;
 
 public class CanvasTimerEntry implements ActionListener {
@@ -16,10 +17,9 @@ public class CanvasTimerEntry implements ActionListener {
         this.canvas = canvas;
         this.queue = queue;
         
-        boolean wasEmpty = queue.isEmpty();
         Timer timer = new Timer(0, this);
         queue.add(timer);
-        if (wasEmpty) {
+        if (queue.size() == 1) {
             timer.start();
         }
     }
@@ -39,8 +39,10 @@ public class CanvasTimerEntry implements ActionListener {
         if (elapsedTime >= endTime) {
             onLastAction();
             queue.remove().stop();
-            if (!queue.isEmpty()) {
+            try {
                 queue.getFirst().start();
+            } catch (NoSuchElementException exc) {
+                
             }
             canvas.repaint();
         }
