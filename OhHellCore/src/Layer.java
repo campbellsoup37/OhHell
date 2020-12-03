@@ -32,6 +32,14 @@ public class Layer {
 		this.af = af;
 	}
 	
+	public int getDepth() {
+	    if (isOutput) {
+	        return 0;
+	    } else {
+	        return 1 + next.getDepth();
+	    }
+	}
+	
 	public void setPrev(Layer prev) {
 		this.prev = prev;
 		isInput = false;
@@ -48,14 +56,29 @@ public class Layer {
 		}
 	}
 	
-	public void setWeights(List<double[][]> ws, List<double[]> bs) {
+	public Layer setWeights(List<double[][]> ws, List<double[]> bs) {
 	    if (!isInput) {
 	        w = ws.remove(0);
 	        b = bs.remove(0);
+	        d = w.length;
 	    }
-	    if (!isOutput) {
-	        next.setWeights(ws, bs);
+	    if (!ws.isEmpty()) {
+	        if (next == null) {
+	            Layer newNext = new Layer(0, null);
+	            addLayer(newNext);
+	        }
+	        return next.setWeights(ws, bs);
 	    }
+	    return this;
+	}
+	
+	public void setActFuncs(List<ActivationFunction> afs) {
+	    if (!isInput) {
+            af = afs.remove(0);
+        }
+        if (!isOutput) {
+            next.setActFuncs(afs);
+        }
 	}
 	
 	public void addLayer(Layer layer) {

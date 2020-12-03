@@ -119,7 +119,12 @@ public class Player {
     }
     
     public void removeCard(Card card) {
-        hand.removeIf(c -> c.equals(card));
+        for (Card c : hand) {
+            if (c.equals(card)) {
+                hand.remove(c);
+                return;
+            }
+        }
     }
     
     public List<Integer> getBids() {

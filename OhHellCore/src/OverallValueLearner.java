@@ -8,11 +8,23 @@ public class OverallValueLearner extends Learner {
     Hashtable<Card, Double> outs = new Hashtable<>();
     private LinkedList<LinkedList<LayerVector>> dataAsList;
     
-    public OverallValueLearner(int[] ds) {
-        super(ds, new ActivationFunction[] {
-                new ReLuFunction(),
-                new SigmoidFunction()
-                }, null);
+    public OverallValueLearner(int[] ds, ActivationFunction[] actFuncs) {
+        super(ds, actFuncs, null);
+    }
+    
+    public OverallValueLearner(String file) {
+        super(new int[] {0}, new ActivationFunction[] {null}, null);
+        openFromFile(file);
+        getInputLayer().setActFuncs(new LinkedList<>(Arrays.asList(getActFuncs(getDepth()))));
+    }
+    
+    public static ActivationFunction[] getActFuncs(int length) {
+        ActivationFunction[] actFuncs = new ActivationFunction[length];
+        for (int i = 0; i < length - 1; i++) {
+            actFuncs[i] = new ReLuFunction();
+        }
+        actFuncs[length - 1] = new SigmoidFunction();
+        return actFuncs;
     }
     
     public void putIn(Card c, LayerVector in) {

@@ -10,39 +10,33 @@ public class AiTrainerOI extends AiTrainer {
     }
     
     public void run() {
-        int N = 2;
+        int N = 5;
         int reps = 1000000;
         boolean verbose = true;
         boolean forMathematica = true;
         boolean printError = false;
         
-        double ovlWEta = 1;
-        double ovlBEta = 0.0001;
-        double ivlWEta = 0.1;
-        double ivlBEta = 0.00001;
+        double ovlWEta = 10;
+        double ovlBEta = 0.001;
+        double ivlWEta = 1;
+        double ivlBEta = 0.0001;
         int groupingSize = 1;
-        
-        boolean openFromFile = true;
-        boolean saveToFile = true;
-        int saveEvery = 10;
-        
-        String folder = "resources/OhHellAIModels/";
 
         int maxH = Math.min(10, 51 / N);
-
-        OverallValueLearner ovl = new OverallValueLearner(new int[] {
+        int[] ovlLayers = {
                 maxH              // Cards left in hand
                 + (maxH + 1) * N  // Bids - takens
                 + 4               // Number of voids
-                + 13              // Trump left                             
+                + 13              // Trump left
                 
                 + 2               // Card is trump
                 + 13              // That suit left
                 + 13,             // Card's adjusted number
-                40,               // Hidden layer
+                60,               // Hidden layer
+                //20,
                 1                 // Card's predicted value
-        });
-        ImmediateValueLearner ivl = new ImmediateValueLearner(new int[] {
+        };
+        int[] ivlLayers = {
                 (maxH + 1) * (N - 1) // Bids - takens
                 + 13                 // Trump left
                 
@@ -52,12 +46,32 @@ public class AiTrainerOI extends AiTrainer {
                 + 2                  // Card is trump
                 + 13,                // Card's adjusted number
                 30,                  // Hidden layer
+                //20,
                 1                    // Card's predicted value
-        });
+        };
+        
+        boolean openFromFile = true;
+        boolean saveToFile = true;
+        int saveEvery = 10;
+        
+        String folder = "resources/OhHellAIModels/";
+
+        String ovlFileSuffix = "o" + ovlLayers[1] + "";
+        for (int i = 2; i < ovlLayers.length - 1; i++) {
+            ovlFileSuffix += "_" + ovlLayers[i];
+        }
+        String ivlFileSuffix = "i" + ivlLayers[1] + "";
+        for (int i = 2; i < ivlLayers.length - 1; i++) {
+            ivlFileSuffix += "_" + ivlLayers[i];
+        }
+        String fileSuffix = ovlFileSuffix + ivlFileSuffix;
+        
+        OverallValueLearner ovl = new OverallValueLearner(ovlLayers, OverallValueLearner.getActFuncs(ovlLayers.length - 1));
+        ImmediateValueLearner ivl = new ImmediateValueLearner(ivlLayers, ImmediateValueLearner.getActFuncs(ivlLayers.length - 1));
         
         if (openFromFile) {
-            ovl.openFromFile(folder + "ovlN" + N + ".txt");
-            ivl.openFromFile(folder + "ivlN" + N + ".txt");
+            ovl.openFromFile(folder + "ovlN" + N + fileSuffix + ".txt");
+            ivl.openFromFile(folder + "ivlN" + N + fileSuffix + ".txt");
         }
         
         OhHellCore core = new OhHellCore();
@@ -78,7 +92,7 @@ public class AiTrainerOI extends AiTrainer {
         int R = 20;
         long[] times = new long[R];
         for (int g = 1; g <= reps; g++) {
-            core.startGame(N, false, ovl, ivl);
+            core.startGame(N, false, 1, ovl, ivl);
             
             try {
                 while (true) {
@@ -152,8 +166,8 @@ public class AiTrainerOI extends AiTrainer {
             
             if (g % saveEvery == 0) {
                 if (saveToFile) {
-                    ovl.saveToFile(new File(folder + "ovlN" + N + ".txt"));
-                    ivl.saveToFile(new File(folder + "ivlN" + N + ".txt"));
+                    ovl.saveToFile(new File(folder + "ovlN" + N + fileSuffix + ".txt"));
+                    ivl.saveToFile(new File(folder + "ivlN" + N + fileSuffix + ".txt"));
                 }
             }
         }

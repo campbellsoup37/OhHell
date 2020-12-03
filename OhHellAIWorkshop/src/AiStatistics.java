@@ -7,44 +7,17 @@ import java.util.List;
 
 public class AiStatistics extends AiTrainer {
     public void run() {
-        int N = 2;
+        int N = 5;
         int reps = 1000000;
         
-        String outputFolder = "C:/Users/Campbell/Desktop/OhHellAiStats/";
+        String outputFolder = "C:/Users/Campb/Desktop/OhHellAiStats/";
         int toPrint = 100;
-        
-        String modelsFolder = "resources/OhHellAIModels/";
+
+        OverallValueLearner ovl = new OverallValueLearner("resources/OhHellAIModels/ovlN5.txt");
+        ImmediateValueLearner ivl = new ImmediateValueLearner("resources/OhHellAIModels/ivlN5.txt");
 
         int maxH = Math.min(10, 51 / N);
-        OverallValueLearner ovl = new OverallValueLearner(new int[] {
-                maxH              // Cards left in hand
-                + (maxH + 1) * N  // Bids - takens
-                + 4               // Number of voids
-                + 13              // Trump left                             
-                
-                + 2               // Card is trump
-                + 13              // That suit left
-                + 13,             // Card's adjusted number
-                40,               // Hidden layer
-                1                 // Card's predicted value
-        });
-        ImmediateValueLearner ivl = new ImmediateValueLearner(new int[] {
-                (maxH + 1) * (N - 1) // Bids - takens
-                + 13                 // Trump left
-                
-                + 2                  // Trump was led
-                + 13                 // Led suit left
-                
-                + 2                  // Card is trump
-                + 13,                // Card's adjusted number
-                30,                  // Hidden layer
-                1                    // Card's predicted value
-        });
-        
         int[][][] bidsTakens = new int[maxH + 1][maxH + 1][maxH + 1];
-        
-        ovl.openFromFile(modelsFolder + "ovlN" + N + ".txt");
-        ivl.openFromFile(modelsFolder + "ivlN" + N + ".txt");
         
         OhHellCore core = new OhHellCore();
         List<Player> players = new ArrayList<>();
@@ -64,11 +37,11 @@ public class AiStatistics extends AiTrainer {
         int R = 20;
         long[] times = new long[R];
         for (int g = 1; g <= reps; g++) {
-            core.startGame(N, false, ovl, ivl);
+            core.startGame(N, false, 0, ovl, ivl);
             
             try {
                 while (true) {
-                    sleep(10);
+                    sleep(1);
                 }
             } catch (InterruptedException e) {
                 

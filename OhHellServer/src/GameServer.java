@@ -119,7 +119,7 @@ public class GameServer extends JFrame {
     }
     
     public void startGame(int robotCount, boolean doubleDeck) {
-        core.startGame(robotCount, doubleDeck, null, null);
+        core.startGame(robotCount, doubleDeck, 100, null, null);
     }
     
     public void updatePlayersList() {

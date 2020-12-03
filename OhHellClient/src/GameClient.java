@@ -475,7 +475,7 @@ public class GameClient extends JFrame {
                     players.add(spPlayer);
                     core.setPlayers(players);
                     spPlayer.setCore(core);
-                    core.startGame(robotCount, false, null, null);
+                    core.startGame(robotCount, false, 100, null, null);
                 }
             });
             add(spStartButton);

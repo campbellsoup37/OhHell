@@ -4,9 +4,20 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 //import java.util.Random;
 import java.util.stream.Collectors;
 
+/**
+ * This class contains the AI. Functions makeBid and makePlay are used to bid and play cards on 
+ * behalf of a given AiPlayer and are called by the appropriate AiPlayer objects. For the game to
+ * work properly, these functions need to be called in a thread not running the corresponding
+ * OhHellCore. An object of this class can act as this thread if it is currently running when the 
+ * functions are called. If not, a Timer object is created to take care of it (see the code for
+ * makeBid and makePlay). When running many games with only AI players, it is significantly more 
+ * efficient to run this class as a Thread.
+ */
 public class AiKernel extends Thread {
     OhHellCore core;
     Deck deck;
@@ -19,7 +30,7 @@ public class AiKernel extends Thread {
     OverallValueLearner ovl;
     ImmediateValueLearner ivl;
     
-    boolean running = true;
+    boolean running = false;
     private enum Task {
         BID,
         PLAY,
@@ -49,32 +60,8 @@ public class AiKernel extends Thread {
     }
     
     public void loadOvlIvl() {
-        ovl = new OverallValueLearner(new int[] {
-                maxH              // Cards left in hand
-                + (maxH + 1) * N  // Bids - takens
-                + 4               // Number of voids
-                + 13              // Trump left
-                
-                + 2               // Card is trump
-                + 13              // That suit left
-                + 13,             // Card's adjusted number
-                40,               // Hidden layer
-                1                 // Card's predicted value
-        });
-        ovl.openFromFile("resources/OhHellAIModels/" + "ovlN" + N + ".txt");
-        ivl = new ImmediateValueLearner(new int[] {
-                (maxH + 1) * (N - 1) // Bids - takens
-                + 13                 // Trump left
-                
-                + 2                  // Trump was led
-                + 13                 // Led suit left
-                
-                + 2                  // Card is trump
-                + 13,                // Card's adjusted number
-                30,                  // Hidden layer
-                1                    // Card's predicted value
-        });
-        ivl.openFromFile("resources/OhHellAIModels/" + "ivlN" + N + ".txt");
+        ovl = new OverallValueLearner("resources/OhHellAIModels/" + "ovlN" + N + ".txt");
+        ivl = new ImmediateValueLearner("resources/OhHellAIModels/" + "ivlN" + N + ".txt");
     }
     
     public boolean isRunning() {
@@ -87,15 +74,12 @@ public class AiKernel extends Thread {
     }
     
     public void run() {
-        loadPlayers();
-        if (ovl == null) {
-            loadOvlIvl();
-        }
+        running = true;
         
         while (running) {
             try {
                 while (true) {
-                    sleep(100);
+                    sleep(1000);
                 }
             } catch (InterruptedException e) {
                 try {
@@ -106,20 +90,10 @@ public class AiKernel extends Thread {
                 
                 switch (task) {
                 case BID:
-                    // OIBot
-                    ////System.out.println(player.getName() + " bidding: -------------------------------------------");
-                    double[] ps = getOvlPs(player);
-                    int myBid = getMyBid(ps);
-
-                    //core.sendChat(player.getName() + ": I have a " + String.format("%.2f", 100 * subsetProb(ps, myBid)) + "% chance of making this.");
-                    core.incomingBid(player, myBid);
+                    makeBid(player);
                     break;
                 case PLAY:
-                    // OIBot
-                    //System.out.println(player.getName() + " playing: -------------------------------------------");
-                    Card cardToPlay = getMyPlay(player);
-                    
-                    core.incomingPlay(player, cardToPlay);
+                    makePlay(player);
                     break;
                 case END:
                     running = false;
@@ -129,19 +103,61 @@ public class AiKernel extends Thread {
         }
     }
     
+    public void makeBid(AiPlayer player, int delay) {
+        if (running) {
+            task = Task.BID;
+            this.player = player;
+            interrupt();
+        } else {
+            Timer timer = new Timer();
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    makeBid(player);
+                    cancel();
+                }
+            }, delay);
+        }
+    }
+    
+    public void makePlay(AiPlayer player, int delay) {
+        if (running) {
+            task = Task.PLAY;
+            this.player = player;
+            interrupt();
+        } else {
+            Timer timer = new Timer();
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    makePlay(player);
+                    cancel();
+                }
+            }, delay);
+        }
+    }
+    
     public void makeBid(AiPlayer player) {
-        task = Task.BID;
-        this.player = player;
-        interrupt();
+        double[] ps = getOvlPs(player);
+        int myBid = getMyBid(ps);
+
+        core.incomingBid(player, myBid);
     }
     
     public void makePlay(AiPlayer player) {
-        task = Task.PLAY;
-        this.player = player;
-        interrupt();
+        Card cardToPlay = getMyPlay(player);
+        
+        core.incomingPlay(player, cardToPlay);
     }
     
     public void addOvlInput(Player player, BinaryLayerVector in, Card card, int hOffSet, int voidsOffset) {
+        if (players == null) {
+            loadPlayers();
+            if (ovl == null) {
+                loadOvlIvl();
+            }
+        }
+        
         int turn = player.getIndex();
         int M = players.size();
         Card trump = core.getTrump();
@@ -154,7 +170,7 @@ public class AiKernel extends Thread {
                 .collect(Collectors.toList());
         
         in.addOneHot(player.getHand().size() - hOffSet, maxH);
-        if (task == Task.BID) {
+        if (!player.hasBid()) {
             for (int j = 0; j < M; j++) {
                 Player iterPlayer = players.get((turn + j) % M);
                 if (!iterPlayer.isKicked()) {
@@ -183,6 +199,13 @@ public class AiKernel extends Thread {
     }
     
     public void addIvlInput(Player player, BinaryLayerVector in, Card card) {
+        if (players == null) {
+            loadPlayers();
+            if (ovl == null) {
+                loadOvlIvl();
+            }
+        }
+        
         int turn = player.getIndex();
         int M = players.size();
         Card trump = core.getTrump();

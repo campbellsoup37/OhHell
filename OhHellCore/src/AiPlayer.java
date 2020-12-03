@@ -4,9 +4,12 @@ public class AiPlayer extends Player {
     OhHellCore core;
     AiKernel aiKernel;
     
-    public AiPlayer(String name, AiKernel aiKernel) {
+    int delay = 10;
+    
+    public AiPlayer(String name, AiKernel aiKernel, int delay) {
         setName(name);
         this.aiKernel = aiKernel;
+        this.delay = delay;
     }
     
     public boolean isHuman() {
@@ -20,14 +23,14 @@ public class AiPlayer extends Player {
     @Override
     public void commandBid(int index) {
         if (index == getIndex()) {
-            aiKernel.makeBid(this);
+            aiKernel.makeBid(this, delay);
         }
     }
     
     @Override
     public void commandPlay(int index) {
         if (index == getIndex()) {
-            aiKernel.makePlay(this);
+            aiKernel.makePlay(this, delay);
         }
     }
     

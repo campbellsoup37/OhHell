@@ -124,12 +124,16 @@ public class OhHellCore {
         return gameStarted;
     }
     
-    public void startGame(int robotCount, boolean doubleDeck,  
+    public void startGame(int robotCount, boolean doubleDeck, int robotDelay,
             OverallValueLearner ovl, ImmediateValueLearner ivl) {
         if (robotCount > 0) {
             aiKernel = new AiKernel(this, deck, aiTrainer, ovl, ivl);
             for (int i = 0; i < robotCount; i++) {
-                players.add(new AiPlayer(firstNames.get(random.nextInt(firstNames.size())) + " Bot", aiKernel));
+                players.add(new AiPlayer(
+                        firstNames.get(random.nextInt(firstNames.size())) + " Bot", 
+                        aiKernel,
+                        robotDelay
+                        ));
             }
             aiKernel.start();
         }
@@ -378,10 +382,11 @@ public class OhHellCore {
                         players.stream().map(Player::getTrick).collect(Collectors.toList()));
             }
             
-            if (players.stream()
-                    .map(Player::getTaken)
-                    .reduce(0, (sofar, t) -> sofar + t)
-                    < rounds.get(roundNumber).getHandSize()) {
+            //if (players.stream()
+            //        .map(Player::getTaken)
+            //        .reduce(0, (sofar, t) -> sofar + t)
+            //        < rounds.get(roundNumber).getHandSize()) {
+            if (!players.get(nextUnkicked(turn)).getHand().isEmpty()) {
                 communicateTurn();
                 leader = turn;
             } else {
@@ -465,7 +470,7 @@ public class OhHellCore {
     }
     
     public void restartRound() {
-        if (aiKernel != null && aiKernel.isRunning()) {
+        if (aiKernel != null) {
             aiKernel.loadPlayers();
             aiKernel.loadOvlIvl();
         }

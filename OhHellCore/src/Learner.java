@@ -16,29 +16,45 @@ public class Learner {
 	String[] labels;
 	
 	public Learner(int[] ds, ActivationFunction af, String[] labels) {
-        inputLayer = new Layer(ds[0], af);
-        for(int i=1;i<ds.length;i++) {
+	    inputLayer = new Layer(ds[0], af);
+        for (int i = 1; i < ds.length; i++) {
             Layer layer = new Layer(ds[i], af);
             inputLayer.addLayer(layer);
-            if(i==ds.length-1) outputLayer = layer;
+            if (i == ds.length - 1) {
+                outputLayer = layer;
+            }
         }
-        depth = ds.length-1;
+        depth = ds.length - 1;
         this.labels = labels;
     }
 	
 	public Learner(int[] ds, ActivationFunction[] afList, String[] labels) {
         inputLayer = new Layer(ds[0], null);
-        for(int i=1;i<ds.length;i++) {
+        for (int i = 1; i < ds.length; i++) {
             Layer layer = new Layer(ds[i], afList[i - 1]);
             inputLayer.addLayer(layer);
-            if(i==ds.length-1) outputLayer = layer;
+            if (i == ds.length - 1) {
+                outputLayer = layer;
+            }
         }
-        depth = ds.length-1;
+        depth = ds.length - 1;
         this.labels = labels;
     }
 	
+	public Layer getInputLayer() {
+	    return inputLayer;
+	}
+	
+	public int getDepth() {
+	    return depth;
+	}
+	
 	public int labelToInt(String s) {
-		for(int i=0;i<labels.length;i++) if(labels[i].equals(s)) return i+1;
+		for (int i = 0; i < labels.length; i++) {
+		    if (labels[i].equals(s)) {
+		        return i + 1;
+		    }
+		}
 		return -1;
 	}
 	
@@ -104,7 +120,8 @@ public class Learner {
 	            }
 	        }
             reader.close();
-	        inputLayer.setWeights(ws, bs);
+	        outputLayer = inputLayer.setWeights(ws, bs);
+	        depth = inputLayer.getDepth();
 	    } catch (IOException e) {
 	        e.printStackTrace();
 	    }
@@ -126,9 +143,9 @@ public class Learner {
 		double[] out = outputLayer.value.toArray();
 		double[] truth = outputLayer.truth.toArray();
 		System.out.println(MLTools.vectorToString(in));
-		if(classifier) {
-	        System.out.println(labels[MLTools.classify(truth)-1]);
-	        System.out.println(labels[MLTools.classify(out)-1]);
+		if (classifier) {
+	        System.out.println(labels[MLTools.classify(truth) - 1]);
+	        System.out.println(labels[MLTools.classify(out) - 1]);
 		} else {
 		    System.out.println(MLTools.vectorToString(truth));
 		    System.out.println(MLTools.vectorToString(out));
