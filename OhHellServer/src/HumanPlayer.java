@@ -1,5 +1,9 @@
 import java.util.List;
 
+import ohHellCore.Card;
+import ohHellCore.Player;
+import ohHellCore.RoundDetails;
+
 public class HumanPlayer extends Player {
     private PlayerThread thread;
     

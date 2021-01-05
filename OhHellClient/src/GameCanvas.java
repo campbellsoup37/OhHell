@@ -17,6 +17,8 @@ import javax.sound.sampled.Clip;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 
+import ohHellCore.Card;
+
 public class GameCanvas extends JPanel {
     private static final long serialVersionUID = 1L;
     
@@ -83,6 +85,7 @@ public class GameCanvas extends JPanel {
     
     private boolean playSoundSelected = false;
     private boolean aiHelpSelected = false;
+    private boolean stopped = false;
     private LinkedList<Timer> audioQueue = new LinkedList<Timer>();
     private Clip cardPlayClip;
     
@@ -1136,5 +1139,27 @@ public class GameCanvas extends JPanel {
                 client.goToPostGame();
             }
         };
+    }
+    
+    public void addStopper() {
+        new CanvasTimerEntry(0, this, actionQueue) {
+            @Override
+            public void onFirstAction() {
+                stopped = true;
+            }
+            
+            @Override
+            public void onAction() {
+                if (stopped) {
+                    setEndTime(System.currentTimeMillis() - getStartTime() + 1);
+                } else {
+                    setEndTime(0);
+                }
+            }
+        };
+    }
+    
+    public void removeStopper() {
+        stopped = false;
     }
 }

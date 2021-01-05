@@ -48,8 +48,16 @@ public class CanvasTimerEntry implements ActionListener {
         }
     }
     
+    public long getStartTime() {
+        return startTime;
+    }
+    
     public long getElapsedTime() {
         return elapsedTime;
+    }
+    
+    public void setEndTime(long endTime) {
+        this.endTime = endTime;
     }
     
     public void onFirstAction() {}

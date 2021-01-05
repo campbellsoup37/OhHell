@@ -1,9 +1,26 @@
+import java.awt.Color;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import ml.Learner;
+import ohHellCore.AiStrategyModule;
+import ohHellCore.AiTrainer;
+import ohHellCore.OhHellCore;
+import ohHellCore.Player;
+import strategyOI.AiStrategyModuleOI;
+import strategyOI.ImmediateValueLearner;
+import strategyOI.OverallValueLearner;
+
 public class AiTrainerOI extends AiTrainer {
+    private Dashboard dash;
+    
+    private OverallValueLearner ovl;
+    private ImmediateValueLearner ivl;
+    private Color ovlColor = Color.PINK;
+    private Color ivlColor = Color.CYAN;
+    
     @Override
     public boolean backprop() {
         return true;
@@ -13,14 +30,16 @@ public class AiTrainerOI extends AiTrainer {
         int N = 5;
         int reps = 1000000;
         boolean verbose = true;
-        boolean forMathematica = true;
-        boolean printError = false;
+        boolean forMathematica = false;
+        boolean printError = true;
+        boolean showDash = true;
         
         double ovlWEta = 10;
-        double ovlBEta = 0.001;
+        double ovlBEta = 10;
         double ivlWEta = 1;
-        double ivlBEta = 0.0001;
-        int groupingSize = 1;
+        double ivlBEta = 1;
+        double scale = 0.01;
+        int groupingSize = 1000;
 
         int maxH = Math.min(10, 51 / N);
         int[] ovlLayers = {
@@ -32,8 +51,7 @@ public class AiTrainerOI extends AiTrainer {
                 + 2               // Card is trump
                 + 13              // That suit left
                 + 13,             // Card's adjusted number
-                60,               // Hidden layer
-                //20,
+                40,               // Hidden layer
                 1                 // Card's predicted value
         };
         int[] ivlLayers = {
@@ -46,16 +64,20 @@ public class AiTrainerOI extends AiTrainer {
                 + 2                  // Card is trump
                 + 13,                // Card's adjusted number
                 30,                  // Hidden layer
-                //20,
                 1                    // Card's predicted value
         };
         
         boolean openFromFile = true;
         boolean saveToFile = true;
-        int saveEvery = 10;
+        int saveEvery = 1000;
         
-        String folder = "resources/OhHellAIModels/";
+        String folder = "resources/OhHellAIModels/OI/";
 
+        ovlWEta *= scale;
+        ovlBEta *= scale;
+        ivlWEta *= scale;
+        ivlBEta *= scale;
+        
         String ovlFileSuffix = "o" + ovlLayers[1] + "";
         for (int i = 2; i < ovlLayers.length - 1; i++) {
             ovlFileSuffix += "_" + ovlLayers[i];
@@ -66,22 +88,28 @@ public class AiTrainerOI extends AiTrainer {
         }
         String fileSuffix = ovlFileSuffix + ivlFileSuffix;
         
-        OverallValueLearner ovl = new OverallValueLearner(ovlLayers, OverallValueLearner.getActFuncs(ovlLayers.length - 1));
-        ImmediateValueLearner ivl = new ImmediateValueLearner(ivlLayers, ImmediateValueLearner.getActFuncs(ivlLayers.length - 1));
+        ovl = new OverallValueLearner(ovlLayers, OverallValueLearner.getActFuncs(ovlLayers.length - 1));
+        ovl.setTrainer(this);
+        ivl = new ImmediateValueLearner(ivlLayers, ImmediateValueLearner.getActFuncs(ivlLayers.length - 1));
+        ivl.setTrainer(this);
         
         if (openFromFile) {
             ovl.openFromFile(folder + "ovlN" + N + fileSuffix + ".txt");
             ivl.openFromFile(folder + "ivlN" + N + fileSuffix + ".txt");
         }
         
-        OhHellCore core = new OhHellCore();
+        OhHellCore core = new OhHellCore(false);
         List<Player> players = new ArrayList<>();
         core.setPlayers(players);
         core.setAiTrainer(this);
-        core.execute(false);
+        
+        List<AiStrategyModule> aiStrategyModules = new ArrayList<>(N);
+        for (int i = 0; i < N; i++) {
+            aiStrategyModules.add(new AiStrategyModuleOI(core, N, ovl, ivl));
+        }
         
         int M = 10000;
-        int[] toAve = {1, 10, 100, 1000, 10000};
+        int[] toAve = {1000, 10000};
         double[] scores = new double[M];
         double[] mades = new double[M];
         double[] aves = new double[toAve.length];
@@ -89,10 +117,22 @@ public class AiTrainerOI extends AiTrainer {
         int bestScore = Integer.MIN_VALUE;
         int overallBest = Integer.MIN_VALUE;
         
+        if (showDash) {
+            dash = new Dashboard();
+            dash.execute();
+            dash.setGraphLabel(0, "Average score");
+            dash.setGraphLabel(1, "OVL mean squared error");
+            dash.setGraphLabel(2, "IVL mean squared error");
+            dash.setGraphColor(0, 0, Color.RED);
+            dash.setGraphColor(0, 1, Color.DARK_GRAY);
+            dash.setGraphColor(1, 0, ovlColor);
+            dash.setGraphColor(2, 0, ivlColor);
+        }
+        
         int R = 20;
         long[] times = new long[R];
         for (int g = 1; g <= reps; g++) {
-            core.startGame(N, false, 1, ovl, ivl);
+            core.startGame(N, false, aiStrategyModules, 0);
             
             try {
                 while (true) {
@@ -109,7 +149,7 @@ public class AiTrainerOI extends AiTrainer {
             scores[(g - 1) % M] = 0;
             mades[(g - 1) % M] = 0;
             
-            int[] sortedScores = getNewScores();
+            int[] sortedScores = getScores();
             Arrays.sort(sortedScores);
             if (forMathematica) {
                 System.out.print("{");
@@ -139,13 +179,15 @@ public class AiTrainerOI extends AiTrainer {
             long timeDiff = newTime - times[(g - 1) % R];
             times[(g - 1) % R] = newTime;
             
+            StringBuilder log = new StringBuilder();
+            
             if (g % toAve[0] == 0 && verbose) {
-                System.out.println(g + "/" + reps + ": ");
-                System.out.println("     Best score: " + bestScore + " (" + overallBest + ")");
+                log.append(g + "/" + reps + ": \n");
+                log.append("     Best score: " + bestScore + " (" + overallBest + ")\n");
                 bestScore = Integer.MIN_VALUE;
                 for (int k = 0; k < toAve.length; k++) {
                     if (g >= toAve[k]) {
-                        System.out.println("     Average of " + toAve[k] + ": " + String.format("%.5f", accs[k]) + "   (" + String.format("%.5f", aves[k]) + ")");
+                        log.append("     Average of " + toAve[k] + ": " + String.format("%.5f", accs[k]) + "   (" + String.format("%.5f", aves[k]) + ")\n");
                     }
                 }
                 if (g > R) {
@@ -153,15 +195,32 @@ public class AiTrainerOI extends AiTrainer {
                     long hours = (long) (timeLeft / 1000 / 60 / 60);
                     long minutes = (long) (timeLeft / 1000 / 60 - hours * 60);
                     long seconds = (long) (timeLeft / 1000 - hours * 60 * 60 - minutes * 60);
-                    System.out.println("     Time left: " + hours + ":" + minutes + ":" + seconds);
+                    log.append("     Time left: " + hours + ":" + minutes + ":" + seconds + "\n");
                 }
             }
+            if (dash == null) {
+                System.out.println(log);
+            } else {
+                dash.addLog(log + "");
+            }
+            
             if (g % groupingSize == 0) {
-                ovl.makeDataList();
-                ivl.makeDataList();
-                
-                System.out.println("OVL ERROR: " + ovl.doEpoch(ovlWEta, ovlBEta, ovl.dataSize(), printError));
-                System.out.println("IVL ERROR: " + ivl.doEpoch(ivlWEta, ivlBEta, ivl.dataSize(), printError));
+                if (dash != null) {
+                    dash.updateEpoch(g / groupingSize);
+                }
+                List<double[]> ovlError = ovl.doEpoch(ovlWEta, ovlBEta, printError);
+                List<double[]> ivlError = ivl.doEpoch(ivlWEta, ivlBEta, printError);
+                if (printError) {
+                    if (dash != null) {
+                        dash.addGraphData(0, 0, aves[0]);
+                        if (g >= toAve[1]) {
+                            dash.addGraphData(0, 1, aves[1]);
+                        }
+                        dash.addGraphData(1, 0, ovlError.get(0)[0]);
+                        dash.addGraphData(2, 0, ivlError.get(0)[0]);
+                        dash.updateLog();
+                    }
+                }
             }
             
             if (g % saveEvery == 0) {
@@ -170,6 +229,20 @@ public class AiTrainerOI extends AiTrainer {
                     ivl.saveToFile(new File(folder + "ivlN" + N + fileSuffix + ".txt"));
                 }
             }
+        }
+    }
+    
+    @Override
+    public void notifyDatumNumber(Learner l, int datumNumber, int datumTotal) {
+        if (dash != null) {
+            dash.updateDatum(datumNumber, datumTotal, l == ovl ? ovlColor : ivlColor);
+        }
+    }
+    
+    @Override
+    public void addLog(Learner l, String text) {
+        if (dash != null) {
+            dash.addLog(text);
         }
     }
     

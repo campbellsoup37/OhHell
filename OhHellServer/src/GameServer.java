@@ -17,6 +17,11 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
+import ohHellCore.Card;
+import ohHellCore.OhHellCore;
+import ohHellCore.Player;
+import ohHellCore.Recorder;
+
 public class GameServer extends JFrame {
     private static final long serialVersionUID = 1L;
     
@@ -32,7 +37,7 @@ public class GameServer extends JFrame {
     
     private JFrame popUpFrame = new JFrame();
     
-    private OhHellCore core = new OhHellCore();
+    private OhHellCore core = new OhHellCore(true);
     
     private int port;
     private ServerSocket serverSocket;
@@ -92,7 +97,6 @@ public class GameServer extends JFrame {
         setVisible(true);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         
-        core.execute(true);
         core.setPlayers(players);
         core.setKibitzers(kibitzers);
     }
@@ -119,7 +123,7 @@ public class GameServer extends JFrame {
     }
     
     public void startGame(int robotCount, boolean doubleDeck) {
-        core.startGame(robotCount, doubleDeck, 100, null, null);
+        core.startGame(robotCount, doubleDeck, null, 100);
     }
     
     public void updatePlayersList() {

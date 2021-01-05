@@ -3,6 +3,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import ohHellCore.Card;
+import ohHellCore.OhHellCore;
+import ohHellCore.Player;
+import ohHellCore.RoundDetails;
+
 public class SinglePlayerPlayer extends Player {
     private GameClient client;
     
@@ -64,17 +69,17 @@ public class SinglePlayerPlayer extends Player {
     }
     
     public void calculateOvls(boolean withBid) {
-        ovlProbs = core.getAiKernel().getOvlPs(this);
+        /*ovlProbs = core.getAiKernel().getOvlPs(this);
         
         if (withBid) {
             aiBid = core.getAiKernel().getMyBid(ovlProbs);
         } else {
             aiBid = -1;
-        }
+        }*/
     }
     
     public void calculateIvls() {
-        aiPlay = core.getAiKernel().getMyPlay(this);
+        //aiPlay = core.getAiKernel().getMyPlay(this);
     }
     
     public int getAiBid() {

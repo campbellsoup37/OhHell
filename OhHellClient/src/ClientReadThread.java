@@ -7,6 +7,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import ohHellCore.Card;
+
 public class ClientReadThread extends Thread {
     private BufferedReader reader;
     private GameClient client;

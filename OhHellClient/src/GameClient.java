@@ -36,6 +36,10 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.text.DefaultCaret;
 
+import ohHellCore.Card;
+import ohHellCore.OhHellCore;
+import ohHellCore.Player;
+
 public class GameClient extends JFrame {
     private static final long serialVersionUID = 1L;
     
@@ -55,7 +59,10 @@ public class GameClient extends JFrame {
     private JMenu optionsItem = new JMenu("Options");
     private JCheckBox soundOption = new JCheckBox("Sound");
     private JCheckBox aiHelpOption = new JCheckBox("AI Help (single player only)");
+    private JCheckBox stopperOption = new JCheckBox("Stoppers (right click)");
     private JMenuItem backOption = new JMenuItem("Back to menu");
+    
+    private boolean stopperSelected = false;
     
     // MAIN_MENU
     private JButton singlePlayerButton = new JButton("Single Player");
@@ -73,7 +80,7 @@ public class GameClient extends JFrame {
                 spRobotsLabel, spRobotsSpinner, spStartButton, spBackButton
             };
     
-    private OhHellCore core = new OhHellCore();
+    private OhHellCore core = new OhHellCore(false);
     private SinglePlayerPlayer spPlayer;
     
     // MULTIPLAYER_MENU
@@ -381,11 +388,17 @@ public class GameClient extends JFrame {
     public void bidReport(int index, int bid) {
         canvas.setBidOnTimer(index, bid);
         canvas.repaint();
+        if (stopperSelected) {
+            canvas.addStopper();
+        }
     }
     
     public void playReport(int index, Card card) {
         canvas.setPlayOnTimer(index, card);
         canvas.animateCardPlay(index);
+        if (stopperSelected) {
+            canvas.addStopper();
+        }
     }
     
     public void trickWinnerReport(int index) {
@@ -394,14 +407,14 @@ public class GameClient extends JFrame {
     
     public void reportScores(List<Integer> scores) {
         canvas.setScoresOnTimer(scores);
-
         if (!myPlayer.isKibitzer()) {
             canvas.showResultMessageOnTimer();
         }
-
         canvas.resetPlayersOnTimer();
-        
         canvas.repaint();
+        if (stopperSelected) {
+            canvas.addStopper();
+        }
     }
     
     public void incrementRoundNumber() {
@@ -475,7 +488,7 @@ public class GameClient extends JFrame {
                     players.add(spPlayer);
                     core.setPlayers(players);
                     spPlayer.setCore(core);
-                    core.startGame(robotCount, false, 100, null, null);
+                    core.startGame(robotCount, false, null, 100);
                 }
             });
             add(spStartButton);
@@ -641,6 +654,8 @@ public class GameClient extends JFrame {
                 public void mousePressed(MouseEvent e) {
                     if (e.getButton() == MouseEvent.BUTTON1) {
                         canvas.mousePressed(e.getX(), e.getY());
+                    } else if (e.getButton() == MouseEvent.BUTTON3 && stopperSelected) {
+                        canvas.removeStopper();
                     }
                 }
 
@@ -755,6 +770,14 @@ public class GameClient extends JFrame {
             });
             optionsItem.add(aiHelpOption);
             
+            stopperOption.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    stopperSelected = stopperOption.isSelected();
+                }
+            });
+            optionsItem.add(stopperOption);
+            
             backOption.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -821,8 +844,6 @@ public class GameClient extends JFrame {
 
             changeState(ClientState.MAIN_MENU);
             setVisible(true);
-            
-            core.execute(false);
         } catch(Exception e) {
             e.printStackTrace();
         }

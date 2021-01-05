@@ -8,6 +8,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
+import ohHellCore.Card;
+import ohHellCore.Player;
+
 public class PlayerThread extends Thread {
     private Socket socket;
     private GameServer server;

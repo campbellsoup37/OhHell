@@ -1,6 +1,16 @@
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Hashtable;
 import java.util.List;
+
+import ohHellCore.AiStrategyModule;
+import ohHellCore.AiTrainer;
+import ohHellCore.OhHellCore;
+import ohHellCore.Player;
+import strategyOI.AiStrategyModuleDynamicOI;
+import strategyOI.AiStrategyModuleOI;
+import strategyOI.ImmediateValueLearner;
+import strategyOI.OverallValueLearner;
 
 public class AiComparer extends AiTrainer {
     public void run() {
@@ -10,52 +20,64 @@ public class AiComparer extends AiTrainer {
         String outputFolder = "C:/Users/Campbell/Desktop/OhHellAiStats/";
         int toPrint = 1;
         
-        OverallValueLearner[] ovls = {
-                new OverallValueLearner("resources/OhHellAIModels/ovlN5.txt"),
-                new OverallValueLearner("resources/OhHellAIModels/ovlN5o60i30.txt")
-        };
-        ImmediateValueLearner[] ivls = {
-                new ImmediateValueLearner("resources/OhHellAIModels/ivlN5.txt"),
-                new ImmediateValueLearner("resources/OhHellAIModels/ivlN5o60i30.txt")
-        };
-        
-        int K = ovls.length;
-        OhHellCore core = new OhHellCore();
+        OhHellCore core = new OhHellCore(false);
         List<Player> players = new ArrayList<>();
         core.setPlayers(players);
         core.setAiTrainer(this);
-        core.execute(false);
         
-        double[] means = new double[K];
-        double[] vars = new double[K];
+        List<AiStrategyModule> aiStrategyModules = Arrays.asList(
+                new AiStrategyModuleDynamicOI(core, N, 
+                        new OverallValueLearner[] {
+                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid0.txt"),
+                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid1.txt"),
+                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid2.txt"),
+                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid3.txt"),
+                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid4.txt"),
+                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid5.txt"),
+                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid6.txt"),
+                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid7.txt"),
+                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid8.txt"),
+                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid9.txt"),
+                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid10.txt"),
+                                }, 
+                        new ImmediateValueLearner("resources/OhHellAIModels/divlN5.txt")),
+                new AiStrategyModuleOI(core, N, new OverallValueLearner("resources/OhHellAIModels/ovlN5.txt"), new ImmediateValueLearner("resources/OhHellAIModels/ivlN5.txt")),
+                new AiStrategyModuleOI(core, N, new OverallValueLearner("resources/OhHellAIModels/ovlN5.txt"), new ImmediateValueLearner("resources/OhHellAIModels/ivlN5.txt")),
+                new AiStrategyModuleOI(core, N, new OverallValueLearner("resources/OhHellAIModels/ovlN5.txt"), new ImmediateValueLearner("resources/OhHellAIModels/ivlN5.txt")),
+                new AiStrategyModuleOI(core, N, new OverallValueLearner("resources/OhHellAIModels/ovlN5.txt"), new ImmediateValueLearner("resources/OhHellAIModels/ivlN5.txt"))
+        );
+        
+        double[] means = new double[N];
+        double[] vars = new double[N];
         
         int R = 20;
         long[] times = new long[R];
         for (int g = 1; g <= reps; g++) {
-            for (int a = 0; a < K; a++) {
-                core.startGame(N, false, 0, ovls[a], ivls[a]);
-                
-                try {
-                    while (true) {
-                        sleep(10);
-                    }
-                } catch (InterruptedException e) {
-                    
+            core.startGame(N, false, aiStrategyModules, 0);
+            
+            try {
+                while (true) {
+                    sleep(10);
                 }
+            } catch (InterruptedException e) {
                 
-                int[] newScores = getNewScores();
-                Arrays.sort(newScores);
-                
-                double x = 0;
-                for (int score : newScores) {
-                    x += (double) score / N;
-                }
-                
-                double prevMean = means[a];
-                means[a] = (means[a] * (g - 1) + x) / g;
+            }
+            
+            players = getPlayers();
+            Hashtable<AiStrategyModule, Integer> scoreMap = new Hashtable<>();
+            for (Player player : players) {
+                scoreMap.put(player.getAiStrategyModule(), player.getScore());
+            }
+            
+            int i = 0;
+            for (AiStrategyModule aiStrategyModule : aiStrategyModules) {
+                double x = scoreMap.get(aiStrategyModule);
+                double prevMean = means[i];
+                means[i] = (means[i] * (g - 1) + x) / g;
                 if (g >= 2) {
-                    vars[a] = (vars[a] * (g - 2) + Math.pow(x - means[a], 2)) / (g - 1) + Math.pow(prevMean - means[a], 2);
+                    vars[i] = (vars[i] * (g - 2) + Math.pow(x - means[i], 2)) / (g - 1) + Math.pow(prevMean - means[i], 2);
                 }
+                i++;
             }
             
             long newTime = System.currentTimeMillis();
@@ -64,10 +86,10 @@ public class AiComparer extends AiTrainer {
             
             if (g % toPrint == 0) {
                 System.out.println(g + "/" + reps + ": ");
-                for (int a = 0; a < K; a++) {
-                    System.out.println("     AI #" + (a + 1)
-                            + ": μ = " + String.format("%.5f", means[a])
-                            + ", σ² = " + String.format("%.5f", vars[a]));
+                for (i = 0; i < N; i++) {
+                    System.out.println("     AI #" + (i + 1)
+                            + ": μ = " + String.format("%.5f", means[i])
+                            + ", σ² = " + String.format("%.5f", vars[i]));
                 }
                 if (g > R) {
                     double timeLeft = (double) timeDiff / R * (reps - g);

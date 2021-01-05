@@ -1,6 +1,8 @@
 import java.util.ArrayList;
 import java.util.List;
 
+import ohHellCore.Card;
+
 public class ClientPlayer {
     private String name;
     private int index = -1;
