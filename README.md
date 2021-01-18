@@ -20,3 +20,8 @@ Oh Hell is a trick taking card game. Every round, cards are dealt to all players
 At the end of the round, the players are scored depending on their bid and the number of tricks they took. If someone bid n and took n, then that person gains 10 + n^2 points. If someone bid n and took m, where m is not equal to n, then that person loses 5 * (1 + 2 + ... + |n-m|) points. Yes, this is the correct way to score Oh Hell.
 
 When the round ends, the player to the left of the dealer becomes the new dealer. The number of cards per hand also depends on the round. The number of cards in the first round is min(10, 51/n), where n is the number of players. In each subsequent round, the number of cards goes down by 1, until that number is 1. At that point, every player deals a round with 1 card per hand. Afterward, the number of cards increases by 1 each round, until that number is back to the number of cards in the first round. After that, the game is over, and the player with the highest score wins.
+
+<br></br>
+<b>About the AI</b>
+
+I am always improving and trying new things with AI. The strongest version so far uses two neural networks to estimate probabilities of winning tricks with certain cards. After training for a few thousand games, the AI can achieve scores in the mid 300s (I have personally never seen a human player get much over 200)! All of the ML is coded from scratch in Java and is included in the OhHellCore.ml package.
