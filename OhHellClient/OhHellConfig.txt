@@ -1,0 +1,8 @@
+windowlocationmenu = -7,-7
+windowlocationingame = -7,-7
+windowsizeingame = 1295,695
+windowmaximizedingame = true
+recentaddress = localhost
+recentport = 6066
+playsound = false
+aidelay = 104

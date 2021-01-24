@@ -1,4 +1,0 @@
-/127.0.0.1:
-TRUMP:6C
-DEALER:0
-BIDS:9:

@@ -1,0 +1,6 @@
+/127.0.0.1:Robot:Robot:Robot:Robot:
+TRUMP:TD
+DEALER:0
+BIDS:1:0:0:1:0:
+TRICK:4C:QC:8S:4D:9H:3
+RESULTS:-1:0:0:0:0:
