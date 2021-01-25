@@ -29,23 +29,23 @@ public class AiComparer extends AiTrainer {
         List<AiStrategyModule> aiStrategyModules = Arrays.asList(
                 new AiStrategyModuleDynamicOI(core, N, 
                         new OverallValueLearner[] {
-                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid0.txt"),
-                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid1.txt"),
-                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid2.txt"),
-                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid3.txt"),
-                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid4.txt"),
-                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid5.txt"),
-                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid6.txt"),
-                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid7.txt"),
-                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid8.txt"),
-                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid9.txt"),
-                                new OverallValueLearner("resources/OhHellAIModels/dovlN5bid10.txt"),
+                                new OverallValueLearner("resources/ai workshop/OhHellAIModels/dovlN5bid0.txt"),
+                                new OverallValueLearner("resources/ai workshop/OhHellAIModels/dovlN5bid1.txt"),
+                                new OverallValueLearner("resources/ai workshop/OhHellAIModels/dovlN5bid2.txt"),
+                                new OverallValueLearner("resources/ai workshop/OhHellAIModels/dovlN5bid3.txt"),
+                                new OverallValueLearner("resources/ai workshop/OhHellAIModels/dovlN5bid4.txt"),
+                                new OverallValueLearner("resources/ai workshop/OhHellAIModels/dovlN5bid5.txt"),
+                                new OverallValueLearner("resources/ai workshop/OhHellAIModels/dovlN5bid6.txt"),
+                                new OverallValueLearner("resources/ai workshop/OhHellAIModels/dovlN5bid7.txt"),
+                                new OverallValueLearner("resources/ai workshop/OhHellAIModels/dovlN5bid8.txt"),
+                                new OverallValueLearner("resources/ai workshop/OhHellAIModels/dovlN5bid9.txt"),
+                                new OverallValueLearner("resources/ai workshop/OhHellAIModels/dovlN5bid10.txt"),
                                 }, 
-                        new ImmediateValueLearner("resources/OhHellAIModels/divlN5.txt")),
-                new AiStrategyModuleOI(core, N, new OverallValueLearner("resources/OhHellAIModels/ovlN5.txt"), new ImmediateValueLearner("resources/OhHellAIModels/ivlN5.txt")),
-                new AiStrategyModuleOI(core, N, new OverallValueLearner("resources/OhHellAIModels/ovlN5.txt"), new ImmediateValueLearner("resources/OhHellAIModels/ivlN5.txt")),
-                new AiStrategyModuleOI(core, N, new OverallValueLearner("resources/OhHellAIModels/ovlN5.txt"), new ImmediateValueLearner("resources/OhHellAIModels/ivlN5.txt")),
-                new AiStrategyModuleOI(core, N, new OverallValueLearner("resources/OhHellAIModels/ovlN5.txt"), new ImmediateValueLearner("resources/OhHellAIModels/ivlN5.txt"))
+                        new ImmediateValueLearner("resources/ai workshop/OhHellAIModels/divlN5.txt")),
+                new AiStrategyModuleOI(core, N, new OverallValueLearner("resources/ai workshop/OhHellAIModels/ovlN5.txt"), new ImmediateValueLearner("resources/ai workshop/OhHellAIModels/ivlN5.txt")),
+                new AiStrategyModuleOI(core, N, new OverallValueLearner("resources/ai workshop/OhHellAIModels/ovlN5.txt"), new ImmediateValueLearner("resources/ai workshop/OhHellAIModels/ivlN5.txt")),
+                new AiStrategyModuleOI(core, N, new OverallValueLearner("resources/ai workshop/OhHellAIModels/ovlN5.txt"), new ImmediateValueLearner("resources/ai workshop/OhHellAIModels/ivlN5.txt")),
+                new AiStrategyModuleOI(core, N, new OverallValueLearner("resources/ai workshop/OhHellAIModels/ovlN5.txt"), new ImmediateValueLearner("resources/ai workshop/OhHellAIModels/ivlN5.txt"))
         );
         
         double[] means = new double[N];

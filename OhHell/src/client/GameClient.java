@@ -62,7 +62,7 @@ import graphics.OhcTextField;
 public class GameClient extends JFrame {
     private static final long serialVersionUID = 1L;
     
-    private final String version = "0.1.4.1";
+    private final String version = "0.1.5";
     
     private boolean connected = false;
     private Socket socket;
@@ -181,6 +181,10 @@ public class GameClient extends JFrame {
     private ClientState state;
     
     public GameClient() {}
+    
+    public ClientState getClientState() {
+        return state;
+    }
     
     public void changeState(ClientState newState) {
         Component[] toShow = {};
@@ -953,6 +957,7 @@ public class GameClient extends JFrame {
             loadConfigFile();
             setVisible(true);
             changeState(ClientState.MAIN_MENU);
+            checkForUpdates();
         } catch(Exception e) {
             e.printStackTrace();
         }
@@ -1075,6 +1080,17 @@ public class GameClient extends JFrame {
         default:
             break;
         }
+    }
+    
+    public void undoBid() {
+        if (state == ClientState.IN_MULTIPLAYER_GAME) {
+            sendCommandToServer("UNDOBID");
+        }
+    }
+    
+    public void undoBidReport(int index) {
+        canvas.removeBidOnTimer(index);
+        canvas.showMessageOnTimer(players.get(index).getName() + " is changing their bid.");
     }
     
     public void makeClaim() {
@@ -1266,34 +1282,38 @@ public class GameClient extends JFrame {
         }
     }
     
+    public void checkForUpdates() {
+        try {
+            BufferedReader versionReader = new BufferedReader(
+                    new InputStreamReader(
+                            new URL("https://raw.githubusercontent.com/campbellsoup37/OhHell/master/OhHell/version")
+                            .openStream()));
+            String latestVersion = versionReader.readLine();
+            versionReader.close();
+            if (!latestVersion.equals(version)) {
+                updateFound = true;
+                newVersion = latestVersion;
+                SwingUtilities.invokeLater(new Runnable() {
+                    public void run() {
+                        updateButton.setAlert(true);
+                        updateButton.setText("Update available");
+                    }
+                });
+            } else {
+                SwingUtilities.invokeLater(new Runnable() {
+                    public void run() {
+                        updateButton.setText("Version up to date");
+                    }
+                });
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
     public void updatePressed() {
         if (!updateFound) {
-            try {
-                BufferedReader versionReader = new BufferedReader(
-                        new InputStreamReader(
-                                new URL("https://raw.githubusercontent.com/campbellsoup37/OhHell/master/version")
-                                .openStream()));
-                String latestVersion = versionReader.readLine();
-                versionReader.close();
-                if (!latestVersion.equals(version)) {
-                    updateFound = true;
-                    newVersion = latestVersion;
-                    SwingUtilities.invokeLater(new Runnable() {
-                        public void run() {
-                            updateButton.setAlert(true);
-                            updateButton.setText("Update available");
-                        }
-                    });
-                } else {
-                    SwingUtilities.invokeLater(new Runnable() {
-                        public void run() {
-                            updateButton.setText("Version up to date");
-                        }
-                    });
-                }
-            } catch (IOException e1) {
-                e1.printStackTrace();
-            }
+            checkForUpdates();
         } else {
             try {
                 dispose();

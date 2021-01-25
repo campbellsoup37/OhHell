@@ -135,6 +135,12 @@ public class ClientPlayer {
         setHasBid(true);
     }
     
+    public void removeBid() {
+        bids.remove(bids.size() - 1);
+        setBidding(1);
+        setHasBid(false);
+    }
+    
     public List<Integer> getBids() {
         return bids;
     }

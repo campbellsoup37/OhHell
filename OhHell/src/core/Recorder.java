@@ -8,7 +8,7 @@ import java.util.List;
 public class Recorder {
     private BufferedWriter writer;
     private boolean ready = false;
-    private LinkedList<String> recordQueue = new LinkedList<String>();
+    private LinkedList<String> recordQueue = new LinkedList<>();
     private boolean queueStarted = false;
     
     public Recorder() {}

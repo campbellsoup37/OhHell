@@ -32,7 +32,7 @@ public class OhHellUpdater extends JFrame {
             graphics.setColor(new Color(175, 255, 175));
             graphics.fillRect(0, 0, (int) (progress * getWidth()), getHeight());
             graphics.setColor(Color.BLACK);
-            OhcGraphicsTools.drawStringJustified(graphics, "Downloading", getWidth() / 2, getHeight() / 2, 1, 1);
+            OhcGraphicsTools.drawStringJustified(graphics, "Downloading v" + newVersion, getWidth() / 2, getHeight() / 2, 1, 1);
         }
     };
 
@@ -70,7 +70,7 @@ public class OhHellUpdater extends JFrame {
     
     public void download() {
         try {
-            URL url = new URL("https://github.com/campbellsoup37/OhHell/releases/download/v" + newVersion + "/OhHellClient.jar");
+            URL url = new URL("https://raw.githubusercontent.com/campbellsoup37/OhHell/master/OhHell/OhHellClient.jar");
             
             URLConnection connection = url.openConnection();
             if (connection instanceof HttpURLConnection) {
@@ -109,7 +109,11 @@ public class OhHellUpdater extends JFrame {
     }
     
     public static void main(String[] args) {
-        OhHellUpdater updater = new OhHellUpdater(args[0]);
+        String version = "";
+        if (args.length > 0) {
+            version = args[0];
+        }
+        OhHellUpdater updater = new OhHellUpdater(version);
         updater.execute();
     }
 }

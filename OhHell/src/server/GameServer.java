@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -24,11 +25,17 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 
 import core.Card;
 import core.OhHellCore;
 import core.Player;
 import core.Recorder;
+import graphics.OhcButton;
+import graphics.OhcGraphicsTools;
+import graphics.OhcScrollPane;
+import graphics.OhcTextField;
 
 public class GameServer extends JFrame {
     private static final long serialVersionUID = 1L;
@@ -36,18 +43,23 @@ public class GameServer extends JFrame {
     private final int robotDelay = 0;
     
     private JLabel portLabel = new JLabel("Port:");
-    private JTextField portField = new JTextField("6066");
-    private JButton goButton = new JButton("Go");
+    private JTextField portField = new OhcTextField("Port");
+    private JButton goButton = new OhcButton("Go");
+    private JCheckBox recordCheckBox = new JCheckBox("Record");
     private JTextArea logTextArea = new JTextArea();
-    private JScrollPane logScrollPane = new JScrollPane(logTextArea);
+    private JScrollPane logScrollPane = new OhcScrollPane(logTextArea,
+            JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+            JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
     private DefaultListModel<String> playersListModel = new DefaultListModel<>();
     private JList<String> playersJList = new JList<>(playersListModel);
-    private JScrollPane playersScrollPane = new JScrollPane(playersJList);
-    private JButton kickButton = new JButton("Kick Player");
+    private JScrollPane playersScrollPane = new OhcScrollPane(playersJList,
+            JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+            JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+    private JButton kickButton = new OhcButton("Kick Player");
     
     private JFrame popUpFrame = new JFrame();
     
-    private OhHellCore core = new OhHellCore(true);
+    private OhHellCore core;
     
     private int port;
     private ServerSocket serverSocket;
@@ -69,6 +81,17 @@ public class GameServer extends JFrame {
     }
     
     public void execute() {
+        try {
+            UIManager.setLookAndFeel(
+                    UIManager.getSystemLookAndFeelClassName());
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException
+                | UnsupportedLookAndFeelException e1) {
+            e1.printStackTrace();
+        }
+        setTitle("Oh Hell Server");
+        
+        setIconImage(OhcGraphicsTools.loadImage("resources/icon/cw.png", this));
+        
         setSize(640, 480);
         setResizable(false);
         setLayout(new BorderLayout());
@@ -81,6 +104,7 @@ public class GameServer extends JFrame {
         northPanel.setLayout(new FlowLayout(3));
         northPanel.add(portLabel);
         portField.setPreferredSize(new Dimension(200, 40));
+        portField.setText("6066");
         northPanel.add(portField);
         goButton.setPreferredSize(new Dimension(200, 40));
         goButton.addActionListener(new ActionListener() {
@@ -90,6 +114,7 @@ public class GameServer extends JFrame {
             }
         });
         northPanel.add(goButton);
+        northPanel.add(recordCheckBox);
         add(northPanel, BorderLayout.NORTH);
         
         logTextArea.setEditable(false);
@@ -113,10 +138,17 @@ public class GameServer extends JFrame {
         eastPanel.add(kickButton);
         add(eastPanel, BorderLayout.EAST);
         
-        recorder = new Recorder();
+        if (recording()) {
+            recorder = new Recorder();
+        }
         
+        core = new OhHellCore(recording());
         core.setPlayers(players);
         core.setKibitzers(kibitzers);
+    }
+    
+    public boolean recording() {
+        return recordCheckBox.isSelected();
     }
     
     public void goPressed() {
@@ -266,7 +298,9 @@ public class GameServer extends JFrame {
         updatePlayersList();
         
         if (gameStarted() && !player.isKibitzer()) {
-            recorder.recordKick(player.getIndex());
+            if (recording()) {
+                recorder.recordKick(player.getIndex());
+            }
             core.updateRounds();
             core.restartRound();
         }
@@ -278,6 +312,10 @@ public class GameServer extends JFrame {
     
     public void makePlay(Player player, Card card) {
         core.incomingPlay(player, card);
+    }
+    
+    public void processUndoBid(Player player) {
+        core.processUndoBid(player);
     }
     
     public void processClaim(Player player) {

@@ -22,7 +22,7 @@ import ml.Learner;
 public class LearnerExplorer extends JPanel {
     private static final long serialVersionUID = 1L;
 
-    private Learner L = new strategyRBP.OverallValueLearner("ai resources/OhHellAIModels/RBP/b30_30o10i40/5/ovl.txt");
+    private Learner L = new strategyRBP.OverallValueLearner("resources/ai workshop/OhHellAIModels/RBP/b30_30o10i40/5/ovl.txt");
     
     List<JLabel> labels = new ArrayList<>();
     List<List<JLabel>> subLabels = new ArrayList<>();

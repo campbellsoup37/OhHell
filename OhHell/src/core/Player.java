@@ -101,6 +101,11 @@ public class Player {
         bids.add(bid);
     }
     
+    public void removeBid() {
+        bidded = false;
+        bids.remove(bids.size() - 1);
+    }
+    
     public void setTaken(int taken) {
         this.taken = taken;
     }
@@ -286,6 +291,8 @@ public class Player {
     public void commandPlayReport(int index, Card card) {}
     
     public void commandTrickWinner(int index, List<Card> trick) {}
+    
+    public void commandUndoBidReport(int index) {}
     
     public void commandClaimRequest(int index) {}
     

@@ -21,15 +21,15 @@ public class AiDataGenerator extends AiTrainer {
         int N = 5;
         int reps = 1;
         
-        String outputFolder = "ai resources/AiData/";
+        String outputFolder = "resources/ai workshop/AiData/";
         
         OhHellCore core = new OhHellCore(false);
         List<Player> players = new ArrayList<>();
         core.setPlayers(players);
         core.setAiTrainer(this);
         
-        strategyOI.OverallValueLearner ovl = new strategyOI.OverallValueLearner("ai resources/OhHellAIModels/OI/ovlN5o40i30.txt");
-        strategyOI.ImmediateValueLearner ivl = new strategyOI.ImmediateValueLearner("ai resources/OhHellAIModels/OI/ivlN5o40i30.txt");
+        strategyOI.OverallValueLearner ovl = new strategyOI.OverallValueLearner("resources/ai workshop/OhHellAIModels/OI/ovlN5o40i30.txt");
+        strategyOI.ImmediateValueLearner ivl = new strategyOI.ImmediateValueLearner("resources/ai workshop/OhHellAIModels/OI/ivlN5o40i30.txt");
         List<AiStrategyModule> aiStrategyModules = new ArrayList<>(N);
         for (int i = 0; i < N; i++) {
             aiStrategyModules.add(new strategyOI.AiStrategyModuleOI(core, N, ovl, ivl));

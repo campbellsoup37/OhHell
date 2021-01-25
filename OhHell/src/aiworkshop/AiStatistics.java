@@ -33,9 +33,9 @@ public class AiStatistics extends AiTrainer {
         for (int i = 0; i < N; i++) {
             aiStrategyModules.add(new strategyOI.AiStrategyModuleOI(core, N, ovl, ivl));
         }*/
-        strategyRBP.BiddingLearner bl = new strategyRBP.BiddingLearner("ai resources/OhHellAIModels/RBP/b30_30o10i40/5/bl.txt");
-        strategyRBP.OverallValueLearner ovl = new strategyRBP.OverallValueLearner("ai resources/OhHellAIModels/RBP/b30_30o10i40/5/ovl.txt");
-        strategyRBP.ImmediateValueLearner ivl = new strategyRBP.ImmediateValueLearner("ai resources/OhHellAIModels/RBP/b30_30o10i40/5/ivl.txt");
+        strategyRBP.BiddingLearner bl = new strategyRBP.BiddingLearner("resources/ai workshop/OhHellAIModels/RBP/b30_30o10i40/5/bl.txt");
+        strategyRBP.OverallValueLearner ovl = new strategyRBP.OverallValueLearner("resources/ai workshop/OhHellAIModels/RBP/b30_30o10i40/5/ovl.txt");
+        strategyRBP.ImmediateValueLearner ivl = new strategyRBP.ImmediateValueLearner("resources/ai workshop/OhHellAIModels/RBP/b30_30o10i40/5/ivl.txt");
         List<AiStrategyModule> aiStrategyModules = new ArrayList<>(N);
         for (int i = 0; i < N; i++) {
             strategyRBP.AiStrategyModuleRBP asm = new strategyRBP.AiStrategyModuleRBP(core, N, bl, ovl, ivl);

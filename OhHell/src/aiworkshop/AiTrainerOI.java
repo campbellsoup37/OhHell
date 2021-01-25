@@ -72,7 +72,7 @@ public class AiTrainerOI extends AiTrainer {
         boolean saveToFile = true;
         int saveEvery = 1000;
         
-        String folder = "ai resources/OhHellAIModels/OI/";
+        String folder = "resources/ai workshop/OhHellAIModels/OI/";
 
         ovlWEta *= scale;
         ovlBEta *= scale;

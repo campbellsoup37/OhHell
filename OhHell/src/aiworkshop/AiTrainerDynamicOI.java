@@ -36,7 +36,7 @@ public class AiTrainerDynamicOI extends AiTrainer {
         boolean saveToFile = true;
         int saveEvery = 10;
         
-        String folder = "ai resources/OhHellAIModels/dOI/";
+        String folder = "resources/ai workshop/OhHellAIModels/dOI/";
         
         ovlWEta *= scale;
         ovlBEta *= scale;

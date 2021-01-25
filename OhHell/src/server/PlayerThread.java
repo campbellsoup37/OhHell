@@ -91,6 +91,8 @@ public class PlayerThread extends Thread {
                     server.makeBid(player, Integer.parseInt(parsedContent.get(0)));
                 } else if (command.equals("PLAY")) {
                     server.makePlay(player, new Card(parsedContent.get(0)));
+                } else if (command.equals("UNDOBID")) {
+                    server.processUndoBid(player);
                 } else if (command.equals("CLAIM")) {
                     server.processClaim(player);
                 } else if (command.equals("CLAIMRESPONSE")) {

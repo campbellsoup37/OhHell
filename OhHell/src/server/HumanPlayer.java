@@ -144,6 +144,11 @@ public class HumanPlayer extends Player {
     }
     
     @Override
+    public void commandUndoBidReport(int index) {
+        thread.sendCommand("UNDOBID:" + index);
+    }
+    
+    @Override
     public void commandClaimRequest(int index) {
         thread.sendCommand("CLAIMREQUEST:" + index);
     }

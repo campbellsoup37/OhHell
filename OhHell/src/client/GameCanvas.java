@@ -71,6 +71,8 @@ public class GameCanvas extends JPanel {
     private int cardJustPlayed = 0;
     private boolean animatingTaken = false;
     private double takenTimer = 1;
+    
+    private boolean canUndoBid = false;
 
     private int claimer = -1;
     
@@ -839,6 +841,41 @@ public class GameCanvas extends JPanel {
         // Buttons
         buttons = new LinkedList<>();
         
+        // Undo bid button
+        buttons.add(new CanvasButton("Undo bid") {
+            @Override
+            public int x() {
+                return (getWidth() - 450) / 2 - 40;
+            }
+            
+            @Override
+            public int y() {
+                return getHeight() - 210 - 15;
+            }
+            
+            @Override
+            public int width() {
+                return 80;
+            }
+            
+            @Override
+            public int height() {
+                return 30;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return canUndoBid
+                        && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
+            }
+            
+            @Override
+            public void click() {
+                client.undoBid();
+                canUndoBid = false;
+            }
+        });
+        
         // Poke button
         buttons.add(new CanvasButton("Poke") {
             @Override
@@ -1138,13 +1175,17 @@ public class GameCanvas extends JPanel {
                 public void click() {
                     myPlayer.setBidding(0);
                     client.makeBid(bid);
-                    interactableMoused = null;
-                    interactablePressed = null;
-                    bidButtons = new LinkedList<>();
+                    removeBidInteractables();
                     //setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
                 }
             });
         }
+    }
+    
+    public void removeBidInteractables() {
+        interactableMoused = null;
+        interactablePressed = null;
+        bidButtons = new LinkedList<>();
     }
     
     public void makeHandInteractables() {
@@ -1259,7 +1300,8 @@ public class GameCanvas extends JPanel {
     
     public boolean cannotBid(int bid) {
         int totalBid = players.stream()
-                .map(p -> p.getBid())
+                .filter(ClientPlayer::hasBid)
+                .map(ClientPlayer::getBid)
                 .reduce(0, (sofar, b) -> sofar + b);
         return (myPlayer.getIndex() == dealer) 
                 && (totalBid + bid == myPlayer.getHand().size());
@@ -1547,6 +1589,34 @@ public class GameCanvas extends JPanel {
             @Override
             public void onLastAction() {
                 players.get(index).addBid(bid);
+                if (index == myPlayer.getIndex()) {
+                    canUndoBid = true;
+                } else {
+                    canUndoBid = false;
+                }
+            }
+        };
+    }
+    
+    public void removeBidOnTimer(int index) {
+        new CanvasTimerEntry(0, this, actionQueue) {
+            @Override
+            public void onLastAction() {
+                if (myPlayer.getBidding() != 0) {
+                    removeBidInteractables();
+                }
+                
+                for (ClientPlayer player : players) {
+                    player.setBidding(0);
+                    player.setPlaying(false);
+                }
+                
+                players.get(index).removeBid();
+                gameState = "BIDDING";
+                if (myPlayer.getBidding() != 0) {
+                    makeBidInteractables();
+                }
+                resetPokeTime();
             }
         };
     }
@@ -1557,6 +1627,7 @@ public class GameCanvas extends JPanel {
             public void onLastAction() {
                 players.get(index).setTrick(card);
                 players.get(index).removeCard(card);
+                canUndoBid = false;
             }
         };
     }

@@ -505,6 +505,17 @@ public class OhHellCore {
         return card.isGreaterThan(players.get(winning).getTrick(), trump.getSuit());
     }
     
+    public void processUndoBid(Player player) {
+        Player nextPlayer = players.get(nextUnkicked(player.getIndex()));
+        if (!nextPlayer.hasBid() || player.getIndex() == getDealer() && nextPlayer.getTrick().isEmpty()) {
+            turn = player.getIndex();
+            player.removeBid();
+            for (Player p : players) {
+                p.commandUndoBidReport(player.getIndex());
+            }
+        }
+    }
+    
     /**
      * This function returns true if the given player can win the remaining tricks by running down
      * trump and then running down all other suits. This information is used to accept or reject

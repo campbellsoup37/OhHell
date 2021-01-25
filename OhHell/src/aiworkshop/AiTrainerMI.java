@@ -67,7 +67,7 @@ public class AiTrainerMI extends AiTrainer {
         boolean saveToFile = true;
         int saveEvery = 10;
         
-        String folder = "ai resources/OhHellAIModels/MI/";
+        String folder = "resources/ai workshop/OhHellAIModels/MI/";
 
         mvlWEta *= scale;
         mvlBEta *= scale;

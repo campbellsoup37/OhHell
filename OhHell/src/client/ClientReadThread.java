@@ -135,6 +135,8 @@ public class ClientReadThread extends Thread {
                     new Card(parsedContent.get(1)));
         } else if (command.equals("TRICKWINNER")) {
             client.trickWinnerReport(Integer.parseInt(parsedContent.get(0)));
+        } else if (command.equals("UNDOBID")) {
+            client.undoBidReport(Integer.parseInt(parsedContent.get(0)));
         } else if (command.equals("CLAIMREQUEST")) {
             client.claimReport(Integer.parseInt(parsedContent.get(0)));
         } else if (command.equals("CLAIMRESULT")) {

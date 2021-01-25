@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="WINDOWS-1252" standalone="no"?>
 <jardesc>
-    <jar path="C:/Users/campb/Desktop/OhHellServer.jar"/>
+    <jar path="OhHell/OhHellServer.jar"/>
     <options buildIfNeeded="true" compress="true" descriptionLocation="/OhHell/jardesc_server.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="false" overwrite="false" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
     <storedRefactorings deprecationInfo="true" structuralOnly="false"/>
     <selectedProjects/>
@@ -17,7 +17,7 @@
         <javaElement handleIdentifier="=OhHell/src&lt;strategyOI"/>
         <javaElement handleIdentifier="=OhHell/src&lt;server"/>
         <folder path="/OhHell/resources/icon"/>
-        <javaElement handleIdentifier="=OhHell/src&lt;graphics"/>
         <folder path="/OhHell/resources/models"/>
+        <javaElement handleIdentifier="=OhHell/src&lt;graphics"/>
     </selectedElements>
 </jardesc>

@@ -80,7 +80,7 @@ public class AiTrainerRBP extends AiTrainer {
         boolean saveToFile = true;
         int saveEvery = 10;
         
-        String folder = "ai resources/OhHellAIModels/RBP/";
+        String folder = "resources/ai workshop/OhHellAIModels/RBP/";
 
         blEta *= scale;
         ovlEta *= scale;
@@ -127,8 +127,8 @@ public class AiTrainerRBP extends AiTrainer {
         /*AiStrategyModuleRBP asm = new AiStrategyModuleRBP(core, N, bl, ovl, ivl);
         asm.setExploration(bidExploration, playExploration);
         aiStrategyModules.add(asm);
-        strategyOI.OverallValueLearner ovlo = new strategyOI.OverallValueLearner("ai resources/OhHellAiModels/OI/ovlN5o40i30.txt");
-        strategyOI.ImmediateValueLearner ivlo = new strategyOI.ImmediateValueLearner("ai resources/OhHellAiModels/OI/ivlN5o40i30.txt");
+        strategyOI.OverallValueLearner ovlo = new strategyOI.OverallValueLearner("resources/ai workshop/OhHellAiModels/OI/ovlN5o40i30.txt");
+        strategyOI.ImmediateValueLearner ivlo = new strategyOI.ImmediateValueLearner("resources/ai workshop/OhHellAiModels/OI/ivlN5o40i30.txt");
         for (int i = 1; i < N; i++) {
             strategyOI.AiStrategyModuleOI asmo = new strategyOI.AiStrategyModuleOI(core, N, ovlo, ivlo);
             aiStrategyModules.add(asmo);
