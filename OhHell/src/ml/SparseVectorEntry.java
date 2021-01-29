@@ -16,4 +16,12 @@ public class SparseVectorEntry {
     public double value() {
         return value;
     }
+    
+    public void setKey(int key) {
+        this.key = key;
+    }
+    
+    public void setValue(double value) {
+        this.value = value;
+    }
 }

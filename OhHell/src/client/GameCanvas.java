@@ -3,6 +3,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -14,6 +15,8 @@ import javax.swing.Timer;
 
 import core.Card;
 import graphics.OhcGraphicsTools;
+import ml.BasicVector;
+import ml.BootstrapAggregator;
 
 public class GameCanvas extends JPanel {
     private static final long serialVersionUID = 1L;
@@ -33,6 +36,11 @@ public class GameCanvas extends JPanel {
     private final int trickStayTime = 1500;
     private final int animationTime = 150;
     private final int messageTime = 2000;
+    
+    private final int finalScoreOuterMargin = 50;
+    private final int finalScoreInnerMargin = 10;
+    private final int finalScoreListWidth = 200;
+    private final int finalScoreBottomMargin = 300;
     
     private final int pokeWaitTime = 25000;
     ///////////////////////////////////
@@ -82,7 +90,8 @@ public class GameCanvas extends JPanel {
     private boolean showOneCard = false;
 
     private boolean end = false;
-    private String[] endscores;
+    private int[][] endscores;
+    private CanvasScorePlot scorePlot;
     
     private String gameState = "PREGAME";
     
@@ -184,12 +193,11 @@ public class GameCanvas extends JPanel {
         if (paintMessageMarker) {
             paintMessage(graphics2);
         }
-        paintChat(graphics2);
-        paintButtons(graphics2);
-        
         if (end) {
             paintFinalScores(graphics2);
         }
+        paintChat(graphics2);
+        paintButtons(graphics2);
         
         if (currentTime == 0) {
             currentTime = System.currentTimeMillis();
@@ -565,38 +573,63 @@ public class GameCanvas extends JPanel {
     public void paintFinalScores(Graphics graphics) {
         graphics.setColor(Color.WHITE);
         graphics.fillRoundRect(
-                (getWidth() - 450) / 2 - 150, 
-                getHeight() / 2 - (players.size() + 1) * 15 / 2 - 56, 
-                300, 
-                (players.size() + 1) * 15 + 100, 20, 20);
-        
+                finalScoreOuterMargin, 
+                finalScoreOuterMargin, 
+                getWidth() - 450 - 2 * finalScoreOuterMargin, 
+                getHeight() - finalScoreBottomMargin, 
+                10, 10);
         graphics.setColor(Color.BLACK);
+        graphics.drawRoundRect(
+                finalScoreOuterMargin, 
+                finalScoreOuterMargin, 
+                getWidth() - 450 - 2 * finalScoreOuterMargin, 
+                getHeight() - finalScoreBottomMargin, 
+                10, 10);
+        
+        graphics.drawRoundRect(
+                finalScoreOuterMargin + finalScoreInnerMargin,
+                finalScoreOuterMargin + finalScoreInnerMargin,
+                finalScoreListWidth,
+                getHeight() - finalScoreBottomMargin - 2 * finalScoreInnerMargin,
+                10, 10);
         graphics.setFont(OhcGraphicsTools.fontBold);
         OhcGraphicsTools.drawStringJustified(graphics, 
-                "Final scores: ", 
-                (getWidth() - 450) / 2, 
-                getHeight() / 2 - (players.size() + 1) * 15 / 2,
+                "Final scores", 
+                finalScoreOuterMargin + finalScoreInnerMargin + finalScoreListWidth / 2, 
+                finalScoreOuterMargin + finalScoreInnerMargin + 20,
                 1, 1);
         graphics.setFont(OhcGraphicsTools.font);
-        String points = "";
+        int points = Integer.MIN_VALUE;
         int place = 1;
         for (int i = 0; i < players.size(); i++) {
-            if (!endscores[2 * i + 1].equals(points)) {
-                points = endscores[2 * i + 1];
+            if (endscores[i][1] != points) {
+                points = endscores[i][1];
                 place = i + 1;
             }
+            graphics.setColor(CanvasScorePlot.colors[endscores[i][0]]);
+            graphics.fillOval(
+                    (int) (finalScoreOuterMargin + 2 * finalScoreInnerMargin - CanvasScorePlot.pointSize / 2), 
+                    (int) (finalScoreOuterMargin + finalScoreInnerMargin + 30 + 15 * (i + 1) - CanvasScorePlot.pointSize / 2), 
+                    (int) (CanvasScorePlot.pointSize),
+                    (int) (CanvasScorePlot.pointSize));
+            graphics.setColor(Color.BLACK);
             OhcGraphicsTools.drawStringJustified(graphics, 
                     OhcGraphicsTools.fitString(
                             graphics, 
                             place + ". " 
-                            + endscores[2 * i], 
-                            200) + ", " 
-                        + endscores[2 * i + 1] 
-                        + " points",
-                    (getWidth() - 450) / 2, 
-                    getHeight() / 2 - (players.size() + 1) * 15 / 2 + 15 * (i + 1), 
+                            + players.get(endscores[i][0]).getName(), 
+                            0.8 * finalScoreListWidth - 2 * finalScoreInnerMargin),
+                    finalScoreOuterMargin + 2 * finalScoreInnerMargin + finalScoreInnerMargin / 2, 
+                    finalScoreOuterMargin + finalScoreInnerMargin + 30 + 15 * (i + 1), 
+                    0, 1);
+            OhcGraphicsTools.drawStringJustified(graphics, 
+                    endscores[i][1] + "",
+                    finalScoreOuterMargin + finalScoreInnerMargin + (int) (0.8 * finalScoreListWidth), 
+                    finalScoreOuterMargin + finalScoreInnerMargin + 30 + 15 * (i + 1), 
                     1, 1);
         }
+        
+        scorePlot.paint(graphics);
     }
     
     public void paintButtons(Graphics graphics) {
@@ -627,7 +660,7 @@ public class GameCanvas extends JPanel {
             ch1 = cardHeight * deckImgSmall.getWidth() / deckImg.getWidth();
         }
         
-        OhcGraphicsTools.makeGraphics2D(graphics, true).drawImage(img, 
+        OhcGraphicsTools.makeGraphics2D(graphics, !client.lowGraphicsSelected()).drawImage(img, 
                 (int) (x - cw1 * scale / 2), (int) (y - ch1 * scale / 2), 
                 (int) (x + cw1 * scale / 2), (int) (y + ch1 * scale / 2), 
                 (int) (col * cw1), (int) (row * ch1), 
@@ -657,6 +690,7 @@ public class GameCanvas extends JPanel {
         end = false;
         
         setPlayerPositions();
+        makePlot();
         resetInteractables();
     }
     
@@ -788,6 +822,44 @@ public class GameCanvas extends JPanel {
         }
     }
     
+    public void makePlot() {
+        scorePlot = new CanvasScorePlot() {
+            @Override
+            public int x() {
+                return finalScoreOuterMargin
+                        + 2 * finalScoreInnerMargin
+                        + finalScoreListWidth;
+            }
+            
+            @Override
+            public int y() {
+                return finalScoreOuterMargin
+                        + finalScoreInnerMargin;
+            }
+            
+            @Override
+            public int width() {
+                return getWidth() - 450 - x()
+                        - finalScoreOuterMargin
+                        - finalScoreInnerMargin;
+            }
+            
+            @Override
+            public int height() {
+                return getHeight() - y()
+                        + finalScoreOuterMargin
+                        - finalScoreBottomMargin
+                        - 2 * finalScoreInnerMargin
+                        - 30;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return end;
+            }
+        };
+    }
+    
     public void resetInteractables() {
         bidButtons = new LinkedList<>();
         cardInteractables = new LinkedList<>();
@@ -866,7 +938,8 @@ public class GameCanvas extends JPanel {
             @Override
             public boolean isShown() {
                 return canUndoBid
-                        && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
+                        && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME
+                        && !myPlayer.isKibitzer();
             }
             
             @Override
@@ -1138,6 +1211,92 @@ public class GameCanvas extends JPanel {
                 }
             });
         }
+        
+        // Plot buttons
+        // Scores button
+        buttons.add(new CanvasButton("Scores") {
+            @Override
+            public int x() {
+                return scorePlot.x()
+                        + scorePlot.width() / 2
+                        - finalScoreInnerMargin / 2
+                        - width();
+            }
+            
+            @Override
+            public int y() {
+                return scorePlot.y()
+                        + scorePlot.height()
+                        + finalScoreInnerMargin;
+            }
+            
+            @Override
+            public int width() {
+                return 100;
+            }
+            
+            @Override
+            public int height() {
+                return 30;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return end;
+            }
+            
+            @Override
+            public boolean isSelected() {
+                return scorePlot.getSelectedTab() == 0;
+            }
+            
+            @Override
+            public void click() {
+                scorePlot.selectTab(0);
+            }
+        });
+        
+        // Win %
+        buttons.add(new CanvasButton("Win %") {
+            @Override
+            public int x() {
+                return scorePlot.x()
+                        + scorePlot.width() / 2
+                        + finalScoreInnerMargin / 2;
+            }
+            
+            @Override
+            public int y() {
+                return scorePlot.y()
+                        + scorePlot.height()
+                        + finalScoreInnerMargin;
+            }
+            
+            @Override
+            public int width() {
+                return 100;
+            }
+            
+            @Override
+            public int height() {
+                return 30;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return end;
+            }
+            
+            @Override
+            public boolean isSelected() {
+                return scorePlot.getSelectedTab() == 1;
+            }
+            
+            @Override
+            public void click() {
+                scorePlot.selectTab(1);
+            }
+        });
     }
     
     public void makeBidInteractables() {
@@ -1281,6 +1440,8 @@ public class GameCanvas extends JPanel {
             mouseChanged = checkIfInteractableMoused(button, x, y) || mouseChanged;
         }
         
+        mouseChanged = checkIfInteractableMoused(scorePlot, x, y) || mouseChanged;
+        
         if (mouseChanged) {
             //repaint();
         }
@@ -1340,7 +1501,7 @@ public class GameCanvas extends JPanel {
     }
     
     public void animateCardPlay(int index) {
-        new CanvasTimerEntry(animationTime, this, actionQueue) {
+        new CanvasTimerEntry(client.devSpeedSelected() ? 1 : animationTime, this, actionQueue) {
             @Override
             public void onFirstAction() {
                 if (client.soundSelected()) {
@@ -1353,14 +1514,14 @@ public class GameCanvas extends JPanel {
             @Override
             public void onAction() {
                 players.get(index).setTrickTimer(
-                        Math.min((double) this.getElapsedTime() / animationTime, 1));
+                        Math.min((double) this.getElapsedTime() / (client.devSpeedSelected() ? 1 : animationTime), 1));
                 //repaint();
             }
         };
     }
     
     public void animateTrickTake(int index) {
-        new CanvasTimerEntry(trickStayTime, this, actionQueue) {
+        new CanvasTimerEntry(client.devSpeedSelected() ? 1 : trickStayTime, this, actionQueue) {
             @Override
             public void onLastAction() {
                 for (ClientPlayer player : players) {
@@ -1370,7 +1531,7 @@ public class GameCanvas extends JPanel {
                 setLeader(index);
             }
         };
-        new CanvasTimerEntry(animationTime, this, actionQueue) {
+        new CanvasTimerEntry(client.devSpeedSelected() ? 1 : animationTime, this, actionQueue) {
             @Override
             public void onFirstAction() {
                 players.get(index).incrementTaken();
@@ -1381,7 +1542,7 @@ public class GameCanvas extends JPanel {
             
             @Override
             public void onAction() {
-                takenTimer = Math.min((double) this.getElapsedTime() / animationTime, 1);
+                takenTimer = Math.min((double) this.getElapsedTime() / (client.devSpeedSelected() ? 1 : animationTime), 1);
                 //repaint();
             }
             
@@ -1435,7 +1596,7 @@ public class GameCanvas extends JPanel {
     }
     
     public void showMessageOnTimer(String text) {
-        new CanvasTimerEntry(messageTime, this, actionQueue) {
+        new CanvasTimerEntry(client.devSpeedSelected() ? 1 : messageTime, this, actionQueue) {
             @Override
             public void onFirstAction() {
                 message = text;
@@ -1456,7 +1617,7 @@ public class GameCanvas extends JPanel {
     }
     
     public void showResultMessageOnTimer() {
-        new CanvasTimerEntry(messageTime, this, actionQueue) {
+        new CanvasTimerEntry(client.devSpeedSelected() ? 1 : messageTime, this, actionQueue) {
             @Override
             public void onFirstAction() {
                 if (myPlayer.getBid() == myPlayer.getTaken()) {
@@ -1646,7 +1807,7 @@ public class GameCanvas extends JPanel {
         };
     }
     
-    public void setFinalScoresOnTimer(LinkedList<String> scores) {
+    public void setFinalScoresOnTimer(List<Integer> scores) {
         new CanvasTimerEntry(0, this, actionQueue) {
             @Override
             public void onFirstAction() {
@@ -1658,12 +1819,69 @@ public class GameCanvas extends JPanel {
                 paintTakenMarker = false;
                 paintTrickMarker = false;
                 end = true;
-                endscores = new String[scores.size()];
-                for (int i = 0; i < scores.size(); i++) {
-                    endscores[i] = scores.get(i);
+                endscores = new int[scores.size() / 2][2];
+                int i = 0;
+                for (Integer score : scores) {
+                    endscores[i / 2][i % 2] = score;
+                    i++;
                 }
                 client.goToPostGame();
                 gameState = "POSTGAME";
+                
+                for (ClientPlayer player : players) {
+                    List<Integer> scoresAug = new LinkedList<>();
+                    scoresAug.add(0);
+                    for (Integer score : player.getScores()) {
+                        scoresAug.add(score);
+                    }
+                    scorePlot.addIntData(0, player.getName(), scoresAug);
+                }
+                
+                boolean[] winners = new boolean[players.size()];
+                int winningScore = Integer.MIN_VALUE;
+                for (ClientPlayer player : players) {
+                    winningScore = Math.max(winningScore, player.getScores().get(player.getScores().size() - 1));
+                }
+                for (ClientPlayer player : players) {
+                    if (player.getScores().get(player.getScores().size() - 1) == winningScore) {
+                        winners[player.getIndex()] = true;
+                    }
+                }
+                
+                List<List<Double>> probs = new ArrayList<>(players.size());
+                for (int k = 0; k < players.size(); k++) {
+                    probs.add(new ArrayList<>(players.get(0).getScores().size()));
+                    probs.get(k).add(100D / players.size());
+                }
+                BootstrapAggregator winModel = new BootstrapAggregator("resources/models/wb" + players.size() + ".txt");
+                for (int j = 0; j < players.get(0).getScores().size(); j++) {
+                    double[] in = new double[players.size() + 1];
+                    for (int k = 0; k < players.size(); k++) {
+                        in[k] = (double) players.get(k).getScores().get(j);
+                    }
+                    in[players.size()] = (double) (players.get(0).getScores().size() - 1 - j);
+                    double[] out = winModel.testValue(new BasicVector(in)).get(1).toArray();
+                    for (int k = 0; k < players.size(); k++) {
+                        probs.get(k).add(out[k] * 100);
+                    }
+                }
+                for (int k = 0; k < players.size(); k++) {
+                    if (winners[k]) {
+                        probs.get(k).set(players.get(0).getScores().size(), 100D);
+                    } else {
+                        probs.get(k).set(players.get(0).getScores().size(), 0D);
+                    }
+                    scorePlot.addData(1, players.get(k).getName(), probs.get(k));
+                }
+                
+                List<int[]> rounds = client.getRounds();
+                List<String> ticks = new ArrayList<>(rounds.size());
+                ticks.add("");
+                for (int[] round : rounds) {
+                    ticks.add(round[1] + "");
+                }
+                scorePlot.addTicks(0, ticks);
+                scorePlot.addTicks(1, ticks);
             }
         };
     }

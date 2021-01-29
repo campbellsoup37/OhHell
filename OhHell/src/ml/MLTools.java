@@ -11,10 +11,10 @@ public class MLTools {
     }
     
     public static Vector stringToVector(String s) {
-        String[] row = s.substring(1, s.length() - 1).split(", ");
+        String[] row = s.trim().substring(1, s.length() - 1).split(",");
         double[] output = new double[row.length];
         for (int i = 0; i < row.length; i++) {
-            output[i] = Double.parseDouble(row[i]);
+            output[i] = Double.parseDouble(row[i].trim());
         }
         return new BasicVector(output);
     }

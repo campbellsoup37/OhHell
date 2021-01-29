@@ -11,6 +11,8 @@ public interface Vector {
     
     public double[] toArray();
     
+    public void scale(double c);
+    
     public Vector applyMatrix(Matrix M);
     
     public double dot(Vector vector);
@@ -22,6 +24,10 @@ public interface Vector {
     public double get(int i);
     
     public double norm();
+    
+    public Vector copy();
+    
+    public boolean entrywiseEquals(Vector v);
     
     public void print();
 }

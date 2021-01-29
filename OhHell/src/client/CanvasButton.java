@@ -11,6 +11,10 @@ public class CanvasButton extends CanvasInteractable {
         this.text = text;
     }
     
+    public boolean isSelected() {
+        return false;
+    }
+    
     @Override
     public void paint(Graphics graphics) {
         if (isShown()) {
@@ -18,6 +22,8 @@ public class CanvasButton extends CanvasInteractable {
                 graphics.setColor(new Color(96, 96, 96));
             } else if (isMoused()) {
                 graphics.setColor(new Color(192, 192, 192));
+            } else if (isSelected()) {
+                graphics.setColor(new Color(210, 210, 210));
             } else {
                 graphics.setColor(Color.WHITE);
             }

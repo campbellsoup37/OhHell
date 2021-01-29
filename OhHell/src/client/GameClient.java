@@ -62,7 +62,7 @@ import graphics.OhcTextField;
 public class GameClient extends JFrame {
     private static final long serialVersionUID = 1L;
     
-    private final String version = "0.1.5";
+    private final String version = "0.1.5.1";
     
     private boolean connected = false;
     private Socket socket;
@@ -88,9 +88,12 @@ public class GameClient extends JFrame {
     private JCheckBox soundOption = new JCheckBox("Sound");
     private JMenu aiSpeedOption = new JMenu("AI play speed");
     private JSlider aiSpeedOptionSlider = new JSlider(JSlider.HORIZONTAL, 0, 900, 500);
-    private JCheckBox aiHelpOption = new JCheckBox("AI help (single player only)");
-    private JCheckBox stopperOption = new JCheckBox("Stoppers (right click)");
     private JCheckBox fpsOption = new JCheckBox("Show FPS");
+    private JMenu devOptionsItem = new JMenu("Dev options");
+    private JCheckBox aiHelpOption = new JCheckBox("AI help");
+    private JCheckBox stopperOption = new JCheckBox("Stoppers");
+    private JCheckBox devSpeedOption = new JCheckBox("Fast animation");
+    private JCheckBox lowGraphicsOption = new JCheckBox("Low graphics");
     private JMenuItem backOption = new JMenuItem("Back to menu");
     
     private boolean stopperSelected = false;
@@ -345,7 +348,7 @@ public class GameClient extends JFrame {
     }
     
     public boolean isOneRound() {
-        return rounds.get(roundNumber)[1] == 1;
+        return roundNumber < rounds.size() && rounds.get(roundNumber)[1] == 1;
     }
     
     public List<int[]> getRounds() {
@@ -708,7 +711,7 @@ public class GameClient extends JFrame {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     if (connected) {
-                        if (players.size() == 1 && mpNumRobots == 0) {
+                        if (players.size() + mpNumRobots <= 1) {
                             thisClient.notify("There must be at least two players to start the game.");
                         } else if (mpNumRobots > 0 && mpDoubleDeck) {
                             thisClient.notify("Double deck with robots is currently unsupported.");
@@ -847,29 +850,12 @@ public class GameClient extends JFrame {
             });
             showButton.setVisible(false);
             
-            optionsItem.add(soundOption);
-            
             aiSpeedOption.add(aiSpeedOptionSlider);
-            
+
+            aiSpeedOption.setPreferredSize(new Dimension(150, 25));
             optionsItem.add(aiSpeedOption);
             
-            aiHelpOption.setEnabled(false);
-            aiHelpOption.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    canvas.setAiHelp(aiHelpOption.isSelected());
-                }
-            });
-            optionsItem.add(aiHelpOption);
-            
-            stopperOption.setEnabled(false);
-            stopperOption.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    stopperSelected = stopperOption.isSelected();
-                }
-            });
-            optionsItem.add(stopperOption);
+            optionsItem.add(soundOption);
             
             optionsItem.add(fpsOption);
             
@@ -905,8 +891,33 @@ public class GameClient extends JFrame {
                 }
             });
             optionsItem.add(backOption);
+            
+            aiHelpOption.setEnabled(false);
+            aiHelpOption.setPreferredSize(new Dimension(150, 25));
+            aiHelpOption.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    canvas.setAiHelp(aiHelpOption.isSelected());
+                }
+            });
+            devOptionsItem.add(aiHelpOption);
+            
+            stopperOption.setEnabled(false);
+            stopperOption.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    stopperSelected = stopperOption.isSelected();
+                }
+            });
+            devOptionsItem.add(stopperOption);
+            
+            devSpeedOption.setEnabled(false);
+            devOptionsItem.add(devSpeedOption);
+            
+            devOptionsItem.add(lowGraphicsOption);
 
             menuBar.add(optionsItem);
+            menuBar.add(devOptionsItem);
             setJMenuBar(menuBar);
             
             addWindowListener(new WindowAdapter() {
@@ -1197,12 +1208,24 @@ public class GameClient extends JFrame {
         changeState(ClientState.MULTIPLAYER_MENU);
     }
     
-    public void finalScores(LinkedList<String> s) {
-        canvas.setFinalScoresOnTimer(s);
+    public void finalScores(List<String> s) {
+        List<Integer> sToInts = new LinkedList<>();
+        for (String score : s) {
+            sToInts.add(Integer.parseInt(score));
+        }
+        canvas.setFinalScoresOnTimer(sToInts);
     }
     
     public boolean soundSelected() {
         return soundOption.isSelected();
+    }
+    
+    public boolean devSpeedSelected() {
+        return devSpeedOption.isSelected();
+    }
+    
+    public boolean lowGraphicsSelected() {
+        return lowGraphicsOption.isSelected();
     }
     
     public boolean showFpsSelected() {

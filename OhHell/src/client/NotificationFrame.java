@@ -22,7 +22,7 @@ public class NotificationFrame extends JFrame {
     
     public void execute() {
         setTitle("Message");
-        setIconImage(OhcGraphicsTools.loadImage("resources/cw.png", this));
+        setIconImage(OhcGraphicsTools.loadImage("resources/icon/cw.png", this));
         message.setBounds(0, 12, 340, 40);
         add(message);
         

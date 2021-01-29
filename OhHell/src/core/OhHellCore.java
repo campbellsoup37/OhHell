@@ -142,9 +142,9 @@ public class OhHellCore {
 
         /*rounds.add(new RoundDetails(1));
         rounds.add(new RoundDetails(1));
-        rounds.add(new RoundDetails(1));
-        rounds.add(new RoundDetails(1));
-        rounds.add(new RoundDetails(1));*/
+        /*rounds.add(new RoundDetails(8));
+        rounds.add(new RoundDetails(7));
+        rounds.add(new RoundDetails(6));*/
         
         int numDecks = doubleDeck ? 2 : 1;
         int maxHand = Math.min(10, (numDecks * 52 - 1) / players.size());

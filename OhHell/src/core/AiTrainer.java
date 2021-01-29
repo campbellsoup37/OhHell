@@ -6,6 +6,7 @@ import ml.Trainer;
 public class AiTrainer extends Trainer {
     private List<Player> players;
     private List<RoundDetails> rounds;
+    private String interruption = "";
     
     public boolean backprop() {
         return false;
@@ -17,6 +18,18 @@ public class AiTrainer extends Trainer {
 
     public List<RoundDetails> getRounds() {
         return rounds;
+    }
+    
+    public int getWinner() {
+        int ans = 0;
+        int score = Integer.MIN_VALUE;
+        for (Player player : players) {
+            if (player.getScore() > score) {
+                ans = player.getIndex();
+                score = player.getScore();
+            }
+        }
+        return ans;
     }
     
     public int[] getScores() {
@@ -55,9 +68,24 @@ public class AiTrainer extends Trainer {
         return takens;
     }
     
+    public int[][] getAllScores() {
+        int[][] scores = new int[players.size()][rounds.size()];
+        for (int i = 0; i < players.size(); i++) {
+            for (int j = 0; j < rounds.size(); j++) {
+                scores[i][j] = players.get(i).getScores().get(j);
+            }
+        }
+        return scores;
+    }
+    
+    public String getInterruption() {
+        return interruption;
+    }
+    
     public void notifyGameDone(List<Player> players, List<RoundDetails> rounds) {
         this.players = players;
         this.rounds = rounds;
+        interruption = "GAMEDONE";
         interrupt();
     }
 }

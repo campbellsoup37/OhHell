@@ -190,7 +190,7 @@ public class SinglePlayerPlayer extends Player {
     public void commandFinalScores(List<Player> playersSorted) {
         LinkedList<String> finalScores = new LinkedList<>();
         for (Player p : playersSorted) {
-            finalScores.add(p.getName());
+            finalScores.add(p.getIndex() + "");
             finalScores.add(p.getScore() + "");
         }
         client.finalScores(finalScores);

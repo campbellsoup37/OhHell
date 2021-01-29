@@ -168,8 +168,7 @@ public class HumanPlayer extends Player {
     @Override
     public void commandFinalScores(List<Player> playersSorted) {
         thread.sendCommand(playersSorted.stream()
-                .map(p -> "STRING " + p.getName().length() 
-                        + ":" + p.getName() + ":" + p.getScore()+":")
+                .map(p -> p.getIndex() + ":" + p.getScore()+":")
                 .reduce("FINALSCORES:", (a, b) -> a + b));
     }
 

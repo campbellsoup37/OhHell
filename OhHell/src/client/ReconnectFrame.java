@@ -39,7 +39,7 @@ public class ReconnectFrame extends JFrame {
     
     public void execute() {
         setTitle("Reconnect");
-        setIconImage(OhcGraphicsTools.loadImage("resources/cw.png", this));
+        setIconImage(OhcGraphicsTools.loadImage("resourcesicon/cw.png", this));
         message.setBounds(20,10,500,20);
         add(message);
         

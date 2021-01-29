@@ -70,6 +70,13 @@ public class SparseVector implements Vector {
     }
     
     @Override
+    public void scale(double s) {
+        for (SparseVectorEntry sve : entries) {
+            sve.setValue(sve.value() * s);
+        }
+    }
+    
+    @Override
     public Vector applyMatrix(Matrix M) {
         return M.applyVector(this);
     }
@@ -102,8 +109,12 @@ public class SparseVector implements Vector {
 
     @Override
     public double get(int i) {
-        double[] vec = toArray();
-        return vec[i];
+        for (SparseVectorEntry sve : entries) {
+            if (sve.key() == i) {
+                return sve.value();
+            }
+        }
+        return 0;
     }
     
     @Override
@@ -113,6 +124,30 @@ public class SparseVector implements Vector {
             square += Math.pow(sve.value(), 2);
         }
         return Math.sqrt(square);
+    }
+    
+    @Override
+    public boolean entrywiseEquals(Vector v) {
+        if (size() != v.size()) {
+            return false;
+        }
+        double[] arr = toArray();
+        double[] vArr = v.toArray();
+        for (int i = 0; i < size(); i++) {
+            if (arr[i] != vArr[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    @Override
+    public Vector copy() {
+        List<SparseVectorEntry> entriesCopy = new LinkedList<>();
+        for (SparseVectorEntry sve : entries) {
+            entriesCopy.add(new SparseVectorEntry(sve.key(), sve.value()));
+        }
+        return new SparseVector(entriesCopy, totalSize);
     }
 
     @Override

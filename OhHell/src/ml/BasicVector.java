@@ -63,6 +63,15 @@ public class BasicVector implements Vector {
         subVecs.add(vec);
         totalSize += vec.length;
     }
+    
+    @Override
+    public void scale(double s) {
+        for (double[] vec : subVecs) {
+            for (int i = 0; i < vec.length; i++) {
+                vec[i] *= s;
+            }
+        }
+    }
 
     @Override
     public Vector applyMatrix(Matrix M) {
@@ -121,6 +130,34 @@ public class BasicVector implements Vector {
             }
         }
         return Math.sqrt(ans);
+    }
+    
+    @Override
+    public boolean entrywiseEquals(Vector v) {
+        if (size() != v.size()) {
+            return false;
+        }
+        double[] arr = toArray();
+        double[] vArr = v.toArray();
+        for (int i = 0; i < size(); i++) {
+            if (arr[i] != vArr[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    @Override
+    public Vector copy() {
+        if (subVecs.size() == 1) {
+            double[] arrCopy = new double[totalSize];
+            for (int i = 0; i < totalSize; i++) {
+                arrCopy[i] = subVecs.get(0)[i];
+            }
+            return new BasicVector(arrCopy);
+        } else {
+            return new BasicVector(toArray());
+        }
     }
 
     @Override

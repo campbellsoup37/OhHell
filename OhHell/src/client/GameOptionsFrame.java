@@ -32,7 +32,7 @@ public class GameOptionsFrame extends JFrame {
     
     public void execute() {
         setTitle("Game Options");
-        setIconImage(OhcGraphicsTools.loadImage("resources/cw.png", this));
+        setIconImage(OhcGraphicsTools.loadImage("resources/icon/cw.png", this));
 
         robotsLabel.setBounds(57, 30, 200, 40);
         add(robotsLabel);
