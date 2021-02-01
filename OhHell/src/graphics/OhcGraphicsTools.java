@@ -53,10 +53,10 @@ public class OhcGraphicsTools {
         }
     }
     
-    public static Graphics2D makeGraphics2D(Graphics graphics, boolean smoothen) {
+    public static Graphics2D makeGraphics2D(Graphics graphics, boolean antialiasing, boolean smoothen) {
         Graphics2D graphics2 = (Graphics2D) graphics;
         RenderingHints qualityHints = new RenderingHints(
-                  RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                RenderingHints.KEY_ANTIALIASING, antialiasing ? RenderingHints.VALUE_ANTIALIAS_ON : RenderingHints.VALUE_ANTIALIAS_OFF);
         //qualityHints.put(RenderingHints.KEY_ALPHA_INTERPOLATION, RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
         //qualityHints.put(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_QUALITY);
         //qualityHints.put(RenderingHints.KEY_DITHERING, RenderingHints.VALUE_DITHER_ENABLE);

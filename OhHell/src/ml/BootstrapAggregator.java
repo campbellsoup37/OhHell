@@ -85,7 +85,7 @@ public class BootstrapAggregator {
         for (int i = 0; i < size; i++) {
             long time = System.currentTimeMillis();
             Tree tree = new Tree(dIn, dOut);
-            tree.train(data.bootstrapSample(sampleSize), alpha);
+            tree.trainBottomUp(data.bootstrapSample(sampleSize), alpha);
             trees.add(tree);
 
             if (printEvery > 0 && i % printEvery == 0) {

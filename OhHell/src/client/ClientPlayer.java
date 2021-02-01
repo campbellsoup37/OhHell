@@ -16,14 +16,16 @@ public class ClientPlayer {
     private CanvasPlayerPosition pos;
     
     private int bid;
-    private List<Integer> bids = new ArrayList<Integer>();
-    private List<Integer> scores = new ArrayList<Integer>();
+    private List<Integer> bids = new ArrayList<>();
+    private List<Integer> takens = new ArrayList<>();
+    private List<Integer> scores = new ArrayList<>();
     private int taken;
     private int bidding;
     private boolean playing;
     private boolean hasBid;
     
-    private List<Card> hand = new ArrayList<Card>();
+    private List<Card> hand = new ArrayList<>();
+    private List<List<Card>> hands = new ArrayList<>();
     
     private Card lastTrick = new Card();
     private Card trick = new Card();
@@ -31,17 +33,20 @@ public class ClientPlayer {
     private double trickTimer;
     private boolean timerStarted;
     
+    private int place;
+    
     public ClientPlayer() {}
     
     public void reset() {
         bid = 0;
-        bids = new ArrayList<Integer>();
-        scores = new ArrayList<Integer>();
+        bids = new ArrayList<>();
+        scores = new ArrayList<>();
         taken = 0;
         bidding = 0;
         playing = false;
         hasBid = false;
-        hand = new ArrayList<Card>();
+        hand = new ArrayList<>();
+        hands = new ArrayList<>();
         lastTrick = new Card();
         trick = new Card();
         trickRad = -1;
@@ -147,6 +152,10 @@ public class ClientPlayer {
     
     public void setBids(List<Integer> bids) {
         this.bids = bids;
+    }
+    
+    public int getScore() {
+        return scores.get(scores.size() - 1);
     }
     
     public void setScores(List<Integer> scores) {
@@ -273,5 +282,29 @@ public class ClientPlayer {
 
     public void setHuman(boolean human) {
         this.human = human;
+    }
+
+    public int getPlace() {
+        return place;
+    }
+
+    public void setPlace(int place) {
+        this.place = place;
+    }
+    
+    public void setTakens(List<Integer> takens) {
+        this.takens = takens;
+    }
+    
+    public List<Integer> getTakens() {
+        return takens;
+    }
+    
+    public void addPostGameHand(List<Card> hand) {
+        hands.add(hand);
+    }
+    
+    public List<List<Card>> getHands() {
+        return hands;
     }
 }

@@ -120,6 +120,18 @@ public class Deck {
         return val;
     }
     
+    public static int adjustedCardValueSmallNoPlayed(Card card, List<List<Card>> additionalPlayeds) {
+        int val = card.getNum() - 2;
+        for (List<Card> additionalPlayed : additionalPlayeds) {
+            for (Card c : additionalPlayed) {
+                if (c != null && c.getNum() > card.getNum() && c.getSuit().equals(card.getSuit())) {
+                    val++;
+                }
+            }
+        }
+        return val;
+    }
+    
     public List<Card> getPlayedCards() {
         List<Card> ans = new LinkedList<>();
         for (List<Card> playedSuit : played) {

@@ -10,6 +10,7 @@ public class Player {
     private int taken;
     
     private List<Card> hand;
+    private List<List<Card>> hands = new ArrayList<>();
     private List<Integer> bids = new ArrayList<>();
     private List<Integer> takens = new ArrayList<>();
     private List<Integer> scores = new ArrayList<>();
@@ -128,6 +129,15 @@ public class Player {
 
     public void setHand(List<Card> hand) {
         this.hand = hand;
+        List<Card> handCopy = new ArrayList<>(hand.size());
+        for (Card card : hand) {
+            handCopy.add(card);
+        }
+        hands.add(handCopy);
+    }
+    
+    public List<List<Card>> getHands() {
+        return hands;
     }
     
     public void removeCard(Card card) {
@@ -231,8 +241,9 @@ public class Player {
     public void reset() {
         score = 0;
         clearTrick();
-        bids = new ArrayList<Integer>();
-        scores = new ArrayList<Integer>();
+        bids = new ArrayList<>();
+        scores = new ArrayList<>();
+        hands = new ArrayList<>();
     }
 
     public AiStrategyModule getAiStrategyModule() {
@@ -300,7 +311,13 @@ public class Player {
     
     public void commandNewScores(List<Integer> scores) {}
     
-    public void commandFinalScores(List<Player> playersSorted) {}
+    public void commandPostGameTrumps(List<Card> trumps) {}
+    
+    public void commandPostGameTakens(List<Player> players) {}
+    
+    public void commandPostGameHands(List<Player> players) {}
+    
+    public void commandPostGame() {}
     
     public void commandChat(String text) {}
     

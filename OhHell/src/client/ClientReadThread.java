@@ -146,7 +146,26 @@ public class ClientReadThread extends Thread {
                     .map(s -> s.equals("-") ? null : Integer.parseInt(s))
                     .collect(Collectors.toList()));
         } else if (command.equals("FINALSCORES")) {
-            client.finalScores(parsedContent);
+            client.postGame();
+        } else if (command.equals("POSTGAMETRUMPS")) {
+            client.setPostGameTrumps(parsedContent
+                    .stream()
+                    .map(s -> new Card(s))
+                    .collect(Collectors.toList()));
+        } else if (command.equals("POSTGAMETAKENS")) {
+            client.addPostGameTakens(
+                    Integer.parseInt(parsedContent.get(0)),
+                    parsedContent.subList(1, parsedContent.size())
+                    .stream()
+                    .map(Integer::parseInt)
+                    .collect(Collectors.toList()));
+        } else if (command.equals("POSTGAMEHAND")) {
+            client.addPostGameHand(
+                    Integer.parseInt(parsedContent.get(0)), 
+                    parsedContent.subList(1, parsedContent.size())
+                    .stream()
+                    .map(s -> new Card(s))
+                    .collect(Collectors.toList()));
         } else if (command.equals("RECONNECT")) {
             client.reconnect(parsedContent);
         } else if (command.equals("STATEDEALERLEADER")) {

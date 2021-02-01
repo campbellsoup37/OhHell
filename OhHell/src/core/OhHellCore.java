@@ -22,6 +22,7 @@ public class OhHellCore {
     private String state = "";
 
     private Card trump;
+    private List<Card> trumps;
     
     private List<RoundDetails> rounds;
     private int roundNumber;
@@ -140,11 +141,11 @@ public class OhHellCore {
         rounds = new ArrayList<RoundDetails>();
         roundNumber = 0;
 
-        /*rounds.add(new RoundDetails(1));
-        rounds.add(new RoundDetails(1));
         /*rounds.add(new RoundDetails(8));
         rounds.add(new RoundDetails(7));
-        rounds.add(new RoundDetails(6));*/
+        /*rounds.add(new RoundDetails(6));
+        rounds.add(new RoundDetails(5));
+        rounds.add(new RoundDetails(4));*/
         
         int numDecks = doubleDeck ? 2 : 1;
         int maxHand = Math.min(10, (numDecks * 52 - 1) / players.size());
@@ -158,6 +159,8 @@ public class OhHellCore {
             rounds.add(new RoundDetails(i));
         }
         updateRounds();
+        
+        trumps = new ArrayList<>(rounds.size());
         
         deal();
     }
@@ -200,6 +203,7 @@ public class OhHellCore {
             players.get(i).setHand(hands.get(i));
         }
         trump = hands.get(players.size()).get(0);
+        trumps.add(trump);
         deck.playCard(trump);
         
         int dealer = getDealer();
@@ -423,20 +427,17 @@ public class OhHellCore {
         if (roundNumber < rounds.size()) {
             deal();
         } else {
-            List<Player> playersSorted = new ArrayList<Player>();
             for (Player p : players) {
-                int i = 0;
-                while (i < playersSorted.size() 
-                        && p.getScore() < playersSorted.get(i).getScore()) {
-                    i++;
-                }
-                playersSorted.add(i, p);
-            }
-            for (Player p : players) {
-                p.commandFinalScores(playersSorted);
+                p.commandPostGameTrumps(trumps);
+                p.commandPostGameHands(players);
+                p.commandPostGameTakens(players);
+                p.commandPostGame();
             }
             for (Player p : kibitzers) {
-                p.commandFinalScores(playersSorted);
+                p.commandPostGameTrumps(trumps);
+                p.commandPostGameHands(players);
+                p.commandPostGameTakens(players);
+                p.commandPostGame();
             }
             if (aiTrainer != null) {
                 List<Player> playersCopy = new ArrayList<>(players.size());

@@ -164,12 +164,37 @@ public class HumanPlayer extends Player {
                 .map(score -> score == null ? "-:" : score + ":")
                 .reduce("REPORTSCORES:", (a, b) -> a + b));
     }
+    
+    @Override
+    public void commandPostGameTrumps(List<Card> trumps) {
+        thread.sendCommand(trumps.stream().map(c -> c + ":").reduce(
+                "POSTGAMETRUMPS:", (c1, c2) -> c1 + c2));
+    }
+    
+    @Override
+    public void commandPostGameTakens(List<Player> players) {
+        for (Player player : players) {
+            thread.sendCommand(player.getTakens()
+                    .stream()
+                    .map(t -> t + ":")
+                    .reduce("POSTGAMETAKENS:" + player.getIndex() + ":", (c1, c2) -> c1 + c2));
+        }
+    }
 
     @Override
-    public void commandFinalScores(List<Player> playersSorted) {
-        thread.sendCommand(playersSorted.stream()
-                .map(p -> p.getIndex() + ":" + p.getScore()+":")
-                .reduce("FINALSCORES:", (a, b) -> a + b));
+    public void commandPostGameHands(List<Player> players) {
+        for (Player player : players) {
+            for (List<Card> hand : player.getHands()) {
+                thread.sendCommand(
+                        hand.stream().map(c -> c + ":").reduce(
+                                "POSTGAMEHAND:" + player.getIndex() + ":", (c1, c2) -> c1 + c2));
+            }
+        }
+    }
+
+    @Override
+    public void commandPostGame() {
+        thread.sendCommand("FINALSCORES");
     }
 
     @Override

@@ -1,6 +1,5 @@
 package client;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -63,6 +62,22 @@ public class SinglePlayerPlayer extends Player {
                 myIndex = i;
             }
         }
+        for (int i = 0; i < kibitzers.size(); i++) {
+            Player player = kibitzers.get(i);
+            
+            ClientPlayer clientPlayer = new ClientPlayer();
+            newPlayers.add(clientPlayer);
+            clientPlayer.setIndex(i);
+            clientPlayer.setName(player.getName());
+            clientPlayer.setHuman(player.isHuman());
+            clientPlayer.setHost(true);
+            clientPlayer.setDisconnected(false);
+            clientPlayer.setKicked(false);
+            clientPlayer.setKibitzer(true);
+            if (player == myPlayer) {
+                myIndex = i + players.size();
+            }
+        }
         
         client.updatePlayersList(newPlayers, myIndex);
     }
@@ -116,7 +131,7 @@ public class SinglePlayerPlayer extends Player {
     @Override
     public void commandDeal(List<Player> players, Card trump) {
         for (Player p : players) {
-            if (p != this) {
+            if (p != this && !isKibitzer()) {
                 client.setHand(p.getIndex(), 
                         p.getHand().stream()
                         .map(c -> new Card())
@@ -185,15 +200,31 @@ public class SinglePlayerPlayer extends Player {
     public void commandNewScores(List<Integer> scores) {
         client.reportScores(scores);
     }
+    
+    @Override
+    public void commandPostGameTrumps(List<Card> trumps) {
+        client.setPostGameTrumps(trumps);
+    }
+    
+    @Override
+    public void commandPostGameTakens(List<Player> players) {
+        for (Player player : players) {
+            client.addPostGameTakens(player.getIndex(), player.getTakens());
+        }
+    }
+    
+    @Override
+    public void commandPostGameHands(List<Player> players) {
+        for (Player player : players) {
+            for (List<Card> hand : player.getHands()) {
+                client.addPostGameHand(player.getIndex(), hand);
+            }
+        }
+    }
 
     @Override
-    public void commandFinalScores(List<Player> playersSorted) {
-        LinkedList<String> finalScores = new LinkedList<>();
-        for (Player p : playersSorted) {
-            finalScores.add(p.getIndex() + "");
-            finalScores.add(p.getScore() + "");
-        }
-        client.finalScores(finalScores);
+    public void commandPostGame() {
+        client.postGame();
     }
 
     @Override

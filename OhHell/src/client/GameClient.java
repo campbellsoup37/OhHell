@@ -11,11 +11,14 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -24,6 +27,7 @@ import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -62,7 +66,17 @@ import graphics.OhcTextField;
 public class GameClient extends JFrame {
     private static final long serialVersionUID = 1L;
     
-    private final String version = "0.1.5.1";
+    //////Dev Options //////////////////
+     private final boolean aiHelpOptionEnabled = false;
+     private final boolean stopperOptionEnabled = false;
+     private final boolean botsOnlyOptionEnabled = false;
+     private final boolean devSpeedOptionEnabled = false;
+     private final boolean fpsOptionEnabled = true;
+     private final boolean lowGraphicsOptionEnabled = true;
+     private final boolean antialiasingOptionEnabled = true;
+     ///////////////////////////////////
+    
+    private final String version = "0.1.5.2";
     
     private boolean connected = false;
     private Socket socket;
@@ -92,8 +106,10 @@ public class GameClient extends JFrame {
     private JMenu devOptionsItem = new JMenu("Dev options");
     private JCheckBox aiHelpOption = new JCheckBox("AI help");
     private JCheckBox stopperOption = new JCheckBox("Stoppers");
+    private JCheckBox botsOnlyOption = new JCheckBox("Bots only");
     private JCheckBox devSpeedOption = new JCheckBox("Fast animation");
     private JCheckBox lowGraphicsOption = new JCheckBox("Low graphics");
+    private JCheckBox antialiasingOption = new JCheckBox("Anti-aliasing");
     private JMenuItem backOption = new JMenuItem("Back to menu");
     
     private boolean stopperSelected = false;
@@ -579,9 +595,12 @@ public class GameClient extends JFrame {
                 public void actionPerformed(ActionEvent e) {
                     int robotCount = (int) spRobotsSpinner.getValue();
                     spPlayer = new SinglePlayerPlayer(thisClient);
+                    spPlayer.setKibitzer(botsOnlyOption.isSelected());
                     List<Player> players = new ArrayList<>();
-                    players.add(spPlayer);
+                    List<Player> kibitzers = new ArrayList<>();
+                    (botsOnlyOption.isSelected() ? kibitzers : players).add(spPlayer);
                     core.setPlayers(players);
+                    core.setKibitzers(kibitzers);
                     spPlayer.setCore(core);
                     core.startGame(robotCount, false, null, 0);
                 }
@@ -752,6 +771,7 @@ public class GameClient extends JFrame {
                     } else if (e.getButton() == MouseEvent.BUTTON3 && stopperSelected) {
                         canvas.removeStopper();
                     }
+                    canvas.grabFocus();
                 }
 
                 @Override
@@ -770,6 +790,25 @@ public class GameClient extends JFrame {
                 @Override
                 public void mouseMoved(MouseEvent e) {
                     canvas.mouseMoved(e.getX(), e.getY());
+                }
+            });
+            canvas.addMouseWheelListener(new MouseWheelListener() {
+                @Override
+                public void mouseWheelMoved(MouseWheelEvent e) {
+                    canvas.mouseWheeled(e.getWheelRotation());
+                }
+            });
+            canvas.setFocusable(true);
+            canvas.addKeyListener(new KeyListener() {
+                @Override
+                public void keyTyped(KeyEvent e) {}
+
+                @Override
+                public void keyPressed(KeyEvent e) {}
+
+                @Override
+                public void keyReleased(KeyEvent e) {
+                    canvas.keyPressed(e.getKeyCode());
                 }
             });
             add(canvas);
@@ -857,8 +896,6 @@ public class GameClient extends JFrame {
             
             optionsItem.add(soundOption);
             
-            optionsItem.add(fpsOption);
-            
             backOption.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -892,7 +929,7 @@ public class GameClient extends JFrame {
             });
             optionsItem.add(backOption);
             
-            aiHelpOption.setEnabled(false);
+            aiHelpOption.setEnabled(aiHelpOptionEnabled);
             aiHelpOption.setPreferredSize(new Dimension(150, 25));
             aiHelpOption.addActionListener(new ActionListener() {
                 @Override
@@ -902,7 +939,7 @@ public class GameClient extends JFrame {
             });
             devOptionsItem.add(aiHelpOption);
             
-            stopperOption.setEnabled(false);
+            stopperOption.setEnabled(stopperOptionEnabled);
             stopperOption.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -911,15 +948,28 @@ public class GameClient extends JFrame {
             });
             devOptionsItem.add(stopperOption);
             
-            devSpeedOption.setEnabled(false);
-            devOptionsItem.add(devSpeedOption);
+            botsOnlyOption.setEnabled(botsOnlyOptionEnabled);
+            devOptionsItem.add(botsOnlyOption);
             
+            devSpeedOption.setEnabled(devSpeedOptionEnabled);
+            devOptionsItem.add(devSpeedOption);
+
+            fpsOption.setEnabled(fpsOptionEnabled);
+            devOptionsItem.add(fpsOption);
+            
+            lowGraphicsOption.setEnabled(lowGraphicsOptionEnabled);
             devOptionsItem.add(lowGraphicsOption);
+            
+            antialiasingOption.setSelected(true);
+            antialiasingOption.setEnabled(antialiasingOptionEnabled);
+            devOptionsItem.add(antialiasingOption);
 
             menuBar.add(optionsItem);
             menuBar.add(devOptionsItem);
             setJMenuBar(menuBar);
             
+            loadConfigFile();
+            setVisible(true);
             addWindowListener(new WindowAdapter() {
                 @Override
                 public void windowClosing(WindowEvent e) {
@@ -964,9 +1014,6 @@ public class GameClient extends JFrame {
                 }
             });
             setDefaultCloseOperation(EXIT_ON_CLOSE);
-
-            loadConfigFile();
-            setVisible(true);
             changeState(ClientState.MAIN_MENU);
             checkForUpdates();
         } catch(Exception e) {
@@ -1208,12 +1255,20 @@ public class GameClient extends JFrame {
         changeState(ClientState.MULTIPLAYER_MENU);
     }
     
-    public void finalScores(List<String> s) {
-        List<Integer> sToInts = new LinkedList<>();
-        for (String score : s) {
-            sToInts.add(Integer.parseInt(score));
-        }
-        canvas.setFinalScoresOnTimer(sToInts);
+    public void setPostGameTrumps(List<Card> trumps) {
+        canvas.setTrumps(trumps);
+    }
+    
+    public void addPostGameTakens(int index, List<Integer> takens) {
+        players.get(index).setTakens(takens);
+    }
+    
+    public void addPostGameHand(int index, List<Card> hand) {
+        players.get(index).addPostGameHand(hand);
+    }
+    
+    public void postGame() {
+        canvas.showPostGameOnTimer();
     }
     
     public boolean soundSelected() {
@@ -1226,6 +1281,10 @@ public class GameClient extends JFrame {
     
     public boolean lowGraphicsSelected() {
         return lowGraphicsOption.isSelected();
+    }
+    
+    public boolean antialiasingSelected() {
+        return antialiasingOption.isSelected();
     }
     
     public boolean showFpsSelected() {
@@ -1319,7 +1378,7 @@ public class GameClient extends JFrame {
                 SwingUtilities.invokeLater(new Runnable() {
                     public void run() {
                         updateButton.setAlert(true);
-                        updateButton.setText("Update available");
+                        updateButton.setText("Update");
                     }
                 });
             } else {
@@ -1340,8 +1399,12 @@ public class GameClient extends JFrame {
         } else {
             try {
                 dispose();
-                Runtime.getRuntime().exec("java -jar updater.jar " + newVersion);
+                String path = new File(GameClient.class.getProtectionDomain().getCodeSource()
+                        .getLocation().toURI()).getParent();
+                Runtime.getRuntime().exec("java -jar " + path + "/updater.jar " + newVersion);
             } catch (IOException e) {
+                e.printStackTrace();
+            } catch (URISyntaxException e) {
                 e.printStackTrace();
             }
         }

@@ -39,10 +39,9 @@ public abstract class CanvasInteractable {
         return pressed;
     }
     
-    public boolean updateMoused(int x, int y) {
-        boolean oldMoused = isMoused();
+    public CanvasInteractable updateMoused(int x, int y) {
         setMoused(isShown() && isEnabled() && x >= x() && x <= x() + width() && y >= y() && y <= y() + height());
-        return isMoused() == oldMoused;
+        return isMoused() ? this : null;
     }
     
     public void setMoused(boolean moused) {
@@ -54,4 +53,8 @@ public abstract class CanvasInteractable {
     }
     
     public void click() {}
+    
+    public void wheel(int clicks) {}
+    
+    public void pressKey(int keyCode) {}
 }

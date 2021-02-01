@@ -38,7 +38,7 @@ public class OhcButton extends JButton {
     
     @Override
     public void paintComponent(Graphics graphics) {
-        Graphics2D graphics2 = OhcGraphicsTools.makeGraphics2D(graphics, false);
+        Graphics2D graphics2 = OhcGraphicsTools.makeGraphics2D(graphics, true, false);
         if (mouseOver && !alert) {
             graphics2.setColor(new Color(192, 192, 192));
         } else if (!mouseOver && !alert) {

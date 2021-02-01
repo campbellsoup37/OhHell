@@ -1,7 +1,6 @@
-/aiworkshop/
-/updater/
 /client/
-/server/
-/core/
-/graphics/
 /ml/
+/core/
+/server/
+/graphics/
+/updater/

@@ -4,10 +4,12 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 
@@ -23,6 +25,7 @@ public class OhHellUpdater extends JFrame {
     private static final long serialVersionUID = 1L;
     
     private String newVersion;
+    private String path;
     
     private JPanel loadingBar = new JPanel() {
         private static final long serialVersionUID = 1L;
@@ -40,6 +43,12 @@ public class OhHellUpdater extends JFrame {
     
     public OhHellUpdater(String newVersion) {
         this.newVersion = newVersion;
+        try {
+            path = new File(OhHellUpdater.class.getProtectionDomain().getCodeSource()
+                            .getLocation().toURI()).getParent();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
     }
 
     public void execute() {
@@ -82,7 +91,7 @@ public class OhHellUpdater extends JFrame {
             
             BufferedInputStream newClientJarInput = new BufferedInputStream(
                     url.openStream());
-            FileOutputStream newClientJarOutput = new FileOutputStream("OhHellClient.jar");
+            FileOutputStream newClientJarOutput = new FileOutputStream(path + "/OhHellClient.jar");
             
             byte[] dataBuffer = new byte[1024];
             int bytesRead;
@@ -105,7 +114,7 @@ public class OhHellUpdater extends JFrame {
     
     public void closeAndRunClient() throws IOException {
         dispose();
-        Runtime.getRuntime().exec("java -jar OhHellClient.jar");
+        Runtime.getRuntime().exec("java -jar " + path + "/OhHellClient.jar");
     }
     
     public static void main(String[] args) {

@@ -2,6 +2,7 @@ package ml;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.PriorityQueue;
@@ -315,7 +316,35 @@ public class Tree {
         return loss;
     }
     
-    public void train(DataSet data, double alpha) {
+    public void trainTopDown(DataSet data, int numNodes) {
+        if (!empty) {
+            throw new MLException("Attempted to train a nonempty tree.");
+        }
+        root.setData(data);
+        
+        Hashtable<Region, Double> diffs = new Hashtable<>();
+        PriorityQueue<Region> leaves = new PriorityQueue<>((R1, R2) -> (int) Math.signum(diffs.get(R1) - diffs.get(R2)));
+        diffs.put(root, -root.loss + root.computeSplit());
+        leaves.add(root);
+        int j = 1;
+        for (Region toSplit = leaves.poll(); 
+                j < numNodes 
+                && toSplit != null
+                && !toSplit.doNotSplit
+                && !toSplit.isPureInput
+                && !toSplit.isPureOutput; 
+                toSplit = leaves.poll(), j++) {
+            toSplit.makeSplit();
+            diffs.put(toSplit.sub1, -toSplit.sub1.loss + toSplit.sub1.computeSplit());
+            leaves.add(toSplit.sub1);
+            diffs.put(toSplit.sub2, -toSplit.sub2.loss + toSplit.sub2.computeSplit());
+            leaves.add(toSplit.sub2);
+        }
+        
+        empty = false;
+    }
+    
+    public void trainBottomUp(DataSet data, double alpha) {
         if (!empty) {
             throw new MLException("Attempted to train a nonempty tree.");
         }
@@ -368,7 +397,7 @@ public class Tree {
     public static void errorVsAlpha(int dIn, int dOut, DataSet data, int testSize, double alpha1, double alpha2, double alphaStep) {
         data.allocateTestData(testSize);
         Tree tree = new Tree(dIn, dOut);
-        tree.train(data, 0);
+        tree.trainBottomUp(data, 0);
         
         for (double alpha = alpha1; alpha < alpha2; alpha += alphaStep) {
             tree.prune(alpha);
@@ -385,7 +414,7 @@ public class Tree {
         for (int k = 0; k < foldsK; k++) {
             System.out.println(k + " / " + foldsK);
             Tree tree = new Tree(dIn, dOut);
-            tree.train(partition.get(k), 0);
+            tree.trainBottomUp(partition.get(k), 0);
             trees.add(tree);
         }
         
