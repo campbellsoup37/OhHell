@@ -11,6 +11,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Function;
 
 public class DataSet implements Iterable<List<Vector>> {
     public class DataSetIterator implements Iterator<List<Vector>> {
@@ -174,6 +175,31 @@ public class DataSet implements Iterable<List<Vector>> {
             partition.add(new DataSet(inOuts, leftOutK));
         }
         return partition;
+    }
+    
+    public DataSet deepCopy() {
+        List<List<Vector>> inOutsCopy = new ArrayList<>(inOuts.size());
+        Set<List<Vector>> leftOutCopy = new HashSet<>(leftOut.size());
+        for (List<Vector> inOut : inOuts) {
+            List<Vector> inOutCopy = new ArrayList<>(inOut.size());
+            for (Vector vec : inOut) {
+                inOutCopy.add(vec.copy());
+            }
+            inOutsCopy.add(inOutCopy);
+            if (leftOut.contains(inOut)) {
+                leftOutCopy.add(inOutCopy);
+            }
+        }
+        return new DataSet(inOutsCopy, leftOutCopy);
+    }
+    
+    public void map(Function<List<Vector>, List<Vector>> map) {
+        for (List<Vector> inOut : inOuts) {
+            List<Vector> transform = map.apply(inOut);
+            for (int i = 0; i < inOut.size(); i++) {
+                inOut.set(i, transform.get(i));
+            }
+        }
     }
     
     public void print() {

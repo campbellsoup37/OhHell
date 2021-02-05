@@ -77,9 +77,17 @@ public class BootstrapAggregator {
         return Arrays.asList(in, out);
     }
     
+    public double testError(DataSet data, LossFunction L) {
+        double loss = 0;
+        for (List<Vector> datum : data) {
+            loss += L.loss(testValue(datum.get(0)).get(1), datum.get(1)) / data.size();
+        }
+        return loss;
+    }
+    
     public void train(DataSet data, int sampleSize, double alpha, int printEvery) {
         if (!empty) {
-            throw new MLException("Attempted to train a nonempty bootstrap aggregator that is already trained.");
+            throw new MLException("Attempted to train a nonempty bootstrap aggregator.");
         }
         
         for (int i = 0; i < size; i++) {

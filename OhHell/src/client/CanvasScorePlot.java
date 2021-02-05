@@ -58,9 +58,12 @@ public class CanvasScorePlot extends CanvasInteractable {
         dataNames.add(name);
     }
     
-    public void setRange(double minY, double maxY) {
-        this.minY = minY;
+    public void setMaxY(double maxY) {
         this.maxY = maxY;
+    }
+    
+    public void setMinY(double minY) {
+        this.minY = minY;
     }
     
     public void paint(Graphics graphics) {
@@ -90,15 +93,17 @@ public class CanvasScorePlot extends CanvasInteractable {
             }
         }
         
-        graphics.setFont(OhcGraphicsTools.fontSmall);
-        for (int x = 0; x <= maxX; x++) {
-            OhcGraphicsTools.drawStringJustified(graphics, 
-                    dataTicks.get(x), 
-                    (int) canvasX(x), 
-                    y() + height() - 10, 
-                    1, 1);
+        if (!dataTicks.isEmpty()) {
+            graphics.setFont(OhcGraphicsTools.fontSmall);
+            for (int x = 0; x <= maxX; x++) {
+                OhcGraphicsTools.drawStringJustified(graphics, 
+                        dataTicks.get(x), 
+                        (int) canvasX(x), 
+                        y() + height() - 10, 
+                        1, 1);
+            }
+            graphics.setFont(OhcGraphicsTools.font);
         }
-        graphics.setFont(OhcGraphicsTools.font);
         
         int p = 0;
         for (List<Double> data : datas) {

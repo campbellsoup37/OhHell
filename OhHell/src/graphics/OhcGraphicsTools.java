@@ -83,26 +83,32 @@ public class OhcGraphicsTools {
         return text.charAt(0) + "";
     }
     
-    public static void drawStringJustified(Graphics graphics, String text, int x, int y, int posX, 
+    public static void drawStringJustified(Graphics graphics, String text, double x, double y, int posX, 
             int posY) {
         FontMetrics m = graphics.getFontMetrics();
-        graphics.drawString(text, x - m.stringWidth(text) * posX / 2, y + m.getHeight() * posY / 3);
+        graphics.drawString(text, 
+                (int) (x - m.stringWidth(text) * posX / 2), 
+                (int) (y + m.getHeight() * posY / 3));
     }
     
-    public static void drawStringJustifiedBacked(Graphics graphics, String text, int x, int y) {
+    public static void drawStringJustifiedBacked(Graphics graphics, String text, double x, double y) {
         FontMetrics m = graphics.getFontMetrics();
         graphics.setColor(new Color(255, 255, 255, 180));
-        graphics.fillRoundRect(x - m.stringWidth(text) / 2 - 20, 
-                y - m.getHeight() / 3 - 12, 
+        graphics.fillRoundRect(
+                (int) (x - m.stringWidth(text) / 2 - 20), 
+                (int) (y - m.getHeight() / 3 - 12), 
                 m.stringWidth(text) + 40, 
                 m.getHeight() + 20, 
                 20, 20);
         graphics.setColor(Color.BLACK);
-        graphics.drawRoundRect(x - m.stringWidth(text) / 2 - 20, 
-                y - m.getHeight() / 3 - 12, 
+        graphics.drawRoundRect(
+                (int) (x - m.stringWidth(text) / 2 - 20), 
+                (int) (y - m.getHeight() / 3 - 12), 
                 m.stringWidth(text) + 40, 
                 m.getHeight() + 20, 
                 20, 20);
-        graphics.drawString(text, x - m.stringWidth(text) / 2, y + m.getHeight() / 3);
+        graphics.drawString(text, 
+                (int) (x - m.stringWidth(text) / 2), 
+                (int) (y + m.getHeight() / 3));
     }
 }

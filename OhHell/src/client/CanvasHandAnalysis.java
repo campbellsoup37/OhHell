@@ -13,6 +13,13 @@ public class CanvasHandAnalysis extends CanvasInteractable {
     private final int margin = 4;
     private final int buttonSize = 18;
     
+    private final double handColumn = 3.0 / 8;
+    private final double plotColumn = 5.0 / 8;
+    private final double bidColumn = 25.0 / 32;
+    private final double tookColumn = 26.75 / 32;
+    private final double aiBidColumn = 28.5 / 32;
+    private final double diffColumn = 30.5 / 32;
+    
     private GameCanvas canvas;
     private List<ClientPlayer> players;
     private List<int[]> rounds;
@@ -118,7 +125,7 @@ public class CanvasHandAnalysis extends CanvasInteractable {
         roundSelected = Math.min(rounds.size() - 1, Math.max(0, round));
     }
     
-    public void addData(List<List<double[]>> qs, List<List<Integer>> aiBids) {
+    public void addData(List<List<double[]>> qs, List<List<Integer>> aiBids, List<List<Double>> diffs) {
         for (int i = 0; i < rounds.size(); i++) {
             List<String> ticks = new ArrayList<>(rounds.get(i)[1] + 1);
             for (int k = 0; k <= rounds.get(i)[1] + 1; k++) {
@@ -131,49 +138,15 @@ public class CanvasHandAnalysis extends CanvasInteractable {
                 }
                 qPlots.get(i).get(j).addData("Probability (%)", data);
                 qPlots.get(i).get(j).setTicks(ticks);
-                qPlots.get(i).get(j).setRange(-40, 100);
+                qPlots.get(i).get(j).setMinY(-40);
+                qPlots.get(i).get(j).setMaxY(100);
                 qPlots.get(i).get(j).setBoxed(false);
                 qPlots.get(i).get(j).setAxes(false);
             }
         }
 
         this.aiBids = aiBids;
-        diffs = new ArrayList<>(rounds.size());
-        for (int i = 0; i < rounds.size(); i++) {
-            diffs.add(new ArrayList<>(players.size()));
-            for (int j = 0; j < players.size(); j++) {
-                diffs.get(i).add(difficulty(qs.get(i).get(j)));
-            }
-        }
-    }
-    
-    /**
-     * Given a list qs, where qs[k] is the probability of making bid k, then determine a difficulty
-     * rating between 1 and 10. A list like {1, 0, 0, 0} should give a rating of 1, and a list like
-     * {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1} should give a rating of 10.
-     * 
-     * On a 0 to 1 scale, the difficulty is currently defined as
-     * (p ^ u - 1) / ((A - B * h) ^ u - 1),
-     * where p is max(qs), h is the number of cards in the hand, and u, A, and B are tuning 
-     * parameters.
-     */
-    public static double difficulty(double[] qs) {
-        double A = 0.45;
-        double B = 0.025;
-        double u = 0;
-        
-        double max = 0;
-        for (double q : qs) {
-            max = Math.max(q, max);
-        }
-        double r = A - B * (qs.length - 1);
-        double s = 0;
-        if (u == 0) {
-            s = Math.log(max) / Math.log(r);
-        } else {
-            s = (Math.pow(max, u) - 1) / (Math.pow(r, u) - 1);
-        }
-        return Math.max(1, Math.min(10, 1 + 9D * s));
+        this.diffs = diffs;
     }
     
     @Override
@@ -183,12 +156,50 @@ public class CanvasHandAnalysis extends CanvasInteractable {
         graphics.setColor(Color.BLACK);
         graphics.drawRoundRect(x(), y(), width(), height(), 10, 10);
         
-        int h = (height() - trumpRowHeight - 2 * margin - buttonSize) / players.size();
+        graphics.setColor(Color.BLACK);
         canvas.drawCard(graphics, canvas.getTrumps().get(roundSelected), 
-                x() + width() / 4, 
+                x() + handColumn * width(), 
                 y() + trumpRowHeight / 2 + 30, 
                 GameCanvas.smallCardScale, true, false,
                 y() + trumpRowHeight);
+        graphics.setFont(OhcGraphicsTools.fontSmall);
+        OhcGraphicsTools.drawStringJustified(graphics, 
+                "Predicted distribution", 
+                x() + plotColumn * width(), 
+                y() + trumpRowHeight / 2, 
+                1, 1);
+        OhcGraphicsTools.drawStringJustified(graphics, 
+                "Bid", 
+                x() + bidColumn * width(), 
+                y() + trumpRowHeight / 2, 
+                1, 1);
+        OhcGraphicsTools.drawStringJustified(graphics, 
+                "Took", 
+                x() + tookColumn * width(), 
+                y() + trumpRowHeight / 2, 
+                1, 1);
+        OhcGraphicsTools.drawStringJustified(graphics, 
+                "AI", 
+                x() + aiBidColumn * width(), 
+                y() + 1 * trumpRowHeight / 3, 
+                1, 1);
+        OhcGraphicsTools.drawStringJustified(graphics, 
+                "Bid", 
+                x() + aiBidColumn * width(), 
+                y() + 2 * trumpRowHeight / 3, 
+                1, 1);
+        OhcGraphicsTools.drawStringJustified(graphics, 
+                "Difficulty", 
+                x() + diffColumn * width(), 
+                y() + 1 * trumpRowHeight / 3, 
+                1, 1);
+        OhcGraphicsTools.drawStringJustified(graphics, 
+                "Score", 
+                x() + diffColumn * width(), 
+                y() + 2 * trumpRowHeight / 3, 
+                1, 1);
+        graphics.setFont(OhcGraphicsTools.font);
+        int h = (height() - trumpRowHeight - 2 * margin - buttonSize) / players.size();
         for (int i = 0; i <= players.size(); i++) {
             graphics.setColor(new Color(192, 192, 192));
             graphics.drawLine(
@@ -221,7 +232,7 @@ public class CanvasHandAnalysis extends CanvasInteractable {
                 int j = 0;
                 for (Card card : player.getHands().get(roundSelected)) {
                     canvas.drawCard(graphics, card, 
-                            x() + 3 * width() / 8 + 10 * j - 10 * rounds.get(roundSelected)[1] / 2, 
+                            x() + handColumn * width() + 10 * j - 10 * rounds.get(roundSelected)[1] / 2, 
                             y() + trumpRowHeight + i * h + h / 2 + 30, 
                             GameCanvas.smallCardScale, true, false,
                             y() + trumpRowHeight + i * h + h);
@@ -232,37 +243,48 @@ public class CanvasHandAnalysis extends CanvasInteractable {
                 graphics.setColor(Color.BLACK);
                 OhcGraphicsTools.drawStringJustified(graphics, 
                         OhcGraphicsTools.fitString(graphics, 
-                                "Player bid: " + players.get(iRelToLeader).getBids().get(roundSelected), 
+                                "" + players.get(iRelToLeader).getBids().get(roundSelected), 
                                 width() / 4 - 2 * margin), 
-                        x() + 3 * width() / 4 + margin, 
-                        y() + trumpRowHeight + iRelToLeader * h + h / 5, 
-                        0, 1);
+                        x() + bidColumn * width(),//x() + 3 * width() / 4 + margin, 
+                        y() + trumpRowHeight + iRelToLeader * h + h / 2,//y() + trumpRowHeight + iRelToLeader * h + h / 5, 
+                        1, 1);
+                int delta = Math.min(
+                        Math.abs(players.get(iRelToLeader).getBids().get(roundSelected) 
+                                - players.get(iRelToLeader).getTakens().get(roundSelected)),
+                        3);
+                if (players.get(iRelToLeader).getBids().get(roundSelected)
+                        == players.get(iRelToLeader).getTakens().get(roundSelected)) {
+                    graphics.setColor(new Color(0, 175, 0));
+                } else {
+                    graphics.setColor(new Color(255 * (delta - 1) / 3 + 195 * (4 - delta) / 3, 0, 0));
+                }
                 OhcGraphicsTools.drawStringJustified(graphics, 
                         OhcGraphicsTools.fitString(graphics, 
-                                "Tricks taken: " + players.get(iRelToLeader).getTakens().get(roundSelected), 
+                                "" + players.get(iRelToLeader).getTakens().get(roundSelected), 
                                 width() / 4 - 2 * margin), 
-                        x() + 3 * width() / 4 + margin, 
-                        y() + trumpRowHeight + iRelToLeader * h + 2 * h / 5, 
-                        0, 1);
+                        x() + tookColumn * width(),//x() + 3 * width() / 4 + margin, 
+                        y() + trumpRowHeight + iRelToLeader * h + h / 2,//y() + trumpRowHeight + iRelToLeader * h + 2 * h / 5, 
+                        1, 1);
+                graphics.setColor(Color.BLACK);
                 OhcGraphicsTools.drawStringJustified(graphics, 
                         OhcGraphicsTools.fitString(graphics, 
-                                "AI preferred bid: " + aiBids.get(roundSelected).get(i), 
+                                "" + aiBids.get(roundSelected).get(i), 
                                 width() / 4 - 2 * margin), 
-                        x() + 3 * width() / 4 + margin, 
-                        y() + trumpRowHeight + iRelToLeader * h + 3 * h / 5, 
-                        0, 1);
-                OhcGraphicsTools.drawStringJustified(graphics, 
+                        x() + aiBidColumn * width(),//x() + 3 * width() / 4 + margin, 
+                        y() + trumpRowHeight + iRelToLeader * h + h / 2,//y() + trumpRowHeight + iRelToLeader * h + 3 * h / 5, 
+                        1, 1);
+                /*OhcGraphicsTools.drawStringJustified(graphics, 
                         "Difficulty score: ", 
-                        x() + 3 * width() / 4 + margin, 
-                        y() + trumpRowHeight + iRelToLeader * h + 4 * h / 5, 
-                        0, 1);
+                        x() + 31 * width() / 32,//x() + 3 * width() / 4 + margin, 
+                        y() + trumpRowHeight + iRelToLeader * h + h / 2,//y() + trumpRowHeight + iRelToLeader * h + 4 * h / 5, 
+                        0, 1);*/
                 float dScale = (float) ((diffs.get(roundSelected).get(i) - 1) / 9);
                 graphics.setColor(new Color(dScale, 0.75F * (1 - dScale), 0F));
                 OhcGraphicsTools.drawStringJustified(graphics, 
                         String.format("%.1f", diffs.get(roundSelected).get(i)), 
-                        x() + 3 * width() / 4 + margin + graphics.getFontMetrics().stringWidth("Difficulty score: "), 
-                        y() + trumpRowHeight + iRelToLeader * h + 4 * h / 5, 
-                        0, 1);
+                        x() + diffColumn * width(),//x() + 3 * width() / 4 + margin + graphics.getFontMetrics().stringWidth("Difficulty score: "), 
+                        y() + trumpRowHeight + iRelToLeader * h + h / 2,//y() + trumpRowHeight + iRelToLeader * h + 4 * h / 5, 
+                        1, 1);
                 
                 qPlots.get(roundSelected).get(i).paint(graphics);
             }

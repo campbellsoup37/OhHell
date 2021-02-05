@@ -403,4 +403,38 @@ public class AiStrategyModuleOI extends AiStrategyModule {
         }
         return ans;
     }
+    
+    public static double max(double[] qs) {
+        double max = 0;
+        for (double q : qs) {
+            max = Math.max(q, max);
+        }
+        return max;
+    }
+    
+    /**
+     * Given a list qs, where qs[k] is the probability of making bid k, then determine a difficulty
+     * rating between 1 and 10. A list like {1, 0, 0, 0} should give a rating of 1, and a list like
+     * {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1} should give a rating of 10.
+     * 
+     * On a 0 to 1 scale, the difficulty is currently defined as
+     * (p ^ u - 1) / ((A - B * h) ^ u - 1),
+     * where p is max(qs), h is the number of cards in the hand, and u, A, and B are tuning 
+     * parameters.
+     */
+    public static double difficulty(double[] qs) {
+        double A = 0.45;
+        double B = 0.025;
+        double u = 0;
+        
+        double p = max(qs);
+        double r = A - B * (qs.length - 1);
+        double s = 0;
+        if (u == 0) {
+            s = Math.log(p) / Math.log(r);
+        } else {
+            s = (Math.pow(p, u) - 1) / (Math.pow(r, u) - 1);
+        }
+        return Math.max(1, Math.min(10, 1 + 9D * s));
+    }
 }

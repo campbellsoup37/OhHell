@@ -595,12 +595,12 @@ public class GameCanvas extends JPanel {
         }
     }
     
-    public void drawCard(Graphics graphics, Card card, int x, int y, double scale, boolean small, 
+    public void drawCard(Graphics graphics, Card card, double x, double y, double scale, boolean small, 
             boolean dark) {
         drawCard(graphics, card, x, y, scale, small, dark, -1);
     }
     
-    public void drawCard(Graphics graphics, Card card, int x, int y, double scale, boolean small, 
+    public void drawCard(Graphics graphics, Card card, double x, double y, double scale, boolean small, 
             boolean dark, int maxY) {
         int cardNumber = card.toNumber();
         int col = cardNumber % 9;
@@ -796,6 +796,7 @@ public class GameCanvas extends JPanel {
     public void resetInteractables() {
         bidButtons = new LinkedList<>();
         cardInteractables = new LinkedList<>();
+        postGamePage = null;
         
         // Last Trick
         lastTrick = new CanvasCard(new Card(), smallCardScale, true, this) {
@@ -1311,14 +1312,16 @@ public class GameCanvas extends JPanel {
     }
     
     public boolean checkIfInteractableMoused(CanvasInteractable inter, int x, int y) {
-        CanvasInteractable moused = inter.updateMoused(x, y);
-        if (moused != null) {
-            if (interactableMoused != null && interactableMoused != moused) {
-                interactableMoused.setMoused(false);
-                interactableMoused.setPressed(false);
+        if (inter != null) {
+            CanvasInteractable moused = inter.updateMoused(x, y);
+            if (moused != null) {
+                if (interactableMoused != null && interactableMoused != moused) {
+                    interactableMoused.setMoused(false);
+                    interactableMoused.setPressed(false);
+                }
+                interactableMoused = moused;
+                return true;        
             }
-            interactableMoused = moused;
-            return true;        
         }
         return false;
     }

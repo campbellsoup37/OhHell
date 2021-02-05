@@ -36,7 +36,8 @@ public class CanvasPostGamePage extends CanvasInteractable {
         String[] names = {
                 "Scores", 
                 "Win %",
-                "Hand analysis"
+                "Summary",
+                "Hands"
         };
         CanvasPostGamePage page = this;
         for (int i = 0; i < names.length; i++) {
@@ -137,7 +138,6 @@ public class CanvasPostGamePage extends CanvasInteractable {
             scorePlot.addIntData(player.getName(), scoresAug);
         }
         scorePlot.setTicks(ticks);
-        tabs.add(scorePlot);
         
         // Win % plot
         CanvasScorePlot winProbPlot = new CanvasScorePlot() {
@@ -197,7 +197,96 @@ public class CanvasPostGamePage extends CanvasInteractable {
             winProbPlot.addData(players.get(k).getName(), probs.get(k));
         }
         winProbPlot.setTicks(ticks);
-        tabs.add(winProbPlot);
+        
+        // Analysis
+        List<List<double[]>> allQs = new ArrayList<>(rounds.size());
+        List<List<Integer>> allAiBids = new ArrayList<>(rounds.size());
+        List<List<Double>> allDiffs = new ArrayList<>(rounds.size());
+        int M = players.size();
+        int maxH = Math.min(10, 51 / M);
+        OverallValueLearner ovl = new OverallValueLearner("resources/models/" + "ovlN" + players.size() + ".txt");
+        for (int i = 0; i < rounds.size(); i++) {
+            List<double[]> roundQs = new ArrayList<>(M);
+            List<Integer> roundAiBids = new ArrayList<>(M);
+            List<Double> roundDiffs = new ArrayList<>(M);
+            Card trump = canvas.getTrumps().get(i);
+            for (int j = 1; j <= players.size(); j++) {
+                ClientPlayer player = players.get((j + rounds.get(i)[0]) % M);
+                
+                double[] ps = new double[rounds.get(i)[1]];
+                
+                int turn = player.getIndex();
+                int numOfVoids = AiStrategyModuleOI.voids(player.getHands().get(i));
+                List<List<Card>> split = AiStrategyModuleOI.splitBySuit(player.getHands().get(i));
+                
+                for (int k = 0; k < rounds.get(i)[1]; k++) {
+                    Card card = player.getHands().get(i).get(k);
+                    
+                    SparseVector in = new SparseVector();
+                    in.addOneHot(player.getHands().get(i).size(), maxH);
+                    for (int l = 0; l < M; l++) {
+                        ClientPlayer iterPlayer = players.get((turn + l) % M);
+                        if (j - 1 + l >= M) {
+                            in.addOneHot(iterPlayer.getBids().get(i) + 1, maxH + 1);
+                        } else {
+                            in.addZeros(maxH + 1);
+                        }
+                    }
+                    in.addOneHot(numOfVoids + 1, 4);
+                    in.addOneHot(13 - split.get(trump.getSuitNumber() - 1).size(), 13);
+                    
+                    in.addOneHot(card.getSuit().equals(trump.getSuit()) ? 2 : 1, 2);
+                    in.addOneHot(14 - (card.getSuit().equals(trump.getSuit()) ? 1 : 0) - split.get(card.getSuitNumber() - 1).size(), 13);
+                    
+                    in.addOneHot(Deck.adjustedCardValueSmallNoPlayed(card, Arrays.asList(split.get(card.getSuitNumber() - 1), Arrays.asList(trump))) + 1, 13);
+                    
+                    ps[k] = ovl.testValue(in).get(1).get(0);
+                }
+                
+                double[] qs = AiStrategyModuleOI.subsetProb(ps, ps.length);
+                
+                roundQs.add(qs);
+                roundAiBids.add(AiStrategyModuleOI.optimalBid(ps)[0]);
+                roundDiffs.add(difficulty(qs));
+            }
+            allQs.add(roundQs);
+            allAiBids.add(roundAiBids);
+            allDiffs.add(roundDiffs);
+        }
+        
+        // Game analysis
+        CanvasGameAnalysis gameAnalysis = new CanvasGameAnalysis(players, rounds) {
+            @Override
+            public int x() {
+                return page.x()
+                        + 2 * GameCanvas.finalScoreInnerMargin
+                        + GameCanvas.finalScoreListWidth;
+            }
+            
+            @Override
+            public int y() {
+                return page.y()
+                        + GameCanvas.finalScoreInnerMargin;
+            }
+            
+            @Override
+            public int width() {
+                return page.x() 
+                        + page.width()
+                        - GameCanvas.finalScoreInnerMargin
+                        - x();
+            }
+            
+            @Override
+            public int height() {
+                return page.y()
+                        + page.height()
+                        - 2 * GameCanvas.finalScoreInnerMargin
+                        - 30
+                        - y();
+            }
+        };
+        gameAnalysis.addData(allQs, allAiBids, allDiffs);
         
         // Hand analysis
         CanvasHandAnalysis handAnalysis = new CanvasHandAnalysis(canvas, players, rounds) {
@@ -245,56 +334,41 @@ public class CanvasPostGamePage extends CanvasInteractable {
                 }
             }
         };
-        List<List<double[]>> allQs = new ArrayList<>(rounds.size());
-        List<List<Integer>> allAiBids = new ArrayList<>(rounds.size());
-        int M = players.size();
-        int maxH = Math.min(10, 51 / M);
-        OverallValueLearner ovl = new OverallValueLearner("resources/models/" + "ovlN" + players.size() + ".txt");
-        for (int i = 0; i < rounds.size(); i++) {
-            List<double[]> roundQs = new ArrayList<>(M);
-            List<Integer> roundAiBids = new ArrayList<>(M);
-            Card trump = canvas.getTrumps().get(i);
-            for (int j = 1; j <= players.size(); j++) {
-                ClientPlayer player = players.get((j + rounds.get(i)[0]) % M);
-                
-                double[] ps = new double[rounds.get(i)[1]];
-                
-                int turn = player.getIndex();
-                int numOfVoids = AiStrategyModuleOI.voids(player.getHands().get(i));
-                List<List<Card>> split = AiStrategyModuleOI.splitBySuit(player.getHands().get(i));
-                
-                for (int k = 0; k < rounds.get(i)[1]; k++) {
-                    Card card = player.getHands().get(i).get(k);
-                    
-                    SparseVector in = new SparseVector();
-                    in.addOneHot(player.getHands().get(i).size(), maxH);
-                    for (int l = 0; l < M; l++) {
-                        ClientPlayer iterPlayer = players.get((turn + l) % M);
-                        if (j - 1 + l >= M) {
-                            in.addOneHot(iterPlayer.getBids().get(i) + 1, maxH + 1);
-                        } else {
-                            in.addZeros(maxH + 1);
-                        }
-                    }
-                    in.addOneHot(numOfVoids + 1, 4);
-                    in.addOneHot(13 - split.get(trump.getSuitNumber() - 1).size(), 13);
-                    
-                    in.addOneHot(card.getSuit().equals(trump.getSuit()) ? 2 : 1, 2);
-                    in.addOneHot(14 - (card.getSuit().equals(trump.getSuit()) ? 1 : 0) - split.get(card.getSuitNumber() - 1).size(), 13);
-                    
-                    in.addOneHot(Deck.adjustedCardValueSmallNoPlayed(card, Arrays.asList(split.get(card.getSuitNumber() - 1), Arrays.asList(trump))) + 1, 13);
-                    
-                    ps[k] = ovl.testValue(in).get(1).get(0);
-                }
-                
-                roundQs.add(AiStrategyModuleOI.subsetProb(ps, ps.length));
-                roundAiBids.add(AiStrategyModuleOI.optimalBid(ps)[0]);
-            }
-            allQs.add(roundQs);
-            allAiBids.add(roundAiBids);
-        }
-        handAnalysis.addData(allQs, allAiBids);
+        handAnalysis.addData(allQs, allAiBids, allDiffs);
+        
+        tabs.add(scorePlot);
+        tabs.add(winProbPlot);
+        tabs.add(gameAnalysis);
         tabs.add(handAnalysis);
+    }
+    
+    /**
+     * Given a list qs, where qs[k] is the probability of making bid k, then determine a difficulty
+     * rating between 1 and 10. A list like {1, 0, 0, 0} should give a rating of 1, and a list like
+     * {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1} should give a rating of 10.
+     * 
+     * On a 0 to 1 scale, the difficulty is currently defined as
+     * (p ^ u - 1) / ((A - B * h) ^ u - 1),
+     * where p is max(qs), h is the number of cards in the hand, and u, A, and B are tuning 
+     * parameters.
+     */
+    public static double difficulty(double[] qs) {
+        double A = 0.45;
+        double B = 0.025;
+        double u = 0;
+        
+        double max = 0;
+        for (double q : qs) {
+            max = Math.max(q, max);
+        }
+        double r = A - B * (qs.length - 1);
+        double s = 0;
+        if (u == 0) {
+            s = Math.log(max) / Math.log(r);
+        } else {
+            s = (Math.pow(max, u) - 1) / (Math.pow(r, u) - 1);
+        }
+        return Math.max(1, Math.min(10, 1 + 9D * s));
     }
     
     public void selectTab(int tab) {

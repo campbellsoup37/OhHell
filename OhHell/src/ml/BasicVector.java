@@ -97,12 +97,12 @@ public class BasicVector implements Vector {
     }
 
     @Override
-    public void add(Vector vector) {
-        add(vector, 1);
+    public Vector add(Vector vector) {
+        return add(vector, 1);
     }
     
     @Override
-    public void add(Vector vector, double scale) {
+    public Vector add(Vector vector, double scale) {
         if (size() != vector.size()) {
             throw new MLException("Attempted to add vectors of sizes " + size() + " and " + vector.size() + ".");
         }
@@ -113,6 +113,7 @@ public class BasicVector implements Vector {
         for (int j = 0; j < thisVec.length; j++) {
             thisVec[j] += vec[j] * scale;
         }
+        return this;
     }
 
     @Override

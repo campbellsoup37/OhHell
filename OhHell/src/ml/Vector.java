@@ -17,9 +17,9 @@ public interface Vector {
     
     public double dot(Vector vector);
     
-    public void add(Vector vector);
+    public Vector add(Vector vector);
     
-    public void add(Vector vector, double scale);
+    public Vector add(Vector vector, double scale);
     
     public double get(int i);
     

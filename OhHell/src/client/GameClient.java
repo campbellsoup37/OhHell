@@ -66,11 +66,11 @@ import graphics.OhcTextField;
 public class GameClient extends JFrame {
     private static final long serialVersionUID = 1L;
     
-    //////Dev Options //////////////////
+     //////Dev Options //////////////////
      private final boolean aiHelpOptionEnabled = false;
      private final boolean stopperOptionEnabled = false;
-     private final boolean botsOnlyOptionEnabled = false;
-     private final boolean devSpeedOptionEnabled = false;
+     private final boolean botsOnlyOptionEnabled = true;
+     private final boolean devSpeedOptionEnabled = true;
      private final boolean fpsOptionEnabled = true;
      private final boolean lowGraphicsOptionEnabled = true;
      private final boolean antialiasingOptionEnabled = true;
