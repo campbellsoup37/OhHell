@@ -76,7 +76,7 @@ public class GameClient extends JFrame {
      private final boolean antialiasingOptionEnabled = true;
      ///////////////////////////////////
     
-    private final String version = "0.1.5.2";
+    private final String version = "0.1.5.3";
     
     private boolean connected = false;
     private Socket socket;
