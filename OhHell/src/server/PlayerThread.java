@@ -185,7 +185,7 @@ public class PlayerThread extends Thread {
             player.setDisconnected(true);
             server.updatePlayersList();
         } else {
-            server.removePlayer(player);
+            server.removePlayer(player, true);
         }
         commandQueue.clear();
         endThread();

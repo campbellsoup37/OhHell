@@ -48,9 +48,7 @@ public class OhcButton extends JButton {
         } else {
             graphics2.setColor(new Color(175, 255, 175));
         }
-        graphics2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 15, 15);
-        graphics2.setColor(Color.BLACK);
-        graphics2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 15, 15);
+        OhcGraphicsTools.drawBox(graphics2, 0, 0, getWidth() - 1, getHeight() - 1, 15);
         
         graphics2.setFont(OhcGraphicsTools.fontBold);
         OhcGraphicsTools.drawStringJustified(graphics2, getText(), getWidth() / 2, getHeight() / 2, 1, 1);

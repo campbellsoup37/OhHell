@@ -25,9 +25,7 @@ public class OhcScrollPane extends JScrollPane {
     public void paintComponent(Graphics graphics) {
         Graphics2D graphics2 = OhcGraphicsTools.makeGraphics2D(graphics, true, false);
         graphics2.setColor(Color.WHITE);
-        graphics2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 15, 15);
-        graphics2.setColor(Color.BLACK);
-        graphics2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 15, 15);
+        OhcGraphicsTools.drawBox(graphics2, 0, 0, getWidth() - 1, getHeight() - 1, 15);
         super.paintComponent(graphics2);
     }
 }

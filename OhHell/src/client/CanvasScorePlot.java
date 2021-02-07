@@ -69,9 +69,7 @@ public class CanvasScorePlot extends CanvasInteractable {
     public void paint(Graphics graphics) {
         if (boxed) {
             graphics.setColor(Color.WHITE);
-            graphics.fillRoundRect(x(), y(), width(), height(), 10, 10);
-            graphics.setColor(Color.BLACK);
-            graphics.drawRoundRect(x(), y(), width(), height(), 10, 10);
+            OhcGraphicsTools.drawBox(graphics, x(), y(), width(), height(), 10);
         }
         
         double nearestX = 0;
@@ -135,9 +133,7 @@ public class CanvasScorePlot extends CanvasInteractable {
             int ttHeight = (int) (tooltipMargin * 2 + 15 + 15 * boxData.size());
             int ttY = (int) canvasY((minY + maxY) / 2) - ttHeight / 2;
             graphics.setColor(Color.WHITE);
-            graphics.fillRoundRect(ttX, ttY, (int) tooltipWidth, ttHeight, 10, 10);
-            graphics.setColor(Color.BLACK);
-            graphics.drawRoundRect(ttX, ttY, (int) tooltipWidth, ttHeight, 10, 10);
+            OhcGraphicsTools.drawBox(graphics, ttX, ttY, tooltipWidth, ttHeight, 10);
             
             OhcGraphicsTools.drawStringJustified(graphics, 
                     dataTicks.get((int) nearestX),

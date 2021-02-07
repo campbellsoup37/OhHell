@@ -25,9 +25,8 @@ public class CanvasPostGamePage extends CanvasInteractable {
     private int tabSelected;
     private List<CanvasButton> buttons = new ArrayList<>();
     
-    public CanvasPostGamePage(List<ClientPlayer> players, List<ClientPlayer> sortedPlayers, List<int[]> rounds) {
+    public CanvasPostGamePage(List<ClientPlayer> players, List<int[]> rounds) {
         this.players = players;
-        this.sortedPlayers = sortedPlayers;
         this.rounds = rounds;
         makeButtons();
     }
@@ -89,6 +88,17 @@ public class CanvasPostGamePage extends CanvasInteractable {
     }
     
     public void buildTabs(GameCanvas canvas) {
+        sortedPlayers = new ArrayList<>(players.size());
+        for (ClientPlayer player : players) {
+            sortedPlayers.add(player);
+        }
+        sortedPlayers.sort((p1, p2) -> (int) Math.signum(p2.getScore() - p1.getScore()));
+        for (int place = 1, i = 0; i < sortedPlayers.size(); place = i + 1) {
+            for (int score = sortedPlayers.get(i).getScore(); i < sortedPlayers.size() && sortedPlayers.get(i).getScore() == score; i++) {
+                sortedPlayers.get(i).setPlace(place);
+            }
+        }
+        
         CanvasPostGamePage page = this;
         
         List<String> ticks = new ArrayList<>(rounds.size());
@@ -381,25 +391,20 @@ public class CanvasPostGamePage extends CanvasInteractable {
     
     @Override
     public void paint(Graphics graphics) {
+        if (!isShown()) {
+            return;
+        }
+        
         graphics.setColor(new Color(255, 255, 255, 180));
-        graphics.fillRoundRect(x(), y(), width(), height(), 10, 10);
-        graphics.setColor(Color.BLACK);
-        graphics.drawRoundRect(x(), y(), width(), height(), 10, 10);
+        OhcGraphicsTools.drawBox(graphics, x(), y(), width(), height(), 10);
         
         graphics.setColor(Color.WHITE);
-        graphics.fillRoundRect(
+        OhcGraphicsTools.drawBox(graphics, 
                 x() + GameCanvas.finalScoreInnerMargin,
                 y() + GameCanvas.finalScoreInnerMargin,
                 GameCanvas.finalScoreListWidth,
                 height() - 2 * GameCanvas.finalScoreInnerMargin,
-                10, 10);
-        graphics.setColor(Color.BLACK);
-        graphics.drawRoundRect(
-                x() + GameCanvas.finalScoreInnerMargin,
-                y() + GameCanvas.finalScoreInnerMargin,
-                GameCanvas.finalScoreListWidth,
-                height() - 2 * GameCanvas.finalScoreInnerMargin,
-                10, 10);
+                10);
         graphics.setFont(OhcGraphicsTools.fontBold);
         OhcGraphicsTools.drawStringJustified(graphics, 
                 "Final scores", 

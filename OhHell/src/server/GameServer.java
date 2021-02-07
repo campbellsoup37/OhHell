@@ -55,6 +55,7 @@ public class GameServer extends JFrame {
     private JScrollPane playersScrollPane = new OhcScrollPane(playersJList,
             JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
             JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+    private JButton dcButton = new OhcButton("DC Player");
     private JButton kickButton = new OhcButton("Kick Player");
     
     private JFrame popUpFrame = new JFrame();
@@ -125,7 +126,18 @@ public class GameServer extends JFrame {
         eastPanel.setLayout(new FlowLayout(2));
         playersScrollPane.setPreferredSize(new Dimension(200, 320));
         eastPanel.add(playersScrollPane);
-        kickButton.setPreferredSize(new Dimension(200, 40));
+        dcButton.setPreferredSize(new Dimension(97, 40));
+        dcButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int index = playersJList.getSelectedIndex();
+                if (index > -1) {
+                    disconnectPlayer((HumanPlayer) players.get(index));
+                }
+            }
+        });
+        eastPanel.add(dcButton);
+        kickButton.setPreferredSize(new Dimension(97, 40));
         kickButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -267,10 +279,16 @@ public class GameServer extends JFrame {
         }
     }
     
+    public void disconnectPlayer(HumanPlayer player) {
+        player.commandKick();
+        //player.getThread().endThread();
+        removePlayer(player, false);
+    }
+    
     public void kickPlayer(HumanPlayer player) {
         player.commandKick();
         player.getThread().endThread();
-        removePlayer(player);
+        removePlayer(player, true);
     }
     
     public void pokePlayer() {
@@ -281,10 +299,10 @@ public class GameServer extends JFrame {
         logTextArea.append(s + "\n");
     }
     
-    public void removePlayer(HumanPlayer player) {
+    public void removePlayer(HumanPlayer player, boolean kick) {
         logMessage("Player disconnected: " 
                 + player.getName() + " at " + player.getThread().getSocket().getInetAddress());
-        player.setKicked(true);
+        player.setKicked(kick);
         while (player.isHost() && players.size() > 1) {
             player.setHost(false);
             players.get(random.nextInt(players.size())).setHost(true);
@@ -297,7 +315,7 @@ public class GameServer extends JFrame {
         }
         updatePlayersList();
         
-        if (gameStarted() && !player.isKibitzer()) {
+        if (kick && gameStarted() && !player.isKibitzer()) {
             if (recording()) {
                 recorder.recordKick(player.getIndex());
             }

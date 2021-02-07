@@ -94,21 +94,22 @@ public class OhcGraphicsTools {
     public static void drawStringJustifiedBacked(Graphics graphics, String text, double x, double y) {
         FontMetrics m = graphics.getFontMetrics();
         graphics.setColor(new Color(255, 255, 255, 180));
-        graphics.fillRoundRect(
-                (int) (x - m.stringWidth(text) / 2 - 20), 
-                (int) (y - m.getHeight() / 3 - 12), 
+        drawBox(graphics,
+                (x - m.stringWidth(text) / 2 - 20), 
+                (y - m.getHeight() / 3 - 12), 
                 m.stringWidth(text) + 40, 
                 m.getHeight() + 20, 
-                20, 20);
-        graphics.setColor(Color.BLACK);
-        graphics.drawRoundRect(
-                (int) (x - m.stringWidth(text) / 2 - 20), 
-                (int) (y - m.getHeight() / 3 - 12), 
-                m.stringWidth(text) + 40, 
-                m.getHeight() + 20, 
-                20, 20);
+                20);
         graphics.drawString(text, 
                 (int) (x - m.stringWidth(text) / 2), 
                 (int) (y + m.getHeight() / 3));
+    }
+    
+    public static void drawBox(Graphics graphics, double x, double y, double width, double height, double roundness) {
+        graphics.fillRoundRect(
+                (int) x, (int) y, (int) width, (int) height, (int) roundness, (int) roundness);
+        graphics.setColor(Color.BLACK);
+        graphics.drawRoundRect(
+                (int) x, (int) y, (int) width, (int) height, (int) roundness, (int) roundness);
     }
 }

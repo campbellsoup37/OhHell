@@ -152,9 +152,7 @@ public class CanvasHandAnalysis extends CanvasInteractable {
     @Override
     public void paint(Graphics graphics) {
         graphics.setColor(Color.WHITE);
-        graphics.fillRoundRect(x(), y(), width(), height(), 10, 10);
-        graphics.setColor(Color.BLACK);
-        graphics.drawRoundRect(x(), y(), width(), height(), 10, 10);
+        OhcGraphicsTools.drawBox(graphics, x(), y(), width(), height(), 10);
         
         graphics.setColor(Color.BLACK);
         canvas.drawCard(graphics, canvas.getTrumps().get(roundSelected), 

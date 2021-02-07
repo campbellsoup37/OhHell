@@ -23,8 +23,8 @@ public class ReconnectFrame extends JFrame {
     
     private JLabel message = new JLabel("Reconnect as:");
     
-    private DefaultListModel<String> playersListModel = new DefaultListModel<String>();
-    private JList<String> playersJList = new JList<String>(playersListModel);
+    private DefaultListModel<String> playersListModel = new DefaultListModel<>();
+    private JList<String> playersJList = new JList<>(playersListModel);
     private JScrollPane playersScrollPane = new OhcScrollPane(playersJList, 
             JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
             JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
@@ -39,7 +39,7 @@ public class ReconnectFrame extends JFrame {
     
     public void execute() {
         setTitle("Reconnect");
-        setIconImage(OhcGraphicsTools.loadImage("resourcesicon/cw.png", this));
+        setIconImage(OhcGraphicsTools.loadImage("resources/icon/cw.png", this));
         message.setBounds(20,10,500,20);
         add(message);
         
@@ -103,7 +103,7 @@ public class ReconnectFrame extends JFrame {
         setResizable(false);
         setLayout(null);
         setVisible(true);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        //setDefaultCloseOperation(EXIT_ON_CLOSE);
     }
     
     public void close() {

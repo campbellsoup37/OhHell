@@ -4,6 +4,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -16,7 +17,7 @@ import javax.swing.Timer;
 import core.Card;
 import graphics.OhcGraphicsTools;
 
-public class GameCanvas extends JPanel {
+public class GameCanvas extends OhcCanvas {
     private static final long serialVersionUID = 1L;
     
     ////// Parameters /////////////////
@@ -134,6 +135,7 @@ public class GameCanvas extends JPanel {
     private int[] frameTimes = new int[frameQueueSize];
     
     public GameCanvas(GameClient client) {
+        super(client);
         this.client = client;
         
         deckImg = OhcGraphicsTools.loadImage("resources/client/deck2.png", this);
@@ -166,6 +168,48 @@ public class GameCanvas extends JPanel {
     }
     
     @Override
+    public void customPaint(Graphics graphics) {
+        maxHand = Math.max(maxHand, myPlayer.getHand().size());
+        
+        graphics.setColor(Color.BLACK);
+
+        if (paintTrumpMarker) {
+            paintTrump(graphics);
+        }
+        if (paintPlayersMarker) {
+            paintPlayers(graphics);
+        }
+        paintScores(graphics);
+        if (paintTakenMarker) {
+            paintTaken(graphics);
+        }
+        if (paintTrickMarker) {
+            paintTrick(graphics);
+        }
+        if (paintMessageMarker) {
+            paintMessage(graphics);
+        }
+        if (end) {
+            paintFinalScores(graphics);
+        }
+        paintChat(graphics);
+        
+        if (currentTime == 0) {
+            currentTime = System.currentTimeMillis();
+        } else {
+            long oldTime = currentTime;
+            currentTime = System.currentTimeMillis();
+            int newFrameTime = (int) (currentTime - oldTime);
+            frameTotalTime += newFrameTime - frameTimes[framePointer];
+            frameTimes[framePointer] = newFrameTime;
+            framePointer = (framePointer + 1) % frameQueueSize;
+            if (frameTimes[frameQueueSize - 1] != 0 && client.showFpsSelected()) {
+                OhcGraphicsTools.drawStringJustified(graphics, "FPS: " + String.format("%.2f", (double) 1000 * frameQueueSize / frameTotalTime), getWidth() - 450 - 100, 10, 0, 1);
+            }
+        }
+    }
+    
+    /*@Override
     public void paintComponent(Graphics graphics) {
         super.paintComponent(graphics);
         
@@ -231,7 +275,7 @@ public class GameCanvas extends JPanel {
                 repaint();
             }
         });
-    }
+    }*/
     
     public void paintTrump(Graphics graphics) {
         graphics.setColor(Color.BLACK);
@@ -304,9 +348,9 @@ public class GameCanvas extends JPanel {
             
             if (paintHandMarker) {
                 if (player == myPlayer) {
-                    for (CanvasCard canvasCard : cardInteractables) {
+                    /*for (CanvasCard canvasCard : cardInteractables) {
                         canvasCard.paint(graphics);
-                    }
+                    }*/
                 } else {
                     int handSize = player.getHand().size();
                     int yOffset = 40;
@@ -330,10 +374,8 @@ public class GameCanvas extends JPanel {
             } else {
                 graphics.setColor(Color.WHITE);
             }
-            graphics.fillRoundRect((int) (x - pos * maxWid / 2), y - 10, (int) maxWid, 20, 20, 20);
+            OhcGraphicsTools.drawBox(graphics, x - pos * maxWid / 2, y - 10, maxWid, 20, 20);
             
-            graphics.setColor(Color.BLACK);
-            graphics.drawRoundRect((int) (x - pos * maxWid / 2), y - 10, (int) maxWid, 20, 20, 20);
             if (player.isDisconnected()) {
                 graphics.setColor(Color.GRAY);
             }
@@ -458,7 +500,7 @@ public class GameCanvas extends JPanel {
                 }
                 
                 if (isLastTrick && !animatingTaken) {
-                    lastTrick.paint(graphics);
+                    //lastTrick.paint(graphics);
                 } else {
                     drawCard(graphics, new Card(), x, y, smallCardScale, true, false);
                 }
@@ -474,19 +516,12 @@ public class GameCanvas extends JPanel {
         int numRounds = rounds.size();
         
         graphics.setColor(Color.WHITE);
-        graphics.fillRoundRect(
+        OhcGraphicsTools.drawBox(graphics, 
                 getWidth() - (450 - scoreMargin), 
                 scoreMargin, 
                 450 - 2 * scoreMargin, 
                 scoreVSpacing * (numRounds + 1) + 5,
-                10, 10);
-        graphics.setColor(Color.BLACK);
-        graphics.drawRoundRect(
-                getWidth() - (450 - scoreMargin), 
-                scoreMargin, 
-                450 - 2 * scoreMargin, 
-                scoreVSpacing * (numRounds + 1) + 5, 
-                10, 10);
+                10);
         
         double wid = (double) (450 - 2 * scoreMargin - 50) / players.size();
 
@@ -661,7 +696,6 @@ public class GameCanvas extends JPanel {
         end = false;
         
         setPlayerPositions();
-        //makePlot();
         resetInteractables();
     }
     
@@ -796,7 +830,6 @@ public class GameCanvas extends JPanel {
     public void resetInteractables() {
         bidButtons = new LinkedList<>();
         cardInteractables = new LinkedList<>();
-        postGamePage = null;
         
         // Last Trick
         lastTrick = new CanvasCard(new Card(), smallCardScale, true, this) {
@@ -1145,10 +1178,46 @@ public class GameCanvas extends JPanel {
                 }
             });
         }
+        
+        // Post-game page
+        postGamePage = new CanvasPostGamePage(players, client.getRounds()) {
+            @Override
+            public int x() {
+                return finalScoreOuterMargin;
+            }
+            
+            @Override
+            public int y() {
+                return finalScoreOuterMargin;
+            }
+            
+            @Override
+            public int width() {
+                return getWidth() - 450 - 2 * finalScoreOuterMargin;
+            }
+            
+            @Override
+            public int height() {
+                return Math.min(getHeight() - finalScoreBottomMargin, 500);
+            }
+            
+            @Override
+            public boolean isShown() {
+                return end;
+            }
+        };
+    
+        setInteractables(Arrays.asList(
+                Arrays.asList(lastTrick),
+                buttons,
+                bidButtons,
+                cardInteractables,
+                Arrays.asList(postGamePage)
+                ));
     }
     
     public void makeBidInteractables() {
-        bidButtons = new LinkedList<>();
+        bidButtons.clear();
         for (int i = 0; i <= myPlayer.getHand().size(); i++) {
             final int bid = i;
             bidButtons.add(new CanvasButton(bid + "") {
@@ -1192,11 +1261,11 @@ public class GameCanvas extends JPanel {
     public void removeBidInteractables() {
         interactableMoused = null;
         interactablePressed = null;
-        bidButtons = new LinkedList<>();
+        bidButtons.clear();
     }
     
     public void makeHandInteractables() {
-        cardInteractables = new LinkedList<>();
+        cardInteractables.clear();
         for (int i = 0; i < myPlayer.getHand().size(); i++) {
             cardInteractables.add(new CanvasCard(myPlayer.getHand().get(i), 1, false, this) {
                 public int index() {
@@ -1251,7 +1320,7 @@ public class GameCanvas extends JPanel {
         this.leader = leader;
     }
     
-    public void mousePressed(int x, int y) {
+    /*public void mousePressed(int x, int y) {
         mouseMoved(x, y);
         if (interactableMoused != null) {
             interactableMoused.setPressed(true);
@@ -1299,18 +1368,6 @@ public class GameCanvas extends JPanel {
         }
     }
     
-    public void mouseWheeled(int clicks) {
-        if (end) {
-            postGamePage.wheel(clicks);
-        }
-    }
-    
-    public void keyPressed(int keyCode) {
-        if (end) {
-            postGamePage.pressKey(keyCode);
-        }
-    }
-    
     public boolean checkIfInteractableMoused(CanvasInteractable inter, int x, int y) {
         if (inter != null) {
             CanvasInteractable moused = inter.updateMoused(x, y);
@@ -1324,6 +1381,18 @@ public class GameCanvas extends JPanel {
             }
         }
         return false;
+    }*/
+    
+    public void mouseWheeled(int clicks) {
+        if (end) {
+            postGamePage.wheel(clicks);
+        }
+    }
+    
+    public void keyPressed(int keyCode) {
+        if (end) {
+            postGamePage.pressKey(keyCode);
+        }
     }
     
     public boolean cannotBid(int bid) {
@@ -1462,7 +1531,7 @@ public class GameCanvas extends JPanel {
                         player.resetTrick();
                         player.setHand(new LinkedList<>());
                     }
-                    cardInteractables = new LinkedList<>();
+                    cardInteractables.clear();
                 }
                 messageState = "UNBLOCKED";
                 claimer = -1;
@@ -1702,39 +1771,6 @@ public class GameCanvas extends JPanel {
             
             @Override
             public void onLastAction() {
-                List<ClientPlayer> sortedPlayers = new ArrayList<>(players.size());
-                for (ClientPlayer player : players) {
-                    sortedPlayers.add(player);
-                }
-                sortedPlayers.sort((p1, p2) -> (int) Math.signum(p2.getScore() - p1.getScore()));
-                for (int place = 1, i = 0; i < sortedPlayers.size(); place = i + 1) {
-                    for (int score = sortedPlayers.get(i).getScore(); i < sortedPlayers.size() && sortedPlayers.get(i).getScore() == score; i++) {
-                        sortedPlayers.get(i).setPlace(place);
-                    }
-                }
-                
-                postGamePage = new CanvasPostGamePage(players, sortedPlayers, client.getRounds()) {
-                    @Override
-                    public int x() {
-                        return finalScoreOuterMargin;
-                    }
-                    
-                    @Override
-                    public int y() {
-                        return finalScoreOuterMargin;
-                    }
-                    
-                    @Override
-                    public int width() {
-                        return getWidth() - 450 - 2 * finalScoreOuterMargin;
-                    }
-                    
-                    @Override
-                    public int height() {
-                        return Math.min(getHeight() - finalScoreBottomMargin, 500);
-                    }
-                };
-                
                 postGamePage.buildTabs(thisCanvas);
                 
                 message = "";

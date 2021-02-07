@@ -1,6 +1,9 @@
 package client;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -16,6 +19,7 @@ import java.awt.event.MouseWheelListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -31,6 +35,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -44,6 +49,7 @@ import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSlider;
 import javax.swing.JSpinner;
@@ -115,6 +121,7 @@ public class GameClient extends JFrame {
     private boolean stopperSelected = false;
     
     // MAIN_MENU
+    private OhcCanvas mainMenuCanvas;
     private JLabel titleLabel = new JLabel("Oh Hell", SwingConstants.CENTER);
     private JButton singlePlayerButton = new OhcButton("Single Player");
     private JButton multiplayerButton = new OhcButton("Multiplayer");
@@ -198,6 +205,7 @@ public class GameClient extends JFrame {
     private Random random = new Random();
     
     private ClientState state;
+    private OhcCanvas stateCanvas;
     
     public GameClient() {}
     
@@ -543,7 +551,9 @@ public class GameClient extends JFrame {
             
             setIconImage(OhcGraphicsTools.loadImage("resources/icon/cw.png", this));
             
-            titleLabel.setFont(OhcGraphicsTools.fontTitle);
+            BufferedImage tableImg = OhcGraphicsTools.loadImage("resources/client/table.jpg", this);
+            
+            /*titleLabel.setFont(OhcGraphicsTools.fontTitle);
             titleLabel.setBounds(0, 100, 685, 52);
             add(titleLabel);
             
@@ -580,7 +590,7 @@ public class GameClient extends JFrame {
                     updatePressed();
                 }
             });
-            add(updateButton);
+            add(updateButton);*/
             
             spRobotsLabel.setBounds(256, 150, 200, 40);
             add(spRobotsLabel);
@@ -811,6 +821,7 @@ public class GameClient extends JFrame {
                     canvas.keyPressed(e.getKeyCode());
                 }
             });
+            canvas.setBackground(tableImg);
             add(canvas);
             canvas.setLayout(null);
             
@@ -889,6 +900,161 @@ public class GameClient extends JFrame {
             });
             showButton.setVisible(false);
             
+            mainMenuCanvas = new OhcCanvas(this) {
+                @Override
+                public void initialize() {
+                    setBackground(tableImg);
+                    
+                    CanvasButton spButton = new CanvasButton("Single Player") {
+                        @Override
+                        public int x() {
+                            return 267;
+                        }
+                        
+                        @Override
+                        public int y() {
+                            return 230;
+                        }
+                        
+                        @Override
+                        public int width() {
+                            return 151;
+                        }
+                        
+                        @Override
+                        public int height() {
+                            return 40;
+                        }
+                        
+                        @Override
+                        public void click() {
+                            changeState(ClientState.SINGLE_PLAYER_MENU);
+                        }
+                    };
+                    
+                    CanvasButton mpButton = new CanvasButton("Multiplayer") {
+                        @Override
+                        public int x() {
+                            return 267;
+                        }
+                        
+                        @Override
+                        public int y() {
+                            return 330;
+                        }
+                        
+                        @Override
+                        public int width() {
+                            return 151;
+                        }
+                        
+                        @Override
+                        public int height() {
+                            return 40;
+                        }
+                        
+                        @Override
+                        public void click() {
+                            changeState(ClientState.MULTIPLAYER_MENU);
+                            SwingUtilities.invokeLater(new Runnable() {
+                                public void run() {
+                                    nameField.setText("");
+                                }
+                            });
+                        }
+                    };
+                    
+                    CanvasButton updateButton = new CanvasButton("Update") {
+                        @Override
+                        public int x() {
+                            return 450;
+                        }
+                        
+                        @Override
+                        public int y() {
+                            return 450;
+                        }
+                        
+                        @Override
+                        public int width() {
+                            return 150;
+                        }
+                        
+                        @Override
+                        public int height() {
+                            return 20;
+                        }
+                        
+                        @Override
+                        public void click() {
+                            updatePressed();
+                        }
+                    };
+                    
+                    setInteractables(Arrays.asList(Arrays.asList(spButton, mpButton, updateButton)));
+                }
+                
+                @Override
+                public boolean isShown() {
+                    return state == ClientState.MAIN_MENU;
+                }
+                
+                @Override
+                public void customPaint(Graphics graphics) {
+                    graphics.setColor(new Color(255, 255, 255, 180));
+                    OhcGraphicsTools.drawBox(graphics, 200, 80, 285, 320, 20);
+                    
+                    graphics.setFont(OhcGraphicsTools.fontTitle);
+                    OhcGraphicsTools.drawStringJustified(graphics, "Oh Hell", 342, 100, 1, 2);
+                    
+                    graphics.setFont(OhcGraphicsTools.font);
+                    OhcGraphicsTools.drawStringJustified(graphics, "v" + version, 610, 460, 0, 1);
+                }
+            };
+            mainMenuCanvas.setBounds(0, 0, 685, 500);
+            add(mainMenuCanvas);
+            
+            for (OhcCanvas c : Arrays.asList(mainMenuCanvas, canvas)) {
+                c.addMouseListener(new MouseListener() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {}
+                    
+                    @Override
+                    public void mouseEntered(MouseEvent arg0) {}
+                    
+                    @Override
+                    public void mouseExited(MouseEvent arg0) {}
+
+                    @Override
+                    public void mousePressed(MouseEvent e) {
+                        if (e.getButton() == MouseEvent.BUTTON1) {
+                            c.mousePressed(e.getX(), e.getY());
+                        } else if (e.getButton() == MouseEvent.BUTTON3 && stopperSelected) {
+                            //menuCanvas.removeStopper();
+                        }
+                        c.grabFocus();
+                    }
+
+                    @Override
+                    public void mouseReleased(MouseEvent e) {
+                        if (e.getButton() == MouseEvent.BUTTON1) {
+                            c.mouseReleased(e.getX(), e.getY());
+                        }
+                    }
+                });
+                c.addMouseMotionListener(new MouseMotionListener() {
+                    @Override
+                    public void mouseDragged(MouseEvent e) {
+                        c.mouseMoved(e.getX(), e.getY());
+                    }
+
+                    @Override
+                    public void mouseMoved(MouseEvent e) {
+                        c.mouseMoved(e.getX(), e.getY());
+                    }
+                });
+            }
+                        
             aiSpeedOption.add(aiSpeedOptionSlider);
 
             aiSpeedOption.setPreferredSize(new Dimension(150, 25));

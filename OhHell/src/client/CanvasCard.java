@@ -63,11 +63,6 @@ public class CanvasCard extends CanvasInteractable {
     @Override
     public void paint(Graphics graphics) {
         if (isShown()) {
-            /*graphics.setColor(Color.WHITE);
-            graphics.fillRoundRect(x() + xPaintOffset(), y() + yPaintOffset(), width(), height(), 10, 10);
-            graphics.setColor(Color.BLACK);
-            graphics.drawRoundRect(x() + xPaintOffset(), y() + yPaintOffset(), width(), height(), 10, 10);
-            OhcGraphicsTools.drawStringJustified(graphics, card + "", x() + xPaintOffset() + 10, y() + yPaintOffset() + 10, 1, 1);*/
             canvas.drawCard(graphics, hidden() ? new Card() : card, xCenter() + xPaintOffset(), yCenter() + yPaintOffset(), scale, small, isMoused());
         }
     }
