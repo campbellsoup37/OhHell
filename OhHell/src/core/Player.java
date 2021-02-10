@@ -4,6 +4,7 @@ import java.util.List;
 
 public class Player {
     private String name;
+    private String id;
     private int index = 0;
     private int score;
     private int bid;
@@ -52,6 +53,14 @@ public class Player {
     
     public String getName() {
         return name;
+    }
+    
+    public void setId(String id) {
+        this.id = id;
+    }
+    
+    public String getId() {
+        return id;
     }
     
     public void setIndex(int index) {
@@ -281,7 +290,13 @@ public class Player {
     
     public void commandStart() {}
     
-    public void commandPlayersInfo(List<Player> players, List<Player> kibitzers, Player player) {}
+    public void commandAddPlayers(List<? extends Player> player, List<? extends Player> kibitzers) {}
+    
+    public void commandRemovePlayer(Player player) {}
+    
+    public void commandUpdatePlayers(List<? extends Player> player) {}
+    
+    //public void commandPlayersInfo(List<Player> players, List<Player> kibitzers, Player player) {}
     
     public void commandStatePlayer(Player player) {}
     

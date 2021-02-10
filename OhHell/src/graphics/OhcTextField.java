@@ -68,16 +68,18 @@ public class OhcTextField extends JTextField {
 
     @Override
     public void paintComponent(Graphics graphics) {
-        Graphics2D graphics2 = OhcGraphicsTools.makeGraphics2D(graphics, true, false);
-        graphics2.setColor(Color.WHITE);
-        OhcGraphicsTools.drawBox(graphics2, 0, 0, getWidth() - 1, getHeight() - 1, 15);
-        
-        if (showingDefaultText) {
-            setForeground(Color.GRAY);
-        } else {
-            setForeground(Color.BLACK);
+        if (isVisible()) {
+            Graphics2D graphics2 = OhcGraphicsTools.makeGraphics2D(graphics, true, false);
+            graphics2.setColor(Color.WHITE);
+            OhcGraphicsTools.drawBox(graphics2, 0, 0, getWidth() - 1, getHeight() - 1, 15);
+            
+            if (showingDefaultText) {
+                setForeground(Color.GRAY);
+            } else {
+                setForeground(Color.BLACK);
+            }
+            
+            super.paintComponent(graphics2);
         }
-        
-        super.paintComponent(graphics2);
     }
 }

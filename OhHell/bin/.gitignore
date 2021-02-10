@@ -1,8 +1,10 @@
-/client/
-/ml/
-/core/
-/server/
-/graphics/
-/updater/
-/strategyOI/
 /aiworkshop/
+/client/
+/core/
+/graphics/
+/ml/
+/server/
+/strategyMI/
+/strategyOI/
+/strategyRBP/
+/updater/

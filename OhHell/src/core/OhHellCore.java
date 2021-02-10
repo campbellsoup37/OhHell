@@ -62,6 +62,7 @@ public class OhHellCore {
             int j = random.nextInt(i);
             Player player = players.remove(j);
             players.add(player);
+            player.setIndex(players.size() - i);
         }
         updatePlayersList();
     }
@@ -82,10 +83,10 @@ public class OhHellCore {
         }
         
         for (Player player : players) {
-            player.commandPlayersInfo(players, kibitzers, player);
+            player.commandUpdatePlayers(players);
         }
         for (Player player : kibitzers) {
-            player.commandPlayersInfo(players, kibitzers, player);
+            player.commandUpdatePlayers(players);
         }
     }
     
@@ -110,8 +111,18 @@ public class OhHellCore {
     public void startGame(int robotCount, boolean doubleDeck, 
             List<AiStrategyModule> aiStrategyModules, int robotDelay) {
         if (robotCount > 0) {
-            players.addAll(aiKernel.createAiPlayers(
-                    players.size() + robotCount, robotCount, aiStrategyModules, robotDelay));
+            List<AiPlayer> aiPlayers = aiKernel.createAiPlayers(
+                    players.size() + robotCount, robotCount, aiStrategyModules, robotDelay);
+            for (int i = 0; i < aiPlayers.size(); i++) {
+                aiPlayers.get(i).setId("@bot" + i);
+            }
+            for (Player player : players) {
+                player.commandAddPlayers(aiPlayers, null);
+            }
+            for (Player kibitzer : kibitzers) {
+                kibitzer.commandAddPlayers(aiPlayers, null);
+            }
+            players.addAll(aiPlayers);
             aiKernel.start();
         }
         deck.setDoubleDeck(doubleDeck);
@@ -141,8 +152,8 @@ public class OhHellCore {
         rounds = new ArrayList<RoundDetails>();
         roundNumber = 0;
 
-        /*rounds.add(new RoundDetails(8));
-        rounds.add(new RoundDetails(7));
+        //rounds.add(new RoundDetails(1));
+        //rounds.add(new RoundDetails(2));
         /*rounds.add(new RoundDetails(6));
         rounds.add(new RoundDetails(5));
         rounds.add(new RoundDetails(4));*/

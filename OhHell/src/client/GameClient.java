@@ -1,9 +1,7 @@
 package client;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -40,61 +38,43 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
-import javax.swing.DefaultListModel;
-import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
 import javax.swing.JSlider;
-import javax.swing.JSpinner;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.SpinnerNumberModel;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.UIManager;
-import javax.swing.text.DefaultCaret;
 
 import core.Card;
 import core.OhHellCore;
 import core.Player;
-import graphics.OhcButton;
 import graphics.OhcGraphicsTools;
-import graphics.OhcScrollPane;
 import graphics.OhcTextField;
 
 public class GameClient extends JFrame {
     private static final long serialVersionUID = 1L;
     
-     //////Dev Options //////////////////
-     private final boolean aiHelpOptionEnabled = false;
-     private final boolean stopperOptionEnabled = false;
-     private final boolean botsOnlyOptionEnabled = true;
-     private final boolean devSpeedOptionEnabled = true;
-     private final boolean fpsOptionEnabled = true;
-     private final boolean lowGraphicsOptionEnabled = true;
-     private final boolean antialiasingOptionEnabled = true;
-     ///////////////////////////////////
+    //////Dev Options //////////////////
+    private final boolean aiHelpOptionEnabled = false;
+    private final boolean stopperOptionEnabled = false;
+    private final boolean botsOnlyOptionEnabled = true;
+    private final boolean devSpeedOptionEnabled = true;
+    private final boolean pingOptionEnabled = true;
+    private final boolean fpsOptionEnabled = true;
+    private final boolean lowGraphicsOptionEnabled = true;
+    private final boolean antialiasingOptionEnabled = true;
+    ///////////////////////////////////
     
-    private final String version = "0.1.5.3";
+    private final String version = "0.1.5.4";
+    private boolean updateChecked = false;
+    private String newVersion;
     
-    private boolean connected = false;
-    private Socket socket;
+    private String username = "";
     private String hostName = "localhost";
-    private int port = 6066;
-    private String name = "";
-    
-    private ClientReadThread readThread;
-    private ClientWriteThread writeThread;
-    
-    private NotificationFrame notificationFrame;
-    //private DisconnectFrame dcFrame;
+    private String port = "6066";
     
     private Point windowLocationMenu = new Point(0, 0);
     private Dimension windowSizeMenu = new Dimension(685, 540);
@@ -102,12 +82,21 @@ public class GameClient extends JFrame {
     private Point windowLocationInGame = new Point(0, 0);
     private Dimension windowSizeInGame = new Dimension(1200, 800);
     private boolean windowMaximizedInGame = false;
+
+    private boolean connected = false;
+    private Socket socket;
+    private ClientReadThread readThread;
+    private ClientWriteThread writeThread;
     
+    private NotificationFrame notificationFrame;
+    
+    // Menu bar
     private JMenuBar menuBar = new JMenuBar();
     private JMenu optionsItem = new JMenu("Options");
     private JCheckBox soundOption = new JCheckBox("Sound");
     private JMenu aiSpeedOption = new JMenu("AI play speed");
     private JSlider aiSpeedOptionSlider = new JSlider(JSlider.HORIZONTAL, 0, 900, 500);
+    private JCheckBox pingOption = new JCheckBox("Show ping");
     private JCheckBox fpsOption = new JCheckBox("Show FPS");
     private JMenu devOptionsItem = new JMenu("Dev options");
     private JCheckBox aiHelpOption = new JCheckBox("AI help");
@@ -119,82 +108,24 @@ public class GameClient extends JFrame {
     private JMenuItem backOption = new JMenuItem("Back to menu");
     
     private boolean stopperSelected = false;
+    private long pingTime = 0;
+    private long currentPing = 0;
     
     // MAIN_MENU
     private OhcCanvas mainMenuCanvas;
-    private JLabel titleLabel = new JLabel("Oh Hell", SwingConstants.CENTER);
-    private JButton singlePlayerButton = new OhcButton("Single Player");
-    private JButton multiplayerButton = new OhcButton("Multiplayer");
-    private JLabel versionLabel = new JLabel("v" + version);
-    private OhcButton updateButton = new OhcButton("Check for updates");
-    private Component[] mainMenuComponents = {
-                titleLabel, singlePlayerButton, multiplayerButton, versionLabel, updateButton
-            };
-    
-    private boolean updateFound = false;
-    private String newVersion;
     
     // SINGLE_PLAYER_MENU
-    private JLabel spRobotsLabel = new JLabel("Robots:");
-    private JSpinner spRobotsSpinner = new JSpinner(new SpinnerNumberModel(4, 1, 6, 1));
-    private JButton spStartButton = new OhcButton("Start!");
-    private JButton spBackButton = new OhcButton("Back");
-    private Component[] singlePlayerMenuComponents = {
-                spRobotsLabel, spRobotsSpinner, spStartButton, spBackButton
-            };
+    private OhcCanvas singlePlayerCanvas;
     
+    private int numRobots = 4;
     private OhHellCore core = new OhHellCore(false);
     private SinglePlayerPlayer spPlayer;
     
-    // MULTIPLAYER_MENU
-    private JLabel hostLabel = new JLabel("Host name:");
-    private JTextField hostField = new OhcTextField("Host address");
-    private JLabel portLabel = new JLabel("Port:");
-    private JTextField portField = new OhcTextField("Port");
-    private JButton connectButton = new OhcButton("Connect");
-    private JLabel nameLabel = new JLabel("Name:");
-    private OhcTextField nameField = new OhcTextField("Player name");
-    private JButton nameButton = new OhcButton("Change name");
-    private JCheckBox kibitzerCheckBox = new JCheckBox("Join as kibitzer");
-    private JButton mpOptionsButton = new OhcButton("Game options");
-    private JButton mpStartButton = new OhcButton("Start!");
-    private JLabel playersLabel = new JLabel("Players:");
-    private DefaultListModel<String> playersListModel = new DefaultListModel<>();
-    private JList<String> playersJList = new JList<>(playersListModel);
-    private JScrollPane playersScrollPane = new OhcScrollPane(playersJList,
-                JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
-                JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
-    private JButton mpBackButton = new OhcButton("Back");
-    private Component[] multiplayerMenuComponents = {
-                hostLabel, hostField, portLabel, portField, connectButton,
-                nameLabel, nameField, nameButton, kibitzerCheckBox, mpOptionsButton,
-                mpStartButton, playersLabel, playersJList, playersScrollPane, mpBackButton
-            };
-    
-    private int mpNumRobots = 0;
-    private boolean mpDoubleDeck = false;
+    // LOGIN_MENU
+    private OhcCanvas loginCanvas;
     
     // IN_GAME
-    private GameCanvas canvas = new GameCanvas(this);
-    private JTextArea chatArea = new JTextArea();
-    private JScrollPane chatScrollPane = new OhcScrollPane(chatArea,
-                JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
-                JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-    private JTextField chatField = new OhcTextField("Enter text");
-    private JButton showButton = new JButton("Show");
-    private Component[] inGameComponents = {
-                canvas, chatArea, chatScrollPane, chatField
-            };
-    
-    // POST_GAME
-    private JButton pgBackButton = new JButton("Back");
-    private Component[] postGameComponents = {
-                canvas, pgBackButton, chatArea, chatScrollPane, chatField
-            };
-    
-    private Component[][] allComponents = {
-                mainMenuComponents, singlePlayerMenuComponents, multiplayerMenuComponents, inGameComponents, postGameComponents
-            };
+    private GameCanvas canvas;
     
     private List<ClientPlayer> players = new ArrayList<>();
     private List<ClientPlayer> kibitzers = new ArrayList<>();
@@ -214,69 +145,78 @@ public class GameClient extends JFrame {
     }
     
     public void changeState(ClientState newState) {
-        Component[] toShow = {};
+        OhcCanvas oldStateCanvas = stateCanvas;
         
         switch (newState) {
         case MAIN_MENU:
-            toShow = mainMenuComponents;
             setLocation(windowLocationMenu);
             setMinimumSize(new Dimension(685, 500));
             setSize(windowSizeMenu);
             setMaximized(windowMaximizedMenu);
             setResizable(false);
+            stateCanvas = mainMenuCanvas;
             break;
         case SINGLE_PLAYER_MENU:
-            name = "";
-            toShow = singlePlayerMenuComponents;
             setLocation(windowLocationMenu);
             setMinimumSize(new Dimension(685, 500));
             setSize(windowSizeMenu);
             setMaximized(windowMaximizedMenu);
             setResizable(false);
+            stateCanvas = singlePlayerCanvas;
             break;
         case IN_SINGLE_PLAYER_GAME:
-            toShow = inGameComponents;
             setLocation(windowLocationInGame);
             setMinimumSize(new Dimension(1200, 800));
             setSize(windowSizeInGame);
             setMaximized(windowMaximizedInGame);
             setResizable(true);
+            stateCanvas = canvas;
             break;
         case SINGLE_PLAYER_POST_GAME:
-            toShow = postGameComponents;
             break;
-        case MULTIPLAYER_MENU:
-            toShow = multiplayerMenuComponents;
-            setLocation(windowLocationMenu);
+        case LOGIN_MENU:
             setMinimumSize(new Dimension(685, 500));
             setSize(windowSizeMenu);
             setMaximized(windowMaximizedMenu);
             setResizable(false);
+            stateCanvas = loginCanvas;
+            myPlayer = null;
             break;
         case IN_MULTIPLAYER_GAME:
-            toShow = inGameComponents;
             setLocation(windowLocationInGame);
             setMinimumSize(new Dimension(1200, 800));
             setSize(windowSizeInGame);
             setMaximized(windowMaximizedInGame);
             setResizable(true);
+            stateCanvas = canvas;
             break;
         case MULTIPLAYER_POST_GAME:
-            toShow = postGameComponents;
             break;
         }
         
-        for (Component[] compsList : allComponents) {
-            if (compsList != toShow) {
-                for (Component comp : compsList) {
-                    comp.setVisible(false);
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                if (oldStateCanvas == null || oldStateCanvas != stateCanvas) {
+                    resizeCanvas();
+                    stateCanvas.setVisible(true);
+                    if (oldStateCanvas != null) {
+                        oldStateCanvas.setVisible(false);
+                    }
                 }
             }
-        }
-        for (Component comp : toShow) {
-            comp.setVisible(true);
-        }
+        });
+        
         state = newState;
+    }
+    
+    public void resizeCanvas() {
+        if (stateCanvas != null) {
+            stateCanvas.setBounds(
+                    0, 0,
+                    getContentPane().getWidth(),
+                    getContentPane().getHeight()
+                    );
+        }
     }
     
     public void setMaximized(boolean m) {
@@ -287,87 +227,112 @@ public class GameClient extends JFrame {
         }
     }
     
-    public void updatePlayersList(List<ClientPlayer> newPlayers, int myIndex) {
-        playersListModel.clear();
-        if (state != ClientState.IN_MULTIPLAYER_GAME) {
-            players.clear();
-        }
-        kibitzers.clear();
-
+    public void addPlayers(List<ClientPlayer> players) {
         boolean anyDc = false;
         
-        for (int i = 0; i < newPlayers.size(); i++) {
-            ClientPlayer player = newPlayers.get(i);
-            if (player.isDisconnected() && !player.isKicked()) {
-                anyDc = true;
-            }
-            if (connected && player.isHuman()) {
-                playersListModel.addElement(
-                        player.getName()
-                        + (player.isHost() ? " (host)" : "")
-                        + (player.isKibitzer() ? " (kibitzer)" : ""));
-            }
-            if (!player.isKibitzer()) {
-                if (state != ClientState.IN_MULTIPLAYER_GAME) {
-                    players.add(player);
-                } else {
-                    ClientPlayer oldPlayer = players.get(i);
-                    oldPlayer.setIndex(player.getIndex());
-                    oldPlayer.setName(player.getName());
-                    oldPlayer.setHost(player.isHost());
-                    oldPlayer.setDisconnected(player.isDisconnected());
-                    oldPlayer.setKicked(player.isKicked());
-                    oldPlayer.setKibitzer(player.isKibitzer());
-                    player = oldPlayer;
-                }
-            } else {
+        for (ClientPlayer player : players) {
+            if (player.isKibitzer()) {
                 kibitzers.add(player);
+            } else {
+                this.players.add(player);
+                player.setIndex(this.players.size() - 1);
+                anyDc = anyDc || player.isDisconnected();
             }
-            if (i == myIndex) {
+            if (player.getId().equals(username)) {
                 myPlayer = player;
-                name = player.getName();
-                SwingUtilities.invokeLater(new Runnable() {
-                    public void run() {
-                        nameField.setText(name);
-                    }
-                });
             }
         }
-        
-        /*if (anyDc && !myPlayer.isKibitzer()) {
-            if (dcFrame == null) {
-                dcFrame = new DisconnectFrame(this);
-                dcFrame.setLocationRelativeTo(this);
-                dcFrame.execute();
-            }
-            dcFrame.setDcList(
-                    players.stream()
-                        .filter(p -> p.isDisconnected() && !p.isKicked())
-                        .map(ClientPlayer::getName)
-                        .collect(Collectors.toList()));
-        } else {
-            if (dcFrame != null) {
-                dcFrame.close();
-                dcFrame = null;
-            }
-        }*/
-        if (state == ClientState.IN_MULTIPLAYER_GAME) {
-            canvas.setConnectionStatusOnTimer(!anyDc);
-        }
-        
-        if (myPlayer.isKibitzer()) {
-            kibitzerCheckBox.setSelected(true);
-        }
-        
+
+        final boolean anyDcF = anyDc;
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-                playersJList.updateUI();
+                canvas.updatePlayerCalcs();
+                
+                if (state == ClientState.IN_MULTIPLAYER_GAME && anyDcF) {
+                    canvas.setConnectionStatusOnTimer(false);
+                }
             }
         });
     }
     
+    public void removePlayer(String id) {
+        int toRemove = players.size();
+        for (int i = 0; i < players.size(); i++) {
+            if (players.get(i).getId().equals(id)) {
+                toRemove = i;
+            }
+            /*if (i > toRemove) {
+                players.get(i).setIndex(i - 1);
+            }*/
+        }
+        if (toRemove < players.size()) {
+            players.remove(toRemove);
+        } else {
+            toRemove = kibitzers.size();
+            for (int i = 0; i < kibitzers.size(); i++) {
+                if (kibitzers.get(i).getId().equals(id)) {
+                    toRemove = i;
+                }
+            }
+            kibitzers.remove(toRemove);
+        }
+        
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                canvas.updatePlayerCalcs();
+            }
+        });
+    }
+    
+    public void updatePlayers(List<ClientPlayer> newPlayers) {
+        boolean anyDc = false;
+        
+        for (ClientPlayer newPlayer : newPlayers) {
+            for (ClientPlayer oldPlayer : players) {
+                if (oldPlayer.getId().equals(newPlayer.getId())) {
+                    oldPlayer.setName(newPlayer.getName());
+                    oldPlayer.setId(newPlayer.getId());
+                    oldPlayer.setIndex(newPlayer.getIndex());
+                    oldPlayer.setHost(newPlayer.isHost());
+                    oldPlayer.setDisconnected(newPlayer.isDisconnected());
+                    oldPlayer.setKicked(newPlayer.isKicked());
+                    oldPlayer.setKibitzer(newPlayer.isKibitzer());
+                    anyDc = anyDc || newPlayer.isDisconnected();
+                }
+            }
+        }
+        
+        players.sort((p1, p2) -> (int) Math.signum(p1.getIndex() - p2.getIndex()));
+
+        final boolean anyDcF = anyDc;
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                canvas.updatePlayerCalcs();
+                
+                if (state == ClientState.IN_MULTIPLAYER_GAME) {
+                    canvas.setConnectionStatusOnTimer(!anyDcF);
+                }
+            }
+        });
+        
+        if (state == ClientState.IN_MULTIPLAYER_GAME) {
+            canvas.setConnectionStatusOnTimer(!anyDc);
+        }
+    }
+    
+    public void sendIdToServer() {
+        sendCommandToServer("ID:" + "STRING " + username.length() + ":" + username);
+    }
+    
+    public void toggleKibitzer() {
+        sendCommandToServer("KIBITZER:" + !myPlayer.isKibitzer());
+    }
+    
     public void updateRounds(List<int[]> rounds, int roundNumber) {
-        this.rounds = rounds;
+        this.rounds.clear();
+        for (int[] round : rounds) {
+            this.rounds.add(round);
+        }
         this.roundNumber = roundNumber;
     }
     
@@ -391,8 +356,29 @@ public class GameClient extends JFrame {
         sendCommandToServer("VOTEKICK:" + index);
     }
     
+    public void startSinglePlayerGame() {
+        players.clear();
+        kibitzers.clear();
+        
+        spPlayer = new SinglePlayerPlayer(this);
+        spPlayer.setId(username);
+        spPlayer.setKibitzer(botsOnlyOption.isSelected());
+        spPlayer.commandAddPlayers(Arrays.asList(spPlayer), null);
+        
+        List<Player> players = new ArrayList<>();
+        List<Player> kibitzers = new ArrayList<>();
+        (botsOnlyOption.isSelected() ? kibitzers : players).add(spPlayer);
+        core.setPlayers(players);
+        core.setKibitzers(kibitzers);
+        
+        spPlayer.setCore(core);
+        canvas.reset();
+        core.startGame(numRobots, false, null, 0);
+    }
+    
     public void startGame() {
         roundNumber = 0;
+        canvas.setState(GameState.BIDDING);
 
         for (ClientPlayer player : players) {
             player.reset();
@@ -400,14 +386,12 @@ public class GameClient extends JFrame {
         if (myPlayer.isKibitzer()) {
             myPlayer.setIndex(random.nextInt(players.size()));
         }
-        canvas.reset();
         
-        switch(state) {
+        switch (state) {
         case SINGLE_PLAYER_MENU:
+        case IN_SINGLE_PLAYER_GAME:
+        case SINGLE_PLAYER_POST_GAME:
             changeState(ClientState.IN_SINGLE_PLAYER_GAME);
-            break;
-        case MULTIPLAYER_MENU:
-            changeState(ClientState.IN_MULTIPLAYER_GAME);
             break;
         case MULTIPLAYER_POST_GAME:
             changeState(ClientState.IN_MULTIPLAYER_GAME);
@@ -415,7 +399,6 @@ public class GameClient extends JFrame {
         default:
             break;
         }
-        //canvas.repaint();
     }
     
     public List<ClientPlayer> getPlayers() {
@@ -435,7 +418,6 @@ public class GameClient extends JFrame {
                 player.getBids().remove(roundNumber);
             }
         }
-        //canvas.repaint();
 
         canvas.showMessageOnTimer("Someone was kicked. Redealing this round.");
     }
@@ -456,7 +438,6 @@ public class GameClient extends JFrame {
     
     public void setTrump(Card card) {
         canvas.setTrumpOnTimer(card);
-        //canvas.repaint();
     }
     
     public void setDealerLeader(int dealer, int leader) {
@@ -466,12 +447,10 @@ public class GameClient extends JFrame {
     
     public void bid(int index) {
         canvas.setBiddingOnTimer(index);
-        //canvas.repaint();
     }
     
     public void play(int index) {
         canvas.setPlayingOnTimer(index);
-        //canvas.repaint();
     }
     
     public int getRobotDelay() {
@@ -480,7 +459,6 @@ public class GameClient extends JFrame {
     
     public void bidReport(int index, int bid) {
         canvas.setBidOnTimer(index, bid, players.get(index).isHuman() ? 0 : getRobotDelay());
-        //canvas.repaint();
         if (stopperSelected) {
             canvas.addStopper();
         }
@@ -502,10 +480,8 @@ public class GameClient extends JFrame {
         if (!myPlayer.isKibitzer()) {
             canvas.showResultMessageOnTimer();
         }
-        //canvas.deletePokeTimer();
         canvas.setScoresOnTimer(scores);
         canvas.clearRoundOnTimer();
-        //canvas.repaint();
         if (stopperSelected) {
             canvas.addStopper();
         }
@@ -516,11 +492,7 @@ public class GameClient extends JFrame {
     }
     
     public void chat(String text) {
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                chatArea.setText(chatArea.getText() + text + "\n");
-            }
-        });
+        canvas.chat(text);
     }
     
     public void setStatePlayer(int index, boolean hasBid, int bid, int taken, Card lastTrick, Card trick) {
@@ -553,354 +525,82 @@ public class GameClient extends JFrame {
             
             BufferedImage tableImg = OhcGraphicsTools.loadImage("resources/client/table.jpg", this);
             
-            /*titleLabel.setFont(OhcGraphicsTools.fontTitle);
-            titleLabel.setBounds(0, 100, 685, 52);
-            add(titleLabel);
-            
-            singlePlayerButton.setBounds(267, 230, 151, 40);
-            singlePlayerButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    changeState(ClientState.SINGLE_PLAYER_MENU);
-                }
-            });
-            add(singlePlayerButton);
-            
-            multiplayerButton.setBounds(267, 330, 151, 40);
-            multiplayerButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    changeState(ClientState.MULTIPLAYER_MENU);
-                    SwingUtilities.invokeLater(new Runnable() {
-                        public void run() {
-                            nameField.setText("");
-                        }
-                    });
-                }
-            });
-            add(multiplayerButton);
-            
-            versionLabel.setBounds(610, 440, 100, 40);
-            add(versionLabel);
-            
-            updateButton.setBounds(450, 450, 150, 20);
-            updateButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    updatePressed();
-                }
-            });
-            add(updateButton);*/
-            
-            spRobotsLabel.setBounds(256, 150, 200, 40);
-            add(spRobotsLabel);
-            
-            spRobotsSpinner.setBounds(328, 150, 100, 40);
-            add(spRobotsSpinner);
-            
-            spStartButton.setBounds(267, 250, 150, 40);
-            GameClient thisClient = this;
-            spStartButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    int robotCount = (int) spRobotsSpinner.getValue();
-                    spPlayer = new SinglePlayerPlayer(thisClient);
-                    spPlayer.setKibitzer(botsOnlyOption.isSelected());
-                    List<Player> players = new ArrayList<>();
-                    List<Player> kibitzers = new ArrayList<>();
-                    (botsOnlyOption.isSelected() ? kibitzers : players).add(spPlayer);
-                    core.setPlayers(players);
-                    core.setKibitzers(kibitzers);
-                    spPlayer.setCore(core);
-                    core.startGame(robotCount, false, null, 0);
-                }
-            });
-            add(spStartButton);
-            
-            spBackButton.setBounds(267, 350, 150, 40);
-            spBackButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    changeState(ClientState.MAIN_MENU);
-                }
-            });
-            add(spBackButton);
-            
-            hostLabel.setBounds(20, 20, 200, 40);
-            add(hostLabel);
-            
-            hostField.setBounds(120, 20, 200, 40);
-            hostField.addKeyListener(new KeyListener() {
-                @Override
-                public void keyPressed(KeyEvent arg0) {}
+            aiSpeedOption.add(aiSpeedOptionSlider);
 
-                @Override
-                public void keyReleased(KeyEvent e) {
-                    if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                        connect();
-                    }
-                }
-
-                @Override
-                public void keyTyped(KeyEvent e) {}
-            });
-            add(hostField);
+            aiSpeedOption.setPreferredSize(new Dimension(150, 25));
+            optionsItem.add(aiSpeedOption);
             
-            portLabel.setBounds(57, 70, 200, 40);
-            add(portLabel);
+            optionsItem.add(soundOption);
             
-            portField.setBounds(120, 70, 200, 40);
-            portField.addKeyListener(new KeyListener() {
-                @Override
-                public void keyPressed(KeyEvent arg0) {}
-
-                @Override
-                public void keyReleased(KeyEvent e) {
-                    if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                        connect();
-                    }
-                }
-
-                @Override
-                public void keyTyped(KeyEvent e) {}
-            });
-            add(portField);
-            
-            connectButton.setBounds(120, 120, 150, 40);
-            connectButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    connect();
-                }
-            });
-            add(connectButton);
-            
-            playersLabel.setBounds(350, 20, 200, 40);
-            add(playersLabel);
-            
-            playersScrollPane.setBounds(350, 70, 300, 320);
-            add(playersScrollPane);
-            
-            nameLabel.setBounds(48, 200, 200, 40);
-            add(nameLabel);
-            
-            nameField.setBounds(120, 200, 200, 40);
-            nameField.addKeyListener(new KeyListener() {
-                @Override
-                public void keyPressed(KeyEvent arg0) {}
-                
-                @Override
-                public void keyReleased(KeyEvent e) {
-                    if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                        if (connected) {
-                            rename();
-                        }
-                    }
-                }
-                
-                public void keyTyped(KeyEvent e) {}
-            });
-            add(nameField);
-            
-            nameButton.setBounds(120, 250, 150, 40);
-            nameButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    if (connected) {
-                        rename();
-                    }
-                }
-            });
-            add(nameButton);
-            
-            kibitzerCheckBox.setBounds(120, 300, 150, 40);
-            kibitzerCheckBox.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    if (connected) {
-                        sendCommandToServer("KIBITZER:" + kibitzerCheckBox.isSelected());
-                    }
-                }
-            });
-            add(kibitzerCheckBox);
-            
-            mpOptionsButton.setBounds(120, 350, 150, 40);
-            mpOptionsButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    GameOptionsFrame mpOptionsFrame = new GameOptionsFrame(thisClient, mpNumRobots, mpDoubleDeck);
-                    mpOptionsFrame.setLocationRelativeTo(thisClient);
-                    mpOptionsFrame.execute();
-                }
-            });
-            add(mpOptionsButton);
-            
-            mpStartButton.setBounds(120, 410, 150, 40);
-            mpStartButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    if (connected) {
-                        if (players.size() + mpNumRobots <= 1) {
-                            thisClient.notify("There must be at least two players to start the game.");
-                        } else if (mpNumRobots > 0 && mpDoubleDeck) {
-                            thisClient.notify("Double deck with robots is currently unsupported.");
-                        } else {
-                            readyPressed();
-                        }
-                    }
-                }
-            });
-            add(mpStartButton);
-            
-            mpBackButton.setBounds(500, 410, 150, 40);
-            mpBackButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    if (connected) {
-                        disconnect();
-                    }
-                    changeState(ClientState.MAIN_MENU);
-                }
-            });
-            add(mpBackButton);
-            
-            canvas.addMouseListener(new MouseListener() {
-                @Override
-                public void mouseClicked(MouseEvent e) {}
-                
-                @Override
-                public void mouseEntered(MouseEvent arg0) {}
-                
-                @Override
-                public void mouseExited(MouseEvent arg0) {}
-
-                @Override
-                public void mousePressed(MouseEvent e) {
-                    if (e.getButton() == MouseEvent.BUTTON1) {
-                        canvas.mousePressed(e.getX(), e.getY());
-                    } else if (e.getButton() == MouseEvent.BUTTON3 && stopperSelected) {
-                        canvas.removeStopper();
-                    }
-                    canvas.grabFocus();
-                }
-
-                @Override
-                public void mouseReleased(MouseEvent e) {
-                    if (e.getButton() == MouseEvent.BUTTON1) {
-                        canvas.mouseReleased(e.getX(), e.getY());
-                    }
-                }
-            });
-            canvas.addMouseMotionListener(new MouseMotionListener() {
-                @Override
-                public void mouseDragged(MouseEvent e) {
-                    canvas.mouseMoved(e.getX(), e.getY());
-                }
-
-                @Override
-                public void mouseMoved(MouseEvent e) {
-                    canvas.mouseMoved(e.getX(), e.getY());
-                }
-            });
-            canvas.addMouseWheelListener(new MouseWheelListener() {
-                @Override
-                public void mouseWheelMoved(MouseWheelEvent e) {
-                    canvas.mouseWheeled(e.getWheelRotation());
-                }
-            });
-            canvas.setFocusable(true);
-            canvas.addKeyListener(new KeyListener() {
-                @Override
-                public void keyTyped(KeyEvent e) {}
-
-                @Override
-                public void keyPressed(KeyEvent e) {}
-
-                @Override
-                public void keyReleased(KeyEvent e) {
-                    canvas.keyPressed(e.getKeyCode());
-                }
-            });
-            canvas.setBackground(tableImg);
-            add(canvas);
-            canvas.setLayout(null);
-            
-            pgBackButton.addActionListener(new ActionListener() {
+            backOption.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     switch (state) {
-                    case SINGLE_PLAYER_POST_GAME:
-                        changeState(ClientState.SINGLE_PLAYER_MENU);
+                    case SINGLE_PLAYER_MENU:
+                        changeState(ClientState.MAIN_MENU);
                         break;
+                    case IN_SINGLE_PLAYER_GAME:
+                    case SINGLE_PLAYER_POST_GAME:
+                        leaveGame();
+                        break;
+                    case IN_MULTIPLAYER_GAME:
                     case MULTIPLAYER_POST_GAME:
-                        changeState(ClientState.MULTIPLAYER_MENU);
+                        leaveGame();
                         break;
                     default:
                         break;
                     }
                 }
             });
-            canvas.add(pgBackButton);
-
-            canvas.add(chatScrollPane);
-            chatArea.setLineWrap(true);
-            chatArea.setWrapStyleWord(true);
-            chatArea.setEditable(false);
-            DefaultCaret caret = (DefaultCaret) chatArea.getCaret();
-            caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
-            chatScrollPane.setVisible(false);
+            optionsItem.add(backOption);
             
-            canvas.add(chatField);
-            chatField.addKeyListener(new KeyListener() {
-                @Override
-                public void keyPressed(KeyEvent arg0) {}
-
-                @Override
-                public void keyReleased(KeyEvent e) {
-                    try {
-                        if (e.getKeyCode() == KeyEvent.VK_ENTER 
-                                && !chatField.getText().trim().isEmpty()) {
-                            String text = name + ": " + chatField.getText().trim();
-                            switch (state) {
-                            case IN_SINGLE_PLAYER_GAME:
-                                core.sendChat(text);
-                                break;
-                            case IN_MULTIPLAYER_GAME:
-                                String command = "CHAT:STRING " 
-                                        + text.toCharArray().length + ":" 
-                                        + text;
-                                sendCommandToServer(command);
-                                break;
-                            default:
-                                    break;
-                            }
-                            SwingUtilities.invokeLater(new Runnable() {
-                                public void run() {
-                                    chatField.setText("");
-                                }
-                            });
-                        }
-                    } catch (Exception exc) {
-                        exc.printStackTrace();
-                    }
-                }
-
-                @Override
-                public void keyTyped(KeyEvent e) {}
-            });
-            
-            canvas.add(showButton);
-            showButton.addActionListener(new ActionListener() {
+            aiHelpOption.setEnabled(aiHelpOptionEnabled);
+            aiHelpOption.setPreferredSize(new Dimension(150, 25));
+            aiHelpOption.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    showButton.setVisible(false);
-                    canvas.doShowOneCard();
-                    //canvas.repaint();
+                    canvas.setAiHelp(aiHelpOption.isSelected());
                 }
             });
-            showButton.setVisible(false);
+            devOptionsItem.add(aiHelpOption);
+            
+            stopperOption.setEnabled(stopperOptionEnabled);
+            stopperOption.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    stopperSelected = stopperOption.isSelected();
+                }
+            });
+            devOptionsItem.add(stopperOption);
+            
+            botsOnlyOption.setEnabled(botsOnlyOptionEnabled);
+            devOptionsItem.add(botsOnlyOption);
+            
+            devSpeedOption.setEnabled(devSpeedOptionEnabled);
+            devOptionsItem.add(devSpeedOption);
+            
+            pingOption.setEnabled(pingOptionEnabled);
+            devOptionsItem.add(pingOption);
+
+            fpsOption.setEnabled(fpsOptionEnabled);
+            devOptionsItem.add(fpsOption);
+            
+            lowGraphicsOption.setEnabled(lowGraphicsOptionEnabled);
+            devOptionsItem.add(lowGraphicsOption);
+            
+            antialiasingOption.setSelected(true);
+            antialiasingOption.setEnabled(antialiasingOptionEnabled);
+            devOptionsItem.add(antialiasingOption);
+
+            menuBar.add(optionsItem);
+            menuBar.add(devOptionsItem);
+            setJMenuBar(menuBar);
+            
+            loadConfigFile();
             
             mainMenuCanvas = new OhcCanvas(this) {
+                private static final long serialVersionUID = 1L;
+
                 @Override
                 public void initialize() {
                     setBackground(tableImg);
@@ -955,16 +655,11 @@ public class GameClient extends JFrame {
                         
                         @Override
                         public void click() {
-                            changeState(ClientState.MULTIPLAYER_MENU);
-                            SwingUtilities.invokeLater(new Runnable() {
-                                public void run() {
-                                    nameField.setText("");
-                                }
-                            });
+                            changeState(ClientState.LOGIN_MENU);
                         }
                     };
                     
-                    CanvasButton updateButton = new CanvasButton("Update") {
+                    CanvasButton updateButton = new CanvasButton("") {
                         @Override
                         public int x() {
                             return 450;
@@ -983,6 +678,22 @@ public class GameClient extends JFrame {
                         @Override
                         public int height() {
                             return 20;
+                        }
+                        
+                        @Override
+                        public String text() {
+                            if (!updateChecked) {
+                                return "Check for update";
+                            } else if (updateChecked && newVersion.equals(version)) {
+                                return "Version up to date";
+                            } else {
+                                return "Download update";
+                            }
+                        }
+                        
+                        @Override
+                        public boolean alert() {
+                            return updateChecked && !newVersion.equals(version);
                         }
                         
                         @Override
@@ -1007,14 +718,352 @@ public class GameClient extends JFrame {
                     graphics.setFont(OhcGraphicsTools.fontTitle);
                     OhcGraphicsTools.drawStringJustified(graphics, "Oh Hell", 342, 100, 1, 2);
                     
-                    graphics.setFont(OhcGraphicsTools.font);
+                    graphics.setFont(OhcGraphicsTools.fontBold);
                     OhcGraphicsTools.drawStringJustified(graphics, "v" + version, 610, 460, 0, 1);
+                    
+                    graphics.setFont(OhcGraphicsTools.font);
                 }
             };
-            mainMenuCanvas.setBounds(0, 0, 685, 500);
-            add(mainMenuCanvas);
             
-            for (OhcCanvas c : Arrays.asList(mainMenuCanvas, canvas)) {
+            singlePlayerCanvas = new OhcCanvas(this) {
+                private static final long serialVersionUID = 1L;
+                
+                @Override
+                public void initialize() {
+                    setBackground(tableImg);
+                    
+                    CanvasButton minusButton = new CanvasButton("-") {
+                        @Override
+                        public int x() {
+                            return 350;
+                        }
+                        
+                        @Override
+                        public int y() {
+                            return 160;
+                        }
+                        
+                        @Override
+                        public int width() {
+                            return 20;
+                        }
+                        
+                        @Override
+                        public int height() {
+                            return 20;
+                        }
+                        
+                        @Override
+                        public void click() {
+                            numRobots = Math.max(0, numRobots - 1);
+                        }
+                    };
+                    
+                    CanvasButton plusButton = new CanvasButton("+") {
+                        @Override
+                        public int x() {
+                            return 400;
+                        }
+                        
+                        @Override
+                        public int y() {
+                            return 160;
+                        }
+                        
+                        @Override
+                        public int width() {
+                            return 20;
+                        }
+                        
+                        @Override
+                        public int height() {
+                            return 20;
+                        }
+                        
+                        @Override
+                        public void click() {
+                            numRobots = Math.min(6, numRobots + 1);
+                        }
+                    };
+                    
+                    CanvasButton startButton = new CanvasButton("Start") {
+                        @Override
+                        public int x() {
+                            return 267;
+                        }
+                        
+                        @Override
+                        public int y() {
+                            return 230;
+                        }
+                        
+                        @Override
+                        public int width() {
+                            return 151;
+                        }
+                        
+                        @Override
+                        public int height() {
+                            return 40;
+                        }
+                        
+                        @Override
+                        public void click() {
+                            startSinglePlayerGame();
+                        }
+                    };
+                    
+                    CanvasButton backButton = new CanvasButton("Back") {
+                        @Override
+                        public int x() {
+                            return 267;
+                        }
+                        
+                        @Override
+                        public int y() {
+                            return 330;
+                        }
+                        
+                        @Override
+                        public int width() {
+                            return 151;
+                        }
+                        
+                        @Override
+                        public int height() {
+                            return 40;
+                        }
+                        
+                        @Override
+                        public void click() {
+                            changeState(ClientState.MAIN_MENU);
+                        }
+                    };
+                    
+                    setInteractables(Arrays.asList(Arrays.asList(minusButton, plusButton, startButton, backButton)));
+                }
+                
+                @Override
+                public boolean isShown() {
+                    return state == ClientState.SINGLE_PLAYER_MENU;
+                }
+                
+                @Override
+                public void customPaint(Graphics graphics) {
+                    graphics.setColor(new Color(255, 255, 255, 180));
+                    OhcGraphicsTools.drawBox(graphics, 200, 80, 285, 320, 20);
+                    
+                    graphics.setFont(OhcGraphicsTools.fontBold);
+                    graphics.setColor(Color.BLACK);
+                    OhcGraphicsTools.drawStringJustified(graphics, "Robots:", 240, 170, 0, 1);
+                    OhcGraphicsTools.drawStringJustified(graphics, numRobots + "", 385, 170, 1, 1);
+                }
+            };
+            
+            loginCanvas = new OhcCanvas(this) {
+                private static final long serialVersionUID = 1L;
+                
+                @Override
+                public void initialize() {
+                    setBackground(tableImg);
+                    
+                    OhcTextField usernameJField = new OhcTextField("Username");
+                    usernameJField.setText(username);
+                    CanvasEmbeddedSwing usernameField = new CanvasEmbeddedSwing(usernameJField, this) {
+                        @Override
+                        public int x() {
+                            return 320;
+                        }
+                        
+                        @Override
+                        public int y() {
+                            return 100;
+                        }
+                        
+                        @Override
+                        public int width() {
+                            return 151;
+                        }
+                        
+                        @Override
+                        public int height() {
+                            return 40;
+                        }
+                        
+                        @Override
+                        public void paint(Graphics graphics) {
+                            username = usernameJField.getText();
+                            super.paint(graphics);
+                        }
+                    };
+                    
+                    OhcTextField serverJField = new OhcTextField("Server address");
+                    serverJField.setText(hostName);
+                    CanvasEmbeddedSwing serverField = new CanvasEmbeddedSwing(serverJField, this) {
+                        @Override
+                        public int x() {
+                            return 320;
+                        }
+                        
+                        @Override
+                        public int y() {
+                            return 150;
+                        }
+                        
+                        @Override
+                        public int width() {
+                            return 151;
+                        }
+                        
+                        @Override
+                        public int height() {
+                            return 40;
+                        }
+                        
+                        @Override
+                        public void paint(Graphics graphics) {
+                            hostName = serverJField.getText();
+                            super.paint(graphics);
+                        }
+                    };
+
+                    OhcTextField portJField = new OhcTextField("Server address");
+                    portJField.setText(port);
+                    CanvasEmbeddedSwing portField = new CanvasEmbeddedSwing(portJField, this) {
+                        @Override
+                        public int x() {
+                            return 320;
+                        }
+                        
+                        @Override
+                        public int y() {
+                            return 200;
+                        }
+                        
+                        @Override
+                        public int width() {
+                            return 151;
+                        }
+                        
+                        @Override
+                        public int height() {
+                            return 40;
+                        }
+                        
+                        @Override
+                        public void paint(Graphics graphics) {
+                            port = portJField.getText();
+                            super.paint(graphics);
+                        }
+                    };
+                    
+                    CanvasButton startButton = new CanvasButton("Connect") {
+                        @Override
+                        public int x() {
+                            return 267;
+                        }
+                        
+                        @Override
+                        public int y() {
+                            return 280;
+                        }
+                        
+                        @Override
+                        public int width() {
+                            return 151;
+                        }
+                        
+                        @Override
+                        public int height() {
+                            return 40;
+                        }
+                        
+                        @Override
+                        public void click() {
+                            username = ((OhcTextField) usernameField.getComponent()).getText();
+                            connect();
+                        }
+                    };
+                    
+                    CanvasButton backButton = new CanvasButton("Back") {
+                        @Override
+                        public int x() {
+                            return 267;
+                        }
+                        
+                        @Override
+                        public int y() {
+                            return 330;
+                        }
+                        
+                        @Override
+                        public int width() {
+                            return 151;
+                        }
+                        
+                        @Override
+                        public int height() {
+                            return 40;
+                        }
+                        
+                        @Override
+                        public void click() {
+                            changeState(ClientState.MAIN_MENU);
+                        }
+                    };
+                    
+                    setInteractables(Arrays.asList(Arrays.asList(usernameField, serverField, portField, startButton, backButton)));
+                }
+                
+                @Override
+                public boolean isShown() {
+                    return state == ClientState.LOGIN_MENU;
+                }
+                
+                @Override
+                public void customPaint(Graphics graphics) {
+                    graphics.setColor(new Color(255, 255, 255, 180));
+                    OhcGraphicsTools.drawBox(graphics, 200, 80, 285, 320, 20);
+
+                    graphics.setFont(OhcGraphicsTools.fontBold);
+                    graphics.setColor(Color.BLACK);
+                    OhcGraphicsTools.drawStringJustified(graphics, "Username:", 230, 120, 0, 1);
+                    OhcGraphicsTools.drawStringJustified(graphics, "Server:", 230, 170, 0, 1);
+                    OhcGraphicsTools.drawStringJustified(graphics, "Port:", 230, 220, 0, 1);
+                }
+            };
+            
+            canvas = new GameCanvas(this);
+            canvas.addMouseWheelListener(new MouseWheelListener() {
+                @Override
+                public void mouseWheelMoved(MouseWheelEvent e) {
+                    canvas.mouseWheeled(e.getWheelRotation());
+                }
+            });
+            canvas.addKeyListener(new KeyListener() {
+                @Override
+                public void keyTyped(KeyEvent e) {}
+
+                @Override
+                public void keyPressed(KeyEvent e) {}
+
+                @Override
+                public void keyReleased(KeyEvent e) {
+                    canvas.keyPressed(e.getKeyCode());
+                }
+            });
+            canvas.setBackground(tableImg);
+            
+            for (OhcCanvas c : Arrays.asList(
+                    mainMenuCanvas, 
+                    singlePlayerCanvas, 
+                    loginCanvas,
+                    canvas
+                    )) {
+                c.setFocusable(true);
+                c.setVisible(false);
+                add(c);
+                c.setLayout(null);
                 c.addMouseListener(new MouseListener() {
                     @Override
                     public void mouseClicked(MouseEvent e) {}
@@ -1054,87 +1103,7 @@ public class GameClient extends JFrame {
                     }
                 });
             }
-                        
-            aiSpeedOption.add(aiSpeedOptionSlider);
-
-            aiSpeedOption.setPreferredSize(new Dimension(150, 25));
-            optionsItem.add(aiSpeedOption);
             
-            optionsItem.add(soundOption);
-            
-            backOption.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    switch (state) {
-                    case SINGLE_PLAYER_MENU:
-                        changeState(ClientState.MAIN_MENU);
-                        break;
-                    case MULTIPLAYER_MENU:
-                        changeState(ClientState.MAIN_MENU);
-                        break;
-                    case IN_SINGLE_PLAYER_GAME:
-                        core.stopGame();
-                        changeState(ClientState.SINGLE_PLAYER_MENU);
-                        break;
-                    case SINGLE_PLAYER_POST_GAME:
-                        changeState(ClientState.SINGLE_PLAYER_MENU);
-                        break;
-                    case IN_MULTIPLAYER_GAME:
-                        if (connected) {
-                            disconnect();
-                        }
-                        changeState(ClientState.MULTIPLAYER_MENU);
-                        break;
-                    case MULTIPLAYER_POST_GAME:
-                        changeState(ClientState.MULTIPLAYER_MENU);
-                        break;
-                    default:
-                        break;
-                    }
-                }
-            });
-            optionsItem.add(backOption);
-            
-            aiHelpOption.setEnabled(aiHelpOptionEnabled);
-            aiHelpOption.setPreferredSize(new Dimension(150, 25));
-            aiHelpOption.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    canvas.setAiHelp(aiHelpOption.isSelected());
-                }
-            });
-            devOptionsItem.add(aiHelpOption);
-            
-            stopperOption.setEnabled(stopperOptionEnabled);
-            stopperOption.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    stopperSelected = stopperOption.isSelected();
-                }
-            });
-            devOptionsItem.add(stopperOption);
-            
-            botsOnlyOption.setEnabled(botsOnlyOptionEnabled);
-            devOptionsItem.add(botsOnlyOption);
-            
-            devSpeedOption.setEnabled(devSpeedOptionEnabled);
-            devOptionsItem.add(devSpeedOption);
-
-            fpsOption.setEnabled(fpsOptionEnabled);
-            devOptionsItem.add(fpsOption);
-            
-            lowGraphicsOption.setEnabled(lowGraphicsOptionEnabled);
-            devOptionsItem.add(lowGraphicsOption);
-            
-            antialiasingOption.setSelected(true);
-            antialiasingOption.setEnabled(antialiasingOptionEnabled);
-            devOptionsItem.add(antialiasingOption);
-
-            menuBar.add(optionsItem);
-            menuBar.add(devOptionsItem);
-            setJMenuBar(menuBar);
-            
-            loadConfigFile();
             setVisible(true);
             addWindowListener(new WindowAdapter() {
                 @Override
@@ -1154,6 +1123,7 @@ public class GameClient extends JFrame {
                             || state == ClientState.MULTIPLAYER_POST_GAME) {
                         windowMaximizedInGame = (e.getNewState() & JFrame.MAXIMIZED_BOTH) != 0;
                     }
+                    resizeCanvas();
                 }
             });
             addComponentListener(new ComponentAdapter() {
@@ -1165,6 +1135,7 @@ public class GameClient extends JFrame {
                             || state == ClientState.MULTIPLAYER_POST_GAME) {
                         windowSizeInGame = getSize();
                     }
+                    resizeCanvas();
                 }
 
                 @Override
@@ -1182,30 +1153,33 @@ public class GameClient extends JFrame {
             setDefaultCloseOperation(EXIT_ON_CLOSE);
             changeState(ClientState.MAIN_MENU);
             checkForUpdates();
+            
+            /*ClientPlayer myPlayer = new ClientPlayer();
+            myPlayer.setName("test");
+            updatePlayersList(Arrays.asList(myPlayer), 0);*/
+            //canvas.reset();
         } catch(Exception e) {
             e.printStackTrace();
         }
     }
     
-    public void pgBackPressed() {
+    public void leaveGame() {
         switch (state) {
+        case IN_SINGLE_PLAYER_GAME:
+            core.stopGame();
         case SINGLE_PLAYER_POST_GAME:
             changeState(ClientState.SINGLE_PLAYER_MENU);
             break;
+        case IN_MULTIPLAYER_GAME:
         case MULTIPLAYER_POST_GAME:
-            changeState(ClientState.MULTIPLAYER_MENU);
+            if (connected) {
+                disconnect();
+            }
+            changeState(ClientState.LOGIN_MENU);
             break;
         default:
             break;
         }
-    }
-    
-    public void setMpNumRobots(int mpNumRobots) {
-        this.mpNumRobots = mpNumRobots;
-    }
-    
-    public void setMpDoubleDeck(boolean mpDoubleDeck) {
-        this.mpDoubleDeck = mpDoubleDeck;
     }
     
     public String getOvlProb(int index) {
@@ -1250,22 +1224,24 @@ public class GameClient extends JFrame {
         }
     }
     
-    public void rename() {
-        String text = nameField.getText().trim();
+    public void rename(String text) {
         if (text.isEmpty()) {
             notify("Name cannot be empty.");
         } else {
-            name = text;
-            sendCommandToServer("RENAME:STRING " + name.length() + ":" + name);
+            sendCommandToServer("RENAME:STRING " + text.length() + ":" + text);
         }
     }
     
-    public void readyPressed() {
-        if (myPlayer.isHost()) {
-            if (!players.isEmpty() || mpNumRobots > 0) {
-                sendCommandToServer("START:" + mpNumRobots + ":" + mpDoubleDeck);
+    public void readyPressed(int numRobots, boolean doubleDeck) {
+        int numPlayers = (int) players.stream().filter(ClientPlayer::isHuman).count() + numRobots;
+        if (myPlayer != null && myPlayer.isHost()) {
+            if (numRobots > 0 && doubleDeck) {
+                notify("Double deck with robots is not yet supported.");
+            } else if (numPlayers <= 1) {
+                notify("Not enough players.");
             } else {
-                notify("There are no players.");
+                players.removeIf(p -> !p.isHuman());
+                sendCommandToServer("START:" + numRobots + ":" + doubleDeck);
             }
         } else {
             notify("You are not the host.");
@@ -1369,17 +1345,30 @@ public class GameClient extends JFrame {
         canvas.bePokedOnTimer();
     }
     
+    public void sendChat(String text) {
+        switch (state) {
+        case IN_SINGLE_PLAYER_GAME:
+            core.sendChat(text);
+            break;
+        case IN_MULTIPLAYER_GAME:
+            String command = "CHAT:STRING " 
+                    + text.toCharArray().length + ":" 
+                    + text;
+            sendCommandToServer(command);
+            break;
+        default:
+            break;
+        }
+    }
+    
     public void connect() {
         if (!connected) {
             try {
-                hostName = hostField.getText();
-                port = Integer.parseInt(portField.getText());
-            } catch(Exception e1) {
-                notify("Invalid port.");
-            }
-            try {
                 socket = new Socket();
-                socket.connect(new InetSocketAddress(hostName, port), 10000);
+                socket.connect(new InetSocketAddress(hostName, Integer.parseInt(port)), 10000);
+                
+                players.clear();
+                kibitzers.clear();
                 
                 writeThread = new ClientWriteThread(socket, this);
                 writeThread.start();
@@ -1388,6 +1377,9 @@ public class GameClient extends JFrame {
                 readThread.start();
                 
                 connected = true;
+                canvas.reset();
+                changeState(ClientState.IN_MULTIPLAYER_GAME);
+                startPing();
             } catch (UnknownHostException e) {
                 notify("That host does not exist.");
                 e.printStackTrace();
@@ -1396,6 +1388,9 @@ public class GameClient extends JFrame {
                 e.printStackTrace();
             } catch (IOException e) {
                 notify("Unable to connect to specified port.");
+                e.printStackTrace();
+            } catch (NumberFormatException e) {
+                notify("Invalid port.");
                 e.printStackTrace();
             }
         }
@@ -1406,7 +1401,6 @@ public class GameClient extends JFrame {
         sendCommandToServer("CLOSE");
         connected = false;
         writeThread.disconnect();
-        playersListModel.clear();
     }
     
     public void reconnect(LinkedList<String> parsedContent) {
@@ -1415,10 +1409,38 @@ public class GameClient extends JFrame {
         reconnectFrame.execute();
     }
     
+    public void startPing() {
+        pingTime = System.nanoTime();
+        sendCommandToServer("PING");
+    }
+    
+    public void endPing() {
+        currentPing = System.nanoTime() - pingTime;
+        Timer timer = new Timer(1000, null);
+        timer.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                startPing();
+                timer.stop();
+            }
+        });
+        timer.start();
+    }
+    
+    public double getPing() {
+        return (double) currentPing / 1000000;
+    }
+    
+    public boolean showPingSelected() {
+        return pingOption.isSelected();
+    }
+    
     public void getKicked() {
         notify("You were disconnected from the server.");
-        disconnect();
-        changeState(ClientState.MULTIPLAYER_MENU);
+        readThread.disconnect();
+        connected = false;
+        writeThread.disconnect();
+        changeState(ClientState.LOGIN_MENU);
     }
     
     public void setPostGameTrumps(List<Card> trumps) {
@@ -1476,20 +1498,12 @@ public class GameClient extends JFrame {
                         windowSizeInGame = new Dimension(Integer.parseInt(xy[0]), Integer.parseInt(xy[1]));
                     } else if (variable.equals("windowmaximizedingame")) {
                         windowMaximizedInGame = value.equals("true");
+                    } else if (variable.equals("recentusername")) {
+                        username = value;
                     } else if (variable.equals("recentaddress")) {
                         hostName = value;
-                        SwingUtilities.invokeLater(new Runnable() {
-                            public void run() {
-                                hostField.setText(value);
-                            }
-                        });
                     } else if (variable.equals("recentport")) {
-                        port = Integer.parseInt(value);
-                        SwingUtilities.invokeLater(new Runnable() {
-                            public void run() {
-                                portField.setText(value);
-                            }
-                        });
+                        port = value;
                     } else if (variable.equals("playsound")) {
                         SwingUtilities.invokeLater(new Runnable() {
                             public void run() {
@@ -1520,6 +1534,7 @@ public class GameClient extends JFrame {
             configWriter.write("windowlocationingame = " + (int) windowLocationInGame.getX() + "," + (int) windowLocationInGame.getY() + "\n");
             configWriter.write("windowsizeingame = " + windowSizeInGame.width + "," + windowSizeInGame.height + "\n");
             configWriter.write("windowmaximizedingame = " + windowMaximizedInGame + "\n");
+            configWriter.write("recentusername = " + username + "\n");
             configWriter.write("recentaddress = " + hostName + "\n");
             configWriter.write("recentport = " + port + "\n");
             configWriter.write("playsound = " + soundOption.isSelected() + "\n");
@@ -1536,31 +1551,16 @@ public class GameClient extends JFrame {
                     new InputStreamReader(
                             new URL("https://raw.githubusercontent.com/campbellsoup37/OhHell/master/OhHell/version")
                             .openStream()));
-            String latestVersion = versionReader.readLine();
+            newVersion = versionReader.readLine();
             versionReader.close();
-            if (!latestVersion.equals(version)) {
-                updateFound = true;
-                newVersion = latestVersion;
-                SwingUtilities.invokeLater(new Runnable() {
-                    public void run() {
-                        updateButton.setAlert(true);
-                        updateButton.setText("Update");
-                    }
-                });
-            } else {
-                SwingUtilities.invokeLater(new Runnable() {
-                    public void run() {
-                        updateButton.setText("Version up to date");
-                    }
-                });
-            }
+            updateChecked = true;
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
     
     public void updatePressed() {
-        if (!updateFound) {
+        if (!updateChecked) {
             checkForUpdates();
         } else {
             try {

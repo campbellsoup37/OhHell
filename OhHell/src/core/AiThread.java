@@ -15,6 +15,7 @@ public class AiThread extends Thread {
     
     public AiThread(AiKernel aiKernel) {
         this.aiKernel = aiKernel;
+        setName("AI Thread");
     }
     
     public boolean isRunning() {

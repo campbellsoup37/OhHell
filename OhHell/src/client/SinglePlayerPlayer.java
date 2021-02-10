@@ -42,6 +42,56 @@ public class SinglePlayerPlayer extends Player {
     }
 
     @Override
+    public void commandAddPlayers(List<? extends Player> players, List<? extends Player> kibitzers) {
+        List<ClientPlayer> cPlayers = new ArrayList<>(
+                (players != null ? players.size() : 0) 
+                + (kibitzers != null ? kibitzers.size() : 0));
+        if (players != null) {
+            for (Player player : players) {
+                cPlayers.add(convert(player));
+            }
+        }
+        if (kibitzers != null) {
+            for (Player kibitzer : kibitzers) {
+                cPlayers.add(convert(kibitzer));
+            }
+        }
+        
+        client.addPlayers(cPlayers);
+    }
+    
+    public ClientPlayer convert(Player player) {
+        ClientPlayer cPlayer = new ClientPlayer();
+        cPlayer.setName(player.getName());
+        cPlayer.setId(player.getId());
+        cPlayer.setIndex(player.getIndex());
+        cPlayer.setHuman(player.isHuman());
+        cPlayer.setHost(player.isHost());
+        cPlayer.setDisconnected(player.isDisconnected());
+        cPlayer.setKicked(player.isKicked());
+        cPlayer.setKibitzer(player.isKibitzer());
+        return cPlayer;
+    }
+
+    @Override
+    public void commandRemovePlayer(Player player) {
+        client.removePlayer(player.getId());
+    }
+
+    @Override
+    public void commandUpdatePlayers(List<? extends Player> players) {
+        List<ClientPlayer> cPlayers = new ArrayList<>(
+                (players != null ? players.size() : 0));
+        if (players != null) {
+            for (Player player : players) {
+                cPlayers.add(convert(player));
+            }
+        }
+        
+        client.updatePlayers(cPlayers);
+    }
+
+    /*@Override
     public void commandPlayersInfo(List<Player> players, List<Player> kibitzers, Player myPlayer) {
         List<ClientPlayer> newPlayers = new ArrayList<>();
         int myIndex = 0;
@@ -80,7 +130,7 @@ public class SinglePlayerPlayer extends Player {
         }
         
         client.updatePlayersList(newPlayers, myIndex);
-    }
+    }*/
     
     public double getOvlProb(int index) {
         if (index >= ovlProbs.length) {

@@ -10,6 +10,7 @@ public class ConnectionFinder extends Thread {
     public ConnectionFinder(ServerSocket serverSocket, GameServer server) {
         this.serverSocket = serverSocket;
         this.server = server;
+        setName("Connection finder");
     }
     
     @Override

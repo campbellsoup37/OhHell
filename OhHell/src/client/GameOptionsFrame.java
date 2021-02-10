@@ -62,8 +62,8 @@ public class GameOptionsFrame extends JFrame {
     }
     
     public void close() {
-        client.setMpNumRobots(Integer.parseInt(robotsSpinner.getValue().toString()));
-        client.setMpDoubleDeck(doubleDeckCheckBox.isSelected());
+        /*client.setMpNumRobots(Integer.parseInt(robotsSpinner.getValue().toString()));
+        client.setMpDoubleDeck(doubleDeckCheckBox.isSelected());*/
         
         setVisible(false);
         dispose();

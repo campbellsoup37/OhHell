@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -206,7 +207,7 @@ public class GameServer extends JFrame {
             }
         });
         
-        core.updatePlayersList();
+        //core.updatePlayersList();
     }
 
     public void connectPlayer(Socket socket) {
@@ -227,42 +228,82 @@ public class GameServer extends JFrame {
         thread.start();
     }
     
-    public void joinPlayer(HumanPlayer player) {
+    public void joinPlayer(HumanPlayer player, String id) {
+        player.setName(id);
+        player.setId(id);
+        player.getThread().setName("Player thread: " + id);
         player.setJoined(true);
+        
+        boolean reconnect = false;
+        for (Player p : players) {
+            if (p.getId().equals(player.getId())) {
+                players.remove(player);
+                ((HumanPlayer) p).getThread().endThread();
+                ((HumanPlayer) p).setThread(player.getThread());
+                ((HumanPlayer) p).getThread().setPlayer(((HumanPlayer) p));
+                ((HumanPlayer) p).setDisconnected(false);
+                ((HumanPlayer) p).resetKickVotes();
+                player = (HumanPlayer) p;
+                
+                for (Player p1 : players) {
+                    if (p1 != player) {
+                        p1.commandUpdatePlayers(Arrays.asList(player));
+                    }
+                }
+                for (Player p1 : kibitzers) {
+                    if (p1 != player) {
+                        p1.commandUpdatePlayers(Arrays.asList(player));
+                    }
+                }
+                
+                reconnect = true;
+                break;
+            }
+        }
+        
         if (gameStarted()) {
-            player.setKibitzer(true);
-            kibitzers.add(player);
-            updatePlayersList();
+            if (!reconnect) {
+                player.setKibitzer(true);
+                kibitzers.add(player);
+                for (Player p : players) {
+                    if (p != player) {
+                        p.commandAddPlayers(null, Arrays.asList(player));
+                    }
+                }
+                for (Player p : kibitzers) {
+                    if (p != player) {
+                        p.commandAddPlayers(null, Arrays.asList(player));
+                    }
+                }
+            }
+            player.commandAddPlayers(players, kibitzers);
             player.commandStart();
             core.sendFullGameState(player);
         } else {
-            players.add(player);
-            if (players.size() == 1) {
-                player.setHost(true);
+            if (!reconnect) {
+                players.add(player);
+                if (players.size() == 1) {
+                    player.setHost(true);
+                }
+                for (Player p : players) {
+                    if (p != player) {
+                        p.commandAddPlayers(Arrays.asList(player), null);
+                    }
+                }
+                for (Player p : kibitzers) {
+                    if (p != player) {
+                        p.commandAddPlayers(Arrays.asList(player), null);
+                    }
+                }
             }
-            updatePlayersList();
+            player.commandAddPlayers(players, kibitzers);
         }
     }
     
-    public void reconnectPlayer(HumanPlayer player, HumanPlayer oldPlayer) {
-        players.remove(player);
-        oldPlayer.getThread().endThread();
-        oldPlayer.setThread(player.getThread());
-        oldPlayer.getThread().setPlayer(oldPlayer);
-        oldPlayer.setDisconnected(false);
-        oldPlayer.resetKickVotes();
-        updatePlayersList();
-        oldPlayer.commandStart();
-        core.sendFullGameState(oldPlayer);
-    }
-    
-    public void putPlayerInRightList(HumanPlayer player) {
-        if (player.isKibitzer()) {
-            players.remove(player);
-            kibitzers.add(player);
-        } else {
-            kibitzers.remove(player);
-            players.add(player);
+    public void renamePlayer(Player player, String name) {
+        player.setName(name);
+        for (Player p : players) {
+            p.commandUpdatePlayers(Arrays.asList(player));
         }
     }
     
@@ -281,7 +322,7 @@ public class GameServer extends JFrame {
     
     public void disconnectPlayer(HumanPlayer player) {
         player.commandKick();
-        //player.getThread().endThread();
+        player.getThread().endThread();
         removePlayer(player, false);
     }
     
@@ -289,6 +330,36 @@ public class GameServer extends JFrame {
         player.commandKick();
         player.getThread().endThread();
         removePlayer(player, true);
+    }
+    
+    public void setKibitzer(Player player, boolean kibitzer) {
+        boolean wasKibitzer = player.isKibitzer();
+        player.setKibitzer(kibitzer);
+        if (!wasKibitzer && kibitzer) {
+            for (Player p : players) {
+                p.commandRemovePlayer(player);
+            }
+            for (Player p : kibitzers) {
+                p.commandRemovePlayer(player);
+            }
+            for (Player p : players) {
+                p.commandAddPlayers(null, Arrays.asList(player));
+            }
+            for (Player p : kibitzers) {
+                p.commandAddPlayers(null, Arrays.asList(player));
+            }
+            players.remove(player);
+            kibitzers.add(player);
+        } else if (wasKibitzer && !kibitzer) {
+            for (Player p : players) {
+                p.commandAddPlayers(Arrays.asList(player), null);
+            }
+            for (Player p : kibitzers) {
+                p.commandAddPlayers(Arrays.asList(player), null);
+            }
+            players.add(player);
+            kibitzers.remove(player);
+        }
     }
     
     public void pokePlayer() {
@@ -303,18 +374,52 @@ public class GameServer extends JFrame {
         logMessage("Player disconnected: " 
                 + player.getName() + " at " + player.getThread().getSocket().getInetAddress());
         player.setKicked(kick);
-        while (player.isHost() && players.size() > 1) {
+        
+        // Change host if necessary
+        if (player.isHost() && players.stream().filter(Player::isHuman).count() > 1) {
+            Player newHost = player;
+            while (newHost == player && newHost.isHuman()) {
+                newHost = players.get(random.nextInt(players.size()));
+            }
             player.setHost(false);
-            players.get(random.nextInt(players.size())).setHost(true);
+            newHost.setHost(true);
+            for (Player p : players) {
+                p.commandUpdatePlayers(Arrays.asList(newHost));
+            }
+            for (Player p : kibitzers) {
+                p.commandUpdatePlayers(Arrays.asList(newHost));
+            }
         }
-        if (!gameStarted() || !player.isJoined()) {
-            players.remove(player);
-        }
-        if (player.isKibitzer()) {
-            kibitzers.remove(player);
+        
+        // Remove if game hasn't started or player is kibitzer
+        // Update otherwise
+        if (!gameStarted() || !player.isJoined() || player.isKibitzer()) {
+            (player.isKibitzer() ? kibitzers : players).remove(player);
+            for (Player p : players) {
+                if (p != player) {
+                    p.commandRemovePlayer(player);
+                }
+            }
+            for (Player p : kibitzers) {
+                if (p != player) {
+                    p.commandRemovePlayer(player);
+                }
+            }
+        } else {
+            for (Player p : players) {
+                if (p != player) {
+                    p.commandUpdatePlayers(Arrays.asList(player));
+                }
+            }
+            for (Player p : kibitzers) {
+                if (p != player) {
+                    p.commandUpdatePlayers(Arrays.asList(player));
+                }
+            }
         }
         updatePlayersList();
         
+        // Restart round if kicked
         if (kick && gameStarted() && !player.isKibitzer()) {
             if (recording()) {
                 recorder.recordKick(player.getIndex());

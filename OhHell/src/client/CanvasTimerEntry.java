@@ -61,8 +61,8 @@ public class CanvasTimerEntry implements ActionListener {
     }
     
     public void startNextAction() {
-        queue.remove().stop();
         try {
+            queue.remove().stop();
             queue.getFirst().start();
         } catch (NoSuchElementException exc) {
             

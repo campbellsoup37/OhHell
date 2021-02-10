@@ -23,7 +23,6 @@ public abstract class OhcCanvas extends JPanel {
     
     public OhcCanvas(GameClient client) {
         this.client = client;
-        
         initialize();
     }
     

@@ -107,6 +107,7 @@ public class AiKernel {
         if (aiThread.isRunning()) {
             aiThread.makeBid(player, delay);
         } else {
+            System.out.println(player.getName() + " bid");
             Timer timer = new Timer();
             timer.schedule(new TimerTask() {
                 @Override
@@ -122,6 +123,7 @@ public class AiKernel {
         if (aiThread.isRunning()) {
             aiThread.makePlay(player, delay);
         } else {
+            System.out.println(player.getName() + " play");
             Timer timer = new Timer();
             timer.schedule(new TimerTask() {
                 @Override

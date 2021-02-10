@@ -30,16 +30,42 @@ public class HumanPlayer extends Player {
     public void setThread(PlayerThread thread) {
         this.thread = thread;
     }
+    
+    public void commandIdRequest() {
+        thread.sendCommand("IDREQUEST");
+    }
+    
+    public void ping() {
+        thread.sendCommand("PING");
+    }
 
     @Override
     public void commandStart() {
         thread.sendCommand("START");
     }
+    
+    @Override
+    public void commandAddPlayers(List<? extends Player> players, List<? extends Player> kibitzers) {
+        thread.sendCommand("ADDPLAYERS:" 
+                + (players != null ? players.stream().map(p -> playerInfoString(p)).reduce("", (a, b) -> a + b) : "")
+                + (kibitzers != null ? kibitzers.stream().map(p -> playerInfoString(p)).reduce("", (a, b) -> a + b) : ""));
+    }
 
     @Override
+    public void commandRemovePlayer(Player player) {
+        thread.sendCommand("REMOVEPLAYER:" + "STRING " + player.getId().length() + ":" + player.getId());
+    }
+
+    @Override
+    public void commandUpdatePlayers(List<? extends Player> players) {
+        thread.sendCommand("UPDATEPLAYERS:"
+                + (players != null ? players.stream().map(p -> playerInfoString(p)).reduce("", (a, b) -> a + b) : ""));
+    }
+
+    /*@Override
     public void commandPlayersInfo(List<Player> players, List<Player> kibitzers, Player player) {
         thread.sendCommand(playerInfoCommand(players, kibitzers, player));
-    }
+    }*/
 
     public String playerInfoCommand(List<Player> players, List<Player> kibitzers, Player player) {
         return players.stream()
@@ -62,6 +88,18 @@ public class HumanPlayer extends Player {
                         + p.isKibitzer() + ":"
                         + p.equals(player) + ":")
                 .reduce("", (sofar, pString) -> sofar + pString);
+    }
+    
+    public String playerInfoString(Player player) {
+        return "STRING " + player.getName().length() + ":" + player.getName() + ":"
+                + "STRING " + player.getId().length() + ":" + player.getId() + ":"
+                + player.getIndex() + ":"
+                + player.isHuman() + ":"
+                + player.isHost() + ":"
+                + player.isDisconnected() + ":"
+                + player.isKicked() + ":"
+                + player.isKibitzer() + ":"
+                + player.equals(player) + ":";
     }
 
     @Override

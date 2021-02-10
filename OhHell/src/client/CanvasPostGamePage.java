@@ -20,14 +20,13 @@ import strategyOI.OverallValueLearner;
 public class CanvasPostGamePage extends CanvasInteractable {
     private List<ClientPlayer> players;
     private List<ClientPlayer> sortedPlayers;
-    private List<int[]> rounds;
     private List<CanvasInteractable> tabs = new ArrayList<>();
     private int tabSelected;
     private List<CanvasButton> buttons = new ArrayList<>();
     
-    public CanvasPostGamePage(List<ClientPlayer> players, List<int[]> rounds) {
-        this.players = players;
-        this.rounds = rounds;
+    private boolean dataLoaded = false;
+    
+    public CanvasPostGamePage() {
         makeButtons();
     }
     
@@ -87,11 +86,10 @@ public class CanvasPostGamePage extends CanvasInteractable {
         return buttons;
     }
     
-    public void buildTabs(GameCanvas canvas) {
+    public void buildTabs(List<ClientPlayer> finalPlayers, List<int[]> rounds, GameCanvas canvas) {
+        players = finalPlayers;
         sortedPlayers = new ArrayList<>(players.size());
-        for (ClientPlayer player : players) {
-            sortedPlayers.add(player);
-        }
+        sortedPlayers.addAll(players);
         sortedPlayers.sort((p1, p2) -> (int) Math.signum(p2.getScore() - p1.getScore()));
         for (int place = 1, i = 0; i < sortedPlayers.size(); place = i + 1) {
             for (int score = sortedPlayers.get(i).getScore(); i < sortedPlayers.size() && sortedPlayers.get(i).getScore() == score; i++) {
@@ -350,6 +348,8 @@ public class CanvasPostGamePage extends CanvasInteractable {
         tabs.add(winProbPlot);
         tabs.add(gameAnalysis);
         tabs.add(handAnalysis);
+        
+        dataLoaded = true;
     }
     
     /**
@@ -387,6 +387,11 @@ public class CanvasPostGamePage extends CanvasInteractable {
     
     public int getSelectedTab() {
         return tabSelected;
+    }
+    
+    @Override
+    public boolean isShown() {
+        return dataLoaded;
     }
     
     @Override

@@ -1,21 +1,28 @@
 package client;
 import java.awt.Color;
 import java.awt.Graphics;
-import java.awt.Graphics2D;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.ConcurrentModificationException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 import javax.sound.sampled.Clip;
-import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import javax.swing.text.DefaultCaret;
 
 import core.Card;
 import graphics.OhcGraphicsTools;
+import graphics.OhcScrollPane;
+import graphics.OhcTextField;
 
 public class GameCanvas extends OhcCanvas {
     private static final long serialVersionUID = 1L;
@@ -61,30 +68,30 @@ public class GameCanvas extends OhcCanvas {
     
     private List<ClientPlayer> players;
     private ClientPlayer myPlayer;
+    private List<ClientPlayer> playersForScore;
 
     private int maxHand;
     private double maxWid;
     
+    private int numRobots = 0;
+    private boolean doubleDeck = false;
+    
     private Card trump;
     private List<Card> trumps;
     
-    private boolean paintHandMarker = true;
-    private boolean paintBiddingMarker = true;
-    private boolean paintTrumpMarker = true;
-    private boolean paintPlayersMarker = true;
     private boolean paintMessageMarker = false;
-    private boolean paintTakenMarker = true;
-    private boolean paintTrickMarker = true;
     
     private String message = "";
     private String messageState = "UNBLOCKED";
     
+    private List<CanvasEmbeddedSwing> embeddedSwings = new LinkedList<>();
     private List<CanvasButton> bidButtons = new LinkedList<>();
     private List<CanvasCard> cardInteractables = new LinkedList<>();
     private CanvasCard lastTrick;
+    private List<CanvasButton> kickButtons = new LinkedList<>();
     private List<CanvasButton> buttons = new LinkedList<>();
-    private CanvasInteractable interactableMoused = null;
-    private CanvasInteractable interactablePressed = null;
+
+    private JTextArea chatArea = new JTextArea();
     
     private boolean trickTaken = false;
     
@@ -102,16 +109,14 @@ public class GameCanvas extends OhcCanvas {
     
     private boolean showOneCard = false;
 
-    private boolean end = false;
     private CanvasPostGamePage postGamePage;
     
-    private String gameState = "PREGAME";
+    private GameState state = GameState.PREGAME;
     
     private BufferedImage deckImg;
     private BufferedImage deckImgDark;
     private BufferedImage deckImgSmall;
     private BufferedImage deckImgSmallDark;
-    private BufferedImage tableImg;
     private double cardHeight;
     private double cardWidth;
     private double cardWidthSmall;
@@ -131,8 +136,8 @@ public class GameCanvas extends OhcCanvas {
     private final int frameQueueSize = 100;
     private long currentTime = 0;
     private int framePointer = 0;
-    private int frameTotalTime = 0;
-    private int[] frameTimes = new int[frameQueueSize];
+    private double frameTotalTime = 0;
+    private double[] frameTimes = new double[frameQueueSize];
     
     public GameCanvas(GameClient client) {
         super(client);
@@ -150,13 +155,14 @@ public class GameCanvas extends OhcCanvas {
         disdg.setColor(new Color(127, 127, 127, 64));
         disdg.fillRect(0, 0, deckImg.getWidth(), deckImg.getHeight());
         
-        tableImg = OhcGraphicsTools.loadImage("resources/client/table.jpg", this);
         cardWidth = (double) deckImg.getWidth() / 9;
         cardHeight = (double) deckImg.getHeight() / 6;
         cardWidthSmall = cardWidth * smallCardScale;
         
         cardPlayClip = OhcGraphicsTools.loadSound("resources/client/Card play.wav", this);
         pokeClip = OhcGraphicsTools.loadSound("resources/client/shortpoke.wav", this);
+        
+        players = new ArrayList<>();
     }
     
     public double getCardWidth(boolean small) {
@@ -169,37 +175,26 @@ public class GameCanvas extends OhcCanvas {
     
     @Override
     public void customPaint(Graphics graphics) {
-        maxHand = Math.max(maxHand, myPlayer.getHand().size());
+        //maxHand = Math.max(maxHand, myPlayer.getHand().size());
         
         graphics.setColor(Color.BLACK);
 
-        if (paintTrumpMarker) {
-            paintTrump(graphics);
-        }
-        if (paintPlayersMarker) {
-            paintPlayers(graphics);
-        }
+        paintPregame(graphics);
+        paintTrump(graphics);
+        paintPlayers(graphics);
         paintScores(graphics);
-        if (paintTakenMarker) {
-            paintTaken(graphics);
-        }
-        if (paintTrickMarker) {
-            paintTrick(graphics);
-        }
+        paintTaken(graphics);
+        paintTrick(graphics);
         if (paintMessageMarker) {
             paintMessage(graphics);
         }
-        if (end) {
-            paintFinalScores(graphics);
-        }
-        paintChat(graphics);
         
         if (currentTime == 0) {
-            currentTime = System.currentTimeMillis();
+            currentTime = System.nanoTime();
         } else {
             long oldTime = currentTime;
-            currentTime = System.currentTimeMillis();
-            int newFrameTime = (int) (currentTime - oldTime);
+            currentTime = System.nanoTime();
+            double newFrameTime = (double) (currentTime - oldTime) / 1000000;
             frameTotalTime += newFrameTime - frameTimes[framePointer];
             frameTimes[framePointer] = newFrameTime;
             framePointer = (framePointer + 1) % frameQueueSize;
@@ -207,85 +202,37 @@ public class GameCanvas extends OhcCanvas {
                 OhcGraphicsTools.drawStringJustified(graphics, "FPS: " + String.format("%.2f", (double) 1000 * frameQueueSize / frameTotalTime), getWidth() - 450 - 100, 10, 0, 1);
             }
         }
+        if (client.showPingSelected()) {
+            OhcGraphicsTools.drawStringJustified(graphics, "Ping: " + String.format("%.2f", client.getPing()) + "ms", getWidth() - 450 - 100, 25, 0, 1);
+        }
     }
     
-    /*@Override
-    public void paintComponent(Graphics graphics) {
-        super.paintComponent(graphics);
-        
-        Graphics2D graphics2 = OhcGraphicsTools.makeGraphics2D(graphics, 
-                client.antialiasingSelected(),
-                false);
-        graphics2.setFont(OhcGraphicsTools.font);
-        
-        maxHand = Math.max(maxHand, myPlayer.getHand().size());
-        
-        graphics2.drawImage(tableImg, 
-                0, 0, 
-                Math.max(getWidth(), tableImg.getWidth()), 
-                Math.max(getHeight(), tableImg.getHeight()), 
-                0, 0, 
-                tableImg.getWidth(), tableImg.getHeight(), null);
-        graphics2.setColor(Color.BLACK);
-
-        if (paintBiddingMarker) {
-            paintBidding(graphics2);
+    public void paintPregame(Graphics graphics) {
+        if (state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME) {
+            graphics.setColor(new Color(255, 255, 255, 180));
+            OhcGraphicsTools.drawBox(graphics, (getWidth() - 450) / 2 - 142, getHeight() / 2 - 150, 285, 300, 20);
+            graphics.setColor(Color.BLACK);
+            graphics.setFont(OhcGraphicsTools.fontBold);
+            OhcGraphicsTools.drawStringJustified(graphics, "Name:", (getWidth() - 450) / 2 - 122, getHeight() / 2 - 100, 0, 1);
+            OhcGraphicsTools.drawStringJustified(graphics, "Join as kibitzer:", (getWidth() - 450) / 2 - 122, getHeight() / 2 - 50, 0, 1);
+            OhcGraphicsTools.drawStringJustified(graphics, "Robots:", (getWidth() - 450) / 2 - 122, getHeight() / 2, 0, 1);
+            OhcGraphicsTools.drawStringJustified(graphics, numRobots + "", (getWidth() - 450) / 2 + 35, getHeight() / 2, 1, 1);
+            OhcGraphicsTools.drawStringJustified(graphics, "Double deck:", (getWidth() - 450) / 2 - 122, getHeight() / 2 + 40, 0, 1);
+            graphics.setFont(OhcGraphicsTools.font);
         }
-        if (paintTrumpMarker) {
-            paintTrump(graphics2);
-        }
-        if (paintPlayersMarker) {
-            paintPlayers(graphics2);
-        }
-        if (aiHelpSelected) {
-            paintAiHelp(graphics2);
-        }
-        paintScores(graphics2);
-        if (paintTakenMarker) {
-            paintTaken(graphics2);
-        }
-        if (paintTrickMarker) {
-            paintTrick(graphics2);
-        }
-        if (paintMessageMarker) {
-            paintMessage(graphics2);
-        }
-        if (end) {
-            paintFinalScores(graphics2);
-        }
-        paintChat(graphics2);
-        paintButtons(graphics2);
-        
-        if (currentTime == 0) {
-            currentTime = System.currentTimeMillis();
-        } else {
-            long oldTime = currentTime;
-            currentTime = System.currentTimeMillis();
-            int newFrameTime = (int) (currentTime - oldTime);
-            frameTotalTime += newFrameTime - frameTimes[framePointer];
-            frameTimes[framePointer] = newFrameTime;
-            framePointer = (framePointer + 1) % frameQueueSize;
-            if (frameTimes[frameQueueSize - 1] != 0 && client.showFpsSelected()) {
-                OhcGraphicsTools.drawStringJustified(graphics2, "FPS: " + String.format("%.2f", (double) 1000 * frameQueueSize / frameTotalTime), getWidth() - 450 - 100, 10, 0, 1);
-            }
-        }
-        
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                repaint();
-            }
-        });
-    }*/
+    }
     
     public void paintTrump(Graphics graphics) {
-        graphics.setColor(Color.BLACK);
-        double scaleFix = 1;
-        if (players.size() >= 6 && getHeight() < 600) {
-            scaleFix = 0.75;
+        if (state != GameState.POSTGAME) {
+            graphics.setColor(Color.BLACK);
+            double scaleFix = 1;
+            if (players.size() >= 6 && getHeight() < 600) {
+                scaleFix = 0.75;
+            }
+            drawCard(graphics, new Card(), 46, 62, trumpCardScale * scaleFix, true, true);
+            drawCard(graphics, new Card(), 48, 64, trumpCardScale * scaleFix, true, true);
+            drawCard(graphics, state == GameState.PREGAME || trump == null ? new Card() : trump, 50, 66, trumpCardScale * scaleFix, true, false);
         }
-        drawCard(graphics, new Card(), 46, 62, trumpCardScale * scaleFix, true, true);
-        drawCard(graphics, new Card(), 48, 64, trumpCardScale * scaleFix, true, true);
-        drawCard(graphics, trump, 50, 66, trumpCardScale * scaleFix, true, false);
     }
     
     public void paintBidding(Graphics graphics) {
@@ -299,54 +246,60 @@ public class GameCanvas extends OhcCanvas {
     }
     
     public void paintTrick(Graphics graphics) {
-        graphics.setColor(Color.BLACK);
-        
-        for (int i = 0; i < players.size(); i++) {
-            int iRelToLeader = (leader + i) % players.size();
-            int iRelToMe = (iRelToLeader - myPlayer.getIndex() + players.size()) % players.size();
-            ClientPlayer player = players.get(iRelToLeader);
-            if (!player.isKicked() && !player.getTrick().isEmpty()) {
-                if (player.getTrickRad() == -1) {
-                    player.setTrickRad((int) (70 + 10 * random.nextDouble()));
-                }
-                
-                double startx = player.getX();
-                double starty = player.getY();
-                
-                if (iRelToLeader == myPlayer.getIndex()) {
-                    startx = (getWidth() - 450) / 2
-                            + cardJustPlayed * cardSeparation
-                            - (myPlayer.getHand().size()) * cardSeparation / 2;
-                    starty = getHeight() - handYOffset;
-                }
-                
-                double endx = (getWidth() - 450) / 2
-                        - player.getTrickRad()
-                            * Math.sin(2 * Math.PI * iRelToMe / players.size());
-                double endy = getHeight()/2 - 50
-                        + player.getTrickRad() 
-                            * Math.cos(2 * Math.PI * iRelToMe / players.size());
-                
-                int x = (int) (player.getTrickTimer() * endx
-                        + (1 - player.getTrickTimer()) * startx);
-                int y = (int) (player.getTrickTimer() * endy
-                        + (1 - player.getTrickTimer()) * starty);
-                if (player.timerStarted()) {
-                    drawCard(graphics, player.getTrick(), x, y, trickCardScale, true, false);
+        if (state != GameState.POSTGAME) {
+            graphics.setColor(Color.BLACK);
+            
+            for (int i = 0; i < players.size(); i++) {
+                int iRelToLeader = (leader + i) % players.size();
+                int iRelToMe = (iRelToLeader - myPlayer.getIndex() + players.size()) % players.size();
+                ClientPlayer player = players.get(iRelToLeader);
+                if (!player.isKicked() && !player.getTrick().isEmpty()) {
+                    if (player.getTrickRad() == -1) {
+                        player.setTrickRad((int) (70 + 10 * random.nextDouble()));
+                    }
+                    
+                    double startx = player.getX();
+                    double starty = player.getY();
+                    
+                    if (iRelToLeader == myPlayer.getIndex()) {
+                        startx = (getWidth() - 450) / 2
+                                + cardJustPlayed * cardSeparation
+                                - (myPlayer.getHand().size()) * cardSeparation / 2;
+                        starty = getHeight() - handYOffset;
+                    }
+                    
+                    double endx = (getWidth() - 450) / 2
+                            - player.getTrickRad()
+                                * Math.sin(2 * Math.PI * iRelToMe / players.size());
+                    double endy = getHeight()/2 - 50
+                            + player.getTrickRad() 
+                                * Math.cos(2 * Math.PI * iRelToMe / players.size());
+                    
+                    int x = (int) (player.getTrickTimer() * endx
+                            + (1 - player.getTrickTimer()) * startx);
+                    int y = (int) (player.getTrickTimer() * endy
+                            + (1 - player.getTrickTimer()) * starty);
+                    if (player.timerStarted()) {
+                        drawCard(graphics, player.getTrick(), x, y, trickCardScale, true, false);
+                    }
                 }
             }
         }
     }
     
     public void paintPlayers(Graphics graphics) {
-        graphics.setColor(Color.BLACK);
-        
-        for (ClientPlayer player : players) {
-            int x = player.getX();
-            int y = player.getY();
-            int pos = player.getJust();
+        if (state != GameState.POSTGAME) {
+            graphics.setColor(Color.BLACK);
             
-            if (paintHandMarker) {
+            for (ClientPlayer player : players) {
+                if (player.posNotSet()) {
+                    continue;
+                }
+                
+                int x = player.getX();
+                int y = player.getY();
+                int pos = player.getJust();
+                
                 if (player == myPlayer) {
                     /*for (CanvasCard canvasCard : cardInteractables) {
                         canvasCard.paint(graphics);
@@ -367,51 +320,53 @@ public class GameCanvas extends OhcCanvas {
                                 false);
                     }
                 }
-            }
-            
-            if (player.getBidding() == 1 || player.isPlaying()) {
-                graphics.setColor(new Color(255, 255, 0));
-            } else {
-                graphics.setColor(Color.WHITE);
-            }
-            OhcGraphicsTools.drawBox(graphics, x - pos * maxWid / 2, y - 10, maxWid, 20, 20);
-            
-            if (player.isDisconnected()) {
-                graphics.setColor(Color.GRAY);
-            }
-            if (player.isKicked()) {
-                graphics.setColor(Color.RED);
-            }
-            OhcGraphicsTools.drawStringJustified(graphics, 
-                    OhcGraphicsTools.fitString(graphics, player.getName(), maxWid), 
-                    (int)(x - (pos - 1) * maxWid / 2), 
-                    y, 
-                    1, 1);
-            
-            if (player.hasBid()) {
-                if (gameState.equals("BIDDING") || gameState.equals("PLAYING") && player.getBid() > player.getTaken()) {
-                    graphics.setColor(Color.LIGHT_GRAY);
-                } else if (player.getBid() == player.getTaken()) {
-                    graphics.setColor(new Color(175, 255, 175));
+                
+                if (player.getBidding() == 1 || player.isPlaying() || state == GameState.PREGAME && player.isHost()) {
+                    graphics.setColor(new Color(255, 255, 0));
+                } else if (player.isHuman()) {
+                    graphics.setColor(Color.WHITE);
                 } else {
-                    graphics.setColor(new Color(255, 175, 175));
+                    graphics.setColor(new Color(210, 255, 255));
                 }
-                graphics.fillOval((int) (x - pos * maxWid / 2) + 2, y - 8, 16, 16);
-                graphics.setColor(Color.BLACK);
-                OhcGraphicsTools.drawStringJustified(graphics, player.getBid() + "", 
-                        (int) (x - pos* maxWid / 2) + 9, 
+                OhcGraphicsTools.drawBox(graphics, x - pos * maxWid / 2, y - 10, maxWid, 20, 20);
+                
+                if (player.isDisconnected()) {
+                    graphics.setColor(Color.GRAY);
+                }
+                if (player.isKicked()) {
+                    graphics.setColor(Color.RED);
+                }
+                OhcGraphicsTools.drawStringJustified(graphics, 
+                        OhcGraphicsTools.fitString(graphics, player.getName(), maxWid), 
+                        (int)(x - (pos - 1) * maxWid / 2), 
                         y, 
                         1, 1);
-            }
-            
-            if (player.getIndex() == dealer) {
-                graphics.setColor(Color.CYAN);
-                graphics.fillOval((int) (x - (pos - 2) * maxWid / 2) - 19, y - 8, 16, 16);
-                graphics.setColor(Color.BLACK);
-                OhcGraphicsTools.drawStringJustified(graphics, "D", 
-                        (int) (x - (pos - 2) * maxWid / 2) - 11, 
-                        y, 
-                        1, 1);
+                
+                if (player.hasBid()) {
+                    if (state == GameState.BIDDING || state == GameState.PLAYING && player.getBid() > player.getTaken()) {
+                        graphics.setColor(Color.LIGHT_GRAY);
+                    } else if (player.getBid() == player.getTaken()) {
+                        graphics.setColor(new Color(175, 255, 175));
+                    } else {
+                        graphics.setColor(new Color(255, 175, 175));
+                    }
+                    graphics.fillOval((int) (x - pos * maxWid / 2) + 2, y - 8, 16, 16);
+                    graphics.setColor(Color.BLACK);
+                    OhcGraphicsTools.drawStringJustified(graphics, player.getBid() + "", 
+                            (int) (x - pos* maxWid / 2) + 9, 
+                            y, 
+                            1, 1);
+                }
+                
+                if (player.getIndex() == dealer) {
+                    graphics.setColor(Color.CYAN);
+                    graphics.fillOval((int) (x - (pos - 2) * maxWid / 2) - 19, y - 8, 16, 16);
+                    graphics.setColor(Color.BLACK);
+                    OhcGraphicsTools.drawStringJustified(graphics, "D", 
+                            (int) (x - (pos - 2) * maxWid / 2) - 11, 
+                            y, 
+                            1, 1);
+                }
             }
         }
     }
@@ -480,154 +435,135 @@ public class GameCanvas extends OhcCanvas {
     }
     
     public void paintTaken(Graphics graphics) {
-        for (ClientPlayer player : players) {
-            for (int j = 0; j < player.getTaken(); j++) {
-                int takenX = player.getTakenX();
-                int takenY = player.getTakenY();
-                
-                boolean isLastTrick = player.getIndex() == leader && j == player.getTaken() - 1;
-                
-                double timer = 1;
-                if (isLastTrick) timer = takenTimer;
-                
-                int x = takenX + takenXSeparation * j;
-                int y = takenY + takenYSeparation * j;
-                if (animatingTaken && isLastTrick) {
-                    x = (int) (timer * (takenX + takenXSeparation * j)
-                            + (1 - timer) * (getWidth() - 450) / 2);
-                    y = (int) (timer * (takenY + takenYSeparation * j)
-                            + (1 - timer) * getHeight() / 2);
-                }
-                
-                if (isLastTrick && !animatingTaken) {
-                    //lastTrick.paint(graphics);
-                } else {
-                    drawCard(graphics, new Card(), x, y, smallCardScale, true, false);
+        if (state != GameState.POSTGAME) {
+            for (ClientPlayer player : players) {
+                for (int j = 0; j < player.getTaken(); j++) {
+                    int takenX = player.getTakenX();
+                    int takenY = player.getTakenY();
+                    
+                    boolean isLastTrick = player.getIndex() == leader && j == player.getTaken() - 1;
+                    
+                    double timer = 1;
+                    if (isLastTrick) timer = takenTimer;
+                    
+                    int x = takenX + takenXSeparation * j;
+                    int y = takenY + takenYSeparation * j;
+                    if (animatingTaken && isLastTrick) {
+                        x = (int) (timer * (takenX + takenXSeparation * j)
+                                + (1 - timer) * (getWidth() - 450) / 2);
+                        y = (int) (timer * (takenY + takenYSeparation * j)
+                                + (1 - timer) * getHeight() / 2);
+                    }
+                    
+                    if (!isLastTrick || animatingTaken) {
+                        drawCard(graphics, new Card(), x, y, smallCardScale, true, false);
+                    }
                 }
             }
         }
     }
     
     public void paintScores(Graphics graphics) {
-        //graphics.setColor(Color.LIGHT_GRAY);
-        //graphics.fillRect(getWidth() - 450, 0, 450, getHeight());
-        
-        List<int[]> rounds = client.getRounds();
-        int numRounds = rounds.size();
-        
-        graphics.setColor(Color.WHITE);
-        OhcGraphicsTools.drawBox(graphics, 
-                getWidth() - (450 - scoreMargin), 
-                scoreMargin, 
-                450 - 2 * scoreMargin, 
-                scoreVSpacing * (numRounds + 1) + 5,
-                10);
-        
-        double wid = (double) (450 - 2 * scoreMargin - 50) / players.size();
+        if (state != GameState.PREGAME) {
+            List<ClientPlayer> playersToShow = 
+                    state == GameState.POSTGAME && playersForScore != null ? playersForScore : players;
+            
+            List<int[]> rounds = client.getRounds();
+            int numRounds = rounds.size();
+            
+            graphics.setColor(Color.WHITE);
+            OhcGraphicsTools.drawBox(graphics, 
+                    getWidth() - (450 - scoreMargin), 
+                    scoreMargin, 
+                    450 - 2 * scoreMargin, 
+                    scoreVSpacing * (numRounds + 1) + 5,
+                    10);
+            
+            double wid = (double) (450 - 2 * scoreMargin - 50) / playersToShow.size();
 
-        graphics.setColor(Color.BLACK);
-        graphics.drawLine(
-                getWidth() - (450 - scoreMargin - 45), 
-                scoreMargin + scoreVSpacing, 
-                getWidth() - scoreMargin - 5, 
-                scoreMargin + scoreVSpacing);
-        for (ClientPlayer player : players) {
-            int index = player.getIndex();
             graphics.setColor(Color.BLACK);
-            if (index > 0) {
-                graphics.drawLine(
-                        (int) (getWidth() - (450 - scoreMargin - 45) + index * wid), 
-                        scoreMargin + 5, 
-                        (int) (getWidth() - (450 - scoreMargin - 45) + index * wid), 
-                        scoreMargin + scoreVSpacing * (numRounds + 1));
-            }
-            
-            graphics.setColor(Color.BLACK);
-            if (player.isDisconnected()) {
-                graphics.setColor(Color.GRAY);
-            }
-            if (player.isKicked()) {
-                graphics.setColor(Color.RED);
-            }
-            
-            if (player.equals(myPlayer)) {
-                graphics.setFont(OhcGraphicsTools.fontBold);
-            } else {
+            graphics.drawLine(
+                    getWidth() - (450 - scoreMargin - 45), 
+                    scoreMargin + scoreVSpacing, 
+                    getWidth() - scoreMargin - 5, 
+                    scoreMargin + scoreVSpacing);
+            for (ClientPlayer player : playersToShow) {
+                int index = player.getIndex();
+                graphics.setColor(Color.BLACK);
+                if (index > 0) {
+                    graphics.drawLine(
+                            (int) (getWidth() - (450 - scoreMargin - 45) + index * wid), 
+                            scoreMargin + 5, 
+                            (int) (getWidth() - (450 - scoreMargin - 45) + index * wid), 
+                            scoreMargin + scoreVSpacing * (numRounds + 1));
+                }
+                
+                graphics.setColor(Color.BLACK);
+                if (player.isDisconnected()) {
+                    graphics.setColor(Color.GRAY);
+                }
+                if (player.isKicked()) {
+                    graphics.setColor(Color.RED);
+                }
+                
+                if (player.equals(myPlayer)) {
+                    graphics.setFont(OhcGraphicsTools.fontBold);
+                } else {
+                    graphics.setFont(OhcGraphicsTools.font);
+                }
+                OhcGraphicsTools.drawStringJustified(graphics, 
+                        OhcGraphicsTools.fitString(graphics, player.getName(), wid - 2), 
+                        (int) (getWidth() - (450 - scoreMargin - 45) + index * wid + wid / 2), 
+                        scoreMargin + 15, 
+                        1, 0);
                 graphics.setFont(OhcGraphicsTools.font);
             }
-            OhcGraphicsTools.drawStringJustified(graphics, 
-                    OhcGraphicsTools.fitString(graphics, player.getName(), wid - 2), 
-                    (int) (getWidth() - (450 - scoreMargin - 45) + index * wid + wid / 2), 
-                    scoreMargin + 15, 
-                    1, 0);
-            graphics.setFont(OhcGraphicsTools.font);
-        }
-        
-        graphics.setColor(Color.BLACK);
-        for (int i = 0; i < numRounds; i++) {
-            int[] round = rounds.get(i);
-            OhcGraphicsTools.drawStringJustified(graphics, 
-                    players.get(round[0]).getName().substring(0, 1), 
-                    getWidth() - (450 - scoreMargin - 5), 
-                    scoreMargin + scoreVSpacing * (i + 2), 
-                    0, 0);
-            OhcGraphicsTools.drawStringJustified(graphics, 
-                    "" + round[1], 
-                    getWidth() - (450 - scoreMargin - 25), 
-                    scoreMargin + scoreVSpacing * (i + 2), 
-                    0, 0);
-        }
-    
-        for (ClientPlayer player : players) {
-            int index = player.getIndex();
-            for (int j = 0; j < player.getBids().size(); j++) {
+            
+            graphics.setColor(Color.BLACK);
+            for (int i = 0; i < numRounds; i++) {
+                int[] round = rounds.get(i);
                 OhcGraphicsTools.drawStringJustified(graphics, 
-                        Integer.toString(player.getBids().get(j)), 
-                        (int) (getWidth() - (450 - scoreMargin - 45) + (index + 1) * wid - 10), 
-                        scoreMargin + scoreVSpacing * (2 + j), 
-                        1, 0);
-                graphics.drawOval(
-                        (int) (getWidth() - (450 - scoreMargin - 45) + (index + 1) * wid - 18), 
-                        scoreMargin + 5 + scoreVSpacing * (1 + j) + 2, 
-                        16, 16);
-            }
-            for (int j = 0; j < player.getScores().size(); j++) {
+                        playersToShow.get(round[0]).getName().substring(0, 1), 
+                        getWidth() - (450 - scoreMargin - 5), 
+                        scoreMargin + scoreVSpacing * (i + 2), 
+                        0, 0);
                 OhcGraphicsTools.drawStringJustified(graphics, 
-                        Integer.toString(player.getScores().get(j)), 
-                        (int) (getWidth() - (450 - scoreMargin - 45) + index * wid + 10), 
-                        scoreMargin + scoreVSpacing * (2 + j), 
+                        "" + round[1], 
+                        getWidth() - (450 - scoreMargin - 25), 
+                        scoreMargin + scoreVSpacing * (i + 2), 
                         0, 0);
             }
+        
+            for (ClientPlayer player : playersToShow) {
+                int index = player.getIndex();
+                for (int j = 0; j < player.getBids().size(); j++) {
+                    OhcGraphicsTools.drawStringJustified(graphics, 
+                            Integer.toString(player.getBids().get(j)), 
+                            (int) (getWidth() - (450 - scoreMargin - 45) + (index + 1) * wid - 10), 
+                            scoreMargin + scoreVSpacing * (2 + j), 
+                            1, 0);
+                    graphics.drawOval(
+                            (int) (getWidth() - (450 - scoreMargin - 45) + (index + 1) * wid - 18), 
+                            scoreMargin + 5 + scoreVSpacing * (1 + j) + 2, 
+                            16, 16);
+                }
+                for (int j = 0; j < player.getScores().size(); j++) {
+                    OhcGraphicsTools.drawStringJustified(graphics, 
+                            Integer.toString(player.getScores().get(j)), 
+                            (int) (getWidth() - (450 - scoreMargin - 45) + index * wid + 10), 
+                            scoreMargin + scoreVSpacing * (2 + j), 
+                            0, 0);
+                }
+            }
         }
     }
     
-    public void paintChat(Graphics graphics) {
-        int numRounds = client.getRounds().size();
-        int chatY = Math.max(
-                2 * scoreMargin + scoreVSpacing * (numRounds + 1) + 5, 
-                getHeight() - 300);
-        getComponents()[1].setBounds(
-                getWidth() - 450 + scoreMargin, 
-                chatY, 
-                450 - 2 * scoreMargin + 1, 
-                getHeight() - chatY - 40 - scoreMargin);
-        getComponents()[2].setBounds(
-                getWidth() - 450 + scoreMargin, 
-                getHeight() - 35 - scoreMargin, 
-                450 - 2 * scoreMargin + 1, 
-                30);
-    }
-    
-    public void paintFinalScores(Graphics graphics) {
-        if (postGamePage != null) {
-            postGamePage.paint(graphics);
-        }
-    }
-    
-    public void paintButtons(Graphics graphics) {
-        for (CanvasButton button : buttons) {
-            button.paint(graphics);
-        }
+    public void chat(String text) {
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                chatArea.setText(chatArea.getText() + text + "\n");
+            }
+        });
     }
     
     public void drawCard(Graphics graphics, Card card, double x, double y, double scale, boolean small, 
@@ -678,25 +614,26 @@ public class GameCanvas extends OhcCanvas {
         showOneCard = true;
     }
     
-    public void reset() {
-        players = client.getPlayers();
+    public void updatePlayerCalcs() {
+        players.clear();
+        players.addAll(client.getPlayers());
         myPlayer = client.getMyPlayer();
-        trump = new Card();
-        
-        maxHand = Math.min(10, 51 / players.size());
+        maxHand = Math.min(10, 51 / Math.max(players.size(), 1));
         maxWid = (maxHand - 1) * 10 + cardWidthSmall;
-        message = "";
-        paintHandMarker = true;
-        paintBiddingMarker = true;
-        paintTrumpMarker = true;
-        paintPlayersMarker = true;
-        paintMessageMarker = false;
-        paintTakenMarker = true;
-        paintTrickMarker = true;
-        end = false;
-        
         setPlayerPositions();
+        resetKickButtons();
+    }
+    
+    public void reset() {
+        state = GameState.PREGAME;
+        message = "";
+        paintMessageMarker = false;
+        playersForScore = null;
         resetInteractables();
+    }
+    
+    public void setState(GameState newState) {
+        state = newState;
     }
     
     public void setPlayerPositions() {
@@ -827,7 +764,50 @@ public class GameCanvas extends OhcCanvas {
         }
     }
     
+    public void resetKickButtons() {
+        kickButtons.clear();
+        for (ClientPlayer player : players) {
+            final ClientPlayer playerF = player;
+            kickButtons.add(new CanvasButton("Kick") {
+                @Override
+                public int x() {
+                    return (int) (playerF.getX() + (1 - playerF.getJust()) * maxWid / 2 - 50);
+                }
+                
+                @Override
+                public int y() {
+                    return playerF.getY() - 50;
+                }
+                
+                @Override
+                public int width() {
+                    return 100;
+                }
+                
+                @Override
+                public int height() {
+                    return 30;
+                }
+                
+                @Override
+                public boolean isShown() {
+                    return playerF.isDisconnected() && !playerF.isKicked();
+                }
+                
+                @Override
+                public void click() {
+                    client.voteKick(playerF.getIndex());
+                }
+            });
+        }
+    }
+    
     public void resetInteractables() {
+        for (CanvasEmbeddedSwing inter : embeddedSwings) {
+            inter.dispose();
+        }
+        
+        embeddedSwings = new LinkedList<>();
         bidButtons = new LinkedList<>();
         cardInteractables = new LinkedList<>();
         
@@ -845,6 +825,11 @@ public class GameCanvas extends OhcCanvas {
             @Override
             public int yCenter() {
                 return player().getTakenY() + takenYSeparation * (player().getTaken() - 1);
+            }
+            
+            @Override
+            public boolean isShown() {
+                return trickTaken && !animatingTaken;
             }
             
             @Override
@@ -879,6 +864,270 @@ public class GameCanvas extends OhcCanvas {
         
         // Buttons
         buttons = new LinkedList<>();
+        
+        // Pre-game interactables
+        OhcTextField nameField = new OhcTextField("Name");
+        nameField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    client.rename(nameField.getText());
+                }
+            }
+        });
+        embeddedSwings.add(new CanvasEmbeddedSwing(nameField, this) {
+            @Override
+            public int x() {
+                return (getWidth() - 450) / 2 - 60;
+            }
+            
+            @Override
+            public int y() {
+                return getHeight() / 2 - 120;
+            }
+            
+            @Override
+            public int width() {
+                return 180;
+            }
+            
+            @Override
+            public int height() {
+                return 40;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
+            }
+        });
+        
+        buttons.add(new CanvasButton("") {
+            @Override
+            public int x() {
+                return (getWidth() - 450) / 2 + 25;
+            }
+            
+            @Override
+            public int y() {
+                return getHeight() / 2 - 60;
+            }
+            
+            @Override
+            public int width() {
+                return 20;
+            }
+            
+            @Override
+            public int height() {
+                return 20;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
+            }
+            
+            @Override
+            public String text() {
+                return myPlayer != null && myPlayer.isKibitzer() ? "x" : "";
+            }
+            
+            @Override
+            public void click() {
+                client.toggleKibitzer();
+            }
+        });
+        
+        buttons.add(new CanvasButton("-") {
+            @Override
+            public int x() {
+                return (getWidth() - 450) / 2;
+            }
+            
+            @Override
+            public int y() {
+                return getHeight() / 2 - 10;
+            }
+            
+            @Override
+            public int width() {
+                return 20;
+            }
+            
+            @Override
+            public int height() {
+                return 20;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
+            }
+            
+            @Override
+            public boolean isEnabled() {
+                return myPlayer != null && myPlayer.isHost();
+            }
+            
+            @Override
+            public void click() {
+                numRobots = Math.max(0, numRobots - 1);
+            }
+        });
+        
+        buttons.add(new CanvasButton("+") {
+            @Override
+            public int x() {
+                return (getWidth() - 450) / 2 + 50;
+            }
+            
+            @Override
+            public int y() {
+                return getHeight() / 2 - 10;
+            }
+            
+            @Override
+            public int width() {
+                return 20;
+            }
+            
+            @Override
+            public int height() {
+                return 20;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
+            }
+            
+            @Override
+            public boolean isEnabled() {
+                return myPlayer != null && myPlayer.isHost();
+            }
+            
+            @Override
+            public void click() {
+                numRobots = Math.min(6, numRobots + 1);
+            }
+        });
+        
+        buttons.add(new CanvasButton("") {
+            @Override
+            public int x() {
+                return (getWidth() - 450) / 2 + 25;
+            }
+            
+            @Override
+            public int y() {
+                return getHeight() / 2 + 30;
+            }
+            
+            @Override
+            public int width() {
+                return 20;
+            }
+            
+            @Override
+            public int height() {
+                return 20;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
+            }
+            
+            @Override
+            public boolean isEnabled() {
+                return myPlayer != null && myPlayer.isHost();
+            }
+            
+            @Override
+            public String text() {
+                return doubleDeck ? "x" : "";
+            }
+            
+            @Override
+            public void click() {
+                doubleDeck = !doubleDeck;
+            }
+        });
+        
+        buttons.add(new CanvasButton("Start") {
+            @Override
+            public int x() {
+                return (getWidth() - 450) / 2 - 110;
+            }
+            
+            @Override
+            public int y() {
+                return getHeight() / 2 + 90;
+            }
+            
+            @Override
+            public int width() {
+                return 100;
+            }
+            
+            @Override
+            public int height() {
+                return 30;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
+            }
+            
+            @Override
+            public boolean isEnabled() {
+                return myPlayer != null && myPlayer.isHost();
+            }
+            
+            @Override
+            public void click() {
+                client.readyPressed(numRobots, doubleDeck);
+            }
+        });
+        
+        buttons.add(new CanvasButton("Leave") {
+            @Override
+            public int x() {
+                return (getWidth() - 450) / 2 + 10;
+            }
+            
+            @Override
+            public int y() {
+                return getHeight() / 2 + 90;
+            }
+            
+            @Override
+            public int width() {
+                return 100;
+            }
+            
+            @Override
+            public int height() {
+                return 30;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
+            }
+            
+            @Override
+            public boolean isEnabled() {
+                return myPlayer != null;
+            }
+            
+            @Override
+            public void click() {
+                client.leaveGame();
+            }
+        });
         
         // Undo bid button
         buttons.add(new CanvasButton("Undo bid") {
@@ -940,13 +1189,13 @@ public class GameCanvas extends OhcCanvas {
             
             @Override
             public boolean isShown() {
-                return !end;
+                return state != GameState.PREGAME && state != GameState.POSTGAME;
             }
             
             @Override
             public boolean isEnabled() {
-                return currentTime - pokeTime >= pokeWaitTime
-                        && (gameState.equals("BIDDING") || gameState.equals("PLAYING"))
+                return currentTime - pokeTime >= (long) pokeWaitTime * 1000000
+                        && (state == GameState.BIDDING || state == GameState.PLAYING)
                         && myPlayer.getBidding() == 0
                         && !myPlayer.isPlaying();//canPoke;
             }
@@ -984,7 +1233,7 @@ public class GameCanvas extends OhcCanvas {
             
             @Override
             public boolean isShown() {
-                return !end;
+                return state != GameState.PREGAME && state != GameState.POSTGAME;
             }
             
             @Override
@@ -1026,12 +1275,12 @@ public class GameCanvas extends OhcCanvas {
             
             @Override
             public boolean isShown() {
-                return !end;
+                return state != GameState.PREGAME && state != GameState.POSTGAME;
             }
             
             @Override
             public boolean isEnabled() {
-                return gameState.equals("PLAYING") && messageState.equals("UNBLOCKED") && actionQueue.isEmpty();
+                return state == GameState.PLAYING && messageState.equals("UNBLOCKED") && actionQueue.isEmpty();
             }
             
             @Override
@@ -1040,11 +1289,15 @@ public class GameCanvas extends OhcCanvas {
             }
         });
         
-        // Post-game back button
-        buttons.add(new CanvasButton("Back") {
+        // Post-game buttons
+        int numPgButtons = 3;
+        // Play again button
+        buttons.add(new CanvasButton("Play again") {
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 - 50;
+                return (getWidth() - 450) / 2 
+                        - (numPgButtons * width() + (numPgButtons - 1) * 20) / 2
+                        + 0 * (width() + 20);
             }
             
             @Override
@@ -1064,15 +1317,106 @@ public class GameCanvas extends OhcCanvas {
             
             @Override
             public boolean isShown() {
-                return end;
+                return state == GameState.POSTGAME;
+            }
+            
+            @Override
+            public boolean isEnabled() {
+                return myPlayer.isHost() || client.getClientState() == ClientState.SINGLE_PLAYER_POST_GAME;
             }
             
             @Override
             public void click() {
-                client.pgBackPressed();
+                if (client.getClientState() == ClientState.SINGLE_PLAYER_POST_GAME) {
+                    client.startSinglePlayerGame();
+                } else {
+                    //reset();
+                    client.readyPressed(numRobots, doubleDeck);
+                }
             }
         });
         
+        // Back to options (pregame)
+        buttons.add(new CanvasButton("Options") {
+            @Override
+            public int x() {
+                return (getWidth() - 450) / 2 
+                        - (numPgButtons * width() + (numPgButtons - 1) * 20) / 2
+                        + 1 * (width() + 20);
+            }
+            
+            @Override
+            public int y() {
+                return getHeight() - finalScoreBottomMargin + 2 * finalScoreOuterMargin;
+            }
+            
+            @Override
+            public int width() {
+                return 100;
+            }
+            
+            @Override
+            public int height() {
+                return 30;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return state == GameState.POSTGAME;
+            }
+            
+            @Override
+            public boolean isEnabled() {
+                return myPlayer.isHost() || client.getClientState() == ClientState.SINGLE_PLAYER_POST_GAME;
+            }
+            
+            @Override
+            public void click() {
+                if (client.getClientState() == ClientState.SINGLE_PLAYER_POST_GAME) {
+                    client.changeState(ClientState.SINGLE_PLAYER_MENU);
+                } else {
+                    client.changeState(ClientState.IN_MULTIPLAYER_GAME);
+                    reset();
+                }
+            }
+        });
+        
+        // Leave
+        buttons.add(new CanvasButton("Leave") {
+            @Override
+            public int x() {
+                return (getWidth() - 450) / 2 
+                        - (numPgButtons * width() + (numPgButtons - 1) * 20) / 2
+                        + 2 * (width() + 20);
+            }
+            
+            @Override
+            public int y() {
+                return getHeight() - finalScoreBottomMargin + 2 * finalScoreOuterMargin;
+            }
+            
+            @Override
+            public int width() {
+                return 100;
+            }
+            
+            @Override
+            public int height() {
+                return 30;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return state == GameState.POSTGAME;
+            }
+            
+            @Override
+            public void click() {
+                client.leaveGame();
+            }
+        });
+        
+        // Bottom left buttons
         // Claim accept button
         buttons.add(new CanvasButton("Accept") {
             @Override
@@ -1143,44 +1487,8 @@ public class GameCanvas extends OhcCanvas {
             }
         });
         
-        // Kick buttons
-        for (ClientPlayer player : players) {
-            final ClientPlayer playerF = player;
-            buttons.add(new CanvasButton("Kick") {
-                @Override
-                public int x() {
-                    return (int) (playerF.getX() + (1 - playerF.getJust()) * maxWid / 2 - 50);
-                }
-                
-                @Override
-                public int y() {
-                    return playerF.getY() - 50;
-                }
-                
-                @Override
-                public int width() {
-                    return 100;
-                }
-                
-                @Override
-                public int height() {
-                    return 30;
-                }
-                
-                @Override
-                public boolean isShown() {
-                    return playerF.isDisconnected() && !playerF.isKicked();
-                }
-                
-                @Override
-                public void click() {
-                    client.voteKick(playerF.getIndex());
-                }
-            });
-        }
-        
         // Post-game page
-        postGamePage = new CanvasPostGamePage(players, client.getRounds()) {
+        postGamePage = new CanvasPostGamePage() {
             @Override
             public int x() {
                 return finalScoreOuterMargin;
@@ -1203,12 +1511,96 @@ public class GameCanvas extends OhcCanvas {
             
             @Override
             public boolean isShown() {
-                return end;
+                return state == GameState.POSTGAME && super.isShown();
             }
         };
+        
+        // Chat areas
+        chatArea.setLineWrap(true);
+        chatArea.setWrapStyleWord(true);
+        chatArea.setEditable(false);
+        DefaultCaret caret = (DefaultCaret) chatArea.getCaret();
+        caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+        CanvasEmbeddedSwing chatScrollPane = new CanvasEmbeddedSwing(
+                new OhcScrollPane(chatArea,
+                        JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+                        JScrollPane.HORIZONTAL_SCROLLBAR_NEVER),
+                this) {
+            @Override
+            public int x() {
+                return getWidth() - 450 + scoreMargin;
+            }
+            
+            @Override
+            public int y() {
+                int numRounds = client.getRounds().size();
+                return Math.max(
+                        2 * scoreMargin + scoreVSpacing * (numRounds + 1) + 5, 
+                        getHeight() - 300);
+            }
+            
+            @Override
+            public int width() {
+                return 450 - 2 * scoreMargin + 1;
+            }
+            
+            @Override
+            public int height() {
+                return getHeight() - y() - 40 - scoreMargin;
+            }
+        };
+        
+        JTextField chatJField = new OhcTextField("Enter text");
+        chatJField.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                try {
+                    if (e.getKeyCode() == KeyEvent.VK_ENTER 
+                            && !chatJField.getText().trim().isEmpty()) {
+                        String text = myPlayer.getName() + ": " + chatJField.getText().trim();
+                        client.sendChat(text);
+                        SwingUtilities.invokeLater(new Runnable() {
+                            public void run() {
+                                chatJField.setText("");
+                            }
+                        });
+                    }
+                } catch (Exception exc) {
+                    exc.printStackTrace();
+                }
+            }
+        });
+        CanvasEmbeddedSwing chatField = new CanvasEmbeddedSwing(
+                chatJField,
+                this) {
+            @Override
+            public int x() {
+                return getWidth() - 450 + scoreMargin;
+            }
+            
+            @Override
+            public int y() {
+                return getHeight() - 35 - scoreMargin;
+            }
+            
+            @Override
+            public int width() {
+                return 450 - 2 * scoreMargin + 1;
+            }
+            
+            @Override
+            public int height() {
+                return 30;
+            }
+        };
+        
+        embeddedSwings.add(chatScrollPane);
+        embeddedSwings.add(chatField);
     
         setInteractables(Arrays.asList(
+                embeddedSwings,
                 Arrays.asList(lastTrick),
+                kickButtons,
                 buttons,
                 bidButtons,
                 cardInteractables,
@@ -1259,8 +1651,6 @@ public class GameCanvas extends OhcCanvas {
     }
     
     public void removeBidInteractables() {
-        interactableMoused = null;
-        interactablePressed = null;
         bidButtons.clear();
     }
     
@@ -1307,8 +1697,6 @@ public class GameCanvas extends OhcCanvas {
                     myPlayer.setPlaying(false);
                     cardJustPlayed = index();
                     client.makePlay(getCard());
-                    interactableMoused = null;
-                    interactablePressed = null;
                     cardInteractables.remove(this);
                     //setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
                 }
@@ -1320,77 +1708,14 @@ public class GameCanvas extends OhcCanvas {
         this.leader = leader;
     }
     
-    /*public void mousePressed(int x, int y) {
-        mouseMoved(x, y);
-        if (interactableMoused != null) {
-            interactableMoused.setPressed(true);
-            interactablePressed = interactableMoused;
-        }
-    }
-    
-    public void mouseReleased(int x, int y) {
-        if (actionQueue.isEmpty()) {
-            if (interactableMoused != null && interactableMoused == interactablePressed) {
-                CanvasInteractable relay = interactableMoused;
-                interactableMoused = null;
-                interactablePressed = null;
-                relay.click();
-            }
-        }
-    }
-    
-    public void mouseMoved(int x, int y) {
-        //interactableMoused = null;
-        boolean anyMoused = false;
-        
-        for (CanvasButton bidButton : bidButtons) {
-            anyMoused = checkIfInteractableMoused(bidButton, x, y) || anyMoused;
-        }
-        
-        for (CanvasCard canvasCard : cardInteractables) {
-            anyMoused = checkIfInteractableMoused(canvasCard, x, y) || anyMoused;
-        }
-        
-        anyMoused = checkIfInteractableMoused(lastTrick, x, y) || anyMoused;
-        
-        for (CanvasButton button : buttons) {
-            anyMoused = checkIfInteractableMoused(button, x, y) || anyMoused;
-        }
-        
-        if (end) {
-            anyMoused = checkIfInteractableMoused(postGamePage, x, y) || anyMoused;
-        }
-        
-        if (interactableMoused != null && !anyMoused) {
-            interactableMoused.setMoused(false);
-            interactableMoused.setPressed(false);
-            interactableMoused = null;
-        }
-    }
-    
-    public boolean checkIfInteractableMoused(CanvasInteractable inter, int x, int y) {
-        if (inter != null) {
-            CanvasInteractable moused = inter.updateMoused(x, y);
-            if (moused != null) {
-                if (interactableMoused != null && interactableMoused != moused) {
-                    interactableMoused.setMoused(false);
-                    interactableMoused.setPressed(false);
-                }
-                interactableMoused = moused;
-                return true;        
-            }
-        }
-        return false;
-    }*/
-    
     public void mouseWheeled(int clicks) {
-        if (end) {
+        if (state == GameState.POSTGAME) {
             postGamePage.wheel(clicks);
         }
     }
     
     public void keyPressed(int keyCode) {
-        if (end) {
+        if (state == GameState.POSTGAME) {
             postGamePage.pressKey(keyCode);
         }
     }
@@ -1571,7 +1896,7 @@ public class GameCanvas extends OhcCanvas {
                             + Math.abs(myPlayer.getBid() - myPlayer.getTaken()) + ".";
                 }
                 paintMessageMarker = true;
-                gameState = "ENDOFROUND";
+                state = GameState.ENDOFROUND;
             }
             
             @Override
@@ -1656,7 +1981,7 @@ public class GameCanvas extends OhcCanvas {
                 for (ClientPlayer player : players) {
                     player.setPlaying(false);
                 }
-                gameState = "BIDDING";
+                state = GameState.BIDDING;
                 if (myPlayer.getBidding() != 0) {
                     makeBidInteractables();
                     //deletePokeTimer();
@@ -1678,7 +2003,7 @@ public class GameCanvas extends OhcCanvas {
                 for (ClientPlayer player : players) {
                     player.setPlaying(player.getIndex() == index);
                 }
-                gameState = "PLAYING";
+                state = GameState.PLAYING;
                 resetPokeTime();
                 /*if (myPlayer.isPlaying()) {
                     deletePokeTimer();
@@ -1717,7 +2042,7 @@ public class GameCanvas extends OhcCanvas {
                 }
                 
                 players.get(index).removeBid();
-                gameState = "BIDDING";
+                state = GameState.BIDDING;
                 if (myPlayer.getBidding() != 0) {
                     makeBidInteractables();
                 }
@@ -1756,22 +2081,24 @@ public class GameCanvas extends OhcCanvas {
         new CanvasTimerEntry(1, this, actionQueue) {
             @Override
             public void onFirstAction() {
-                paintHandMarker = false;
-                paintBiddingMarker = false;
-                paintTrumpMarker = false;
-                paintPlayersMarker = false;
+                for (ClientPlayer player : players) {
+                    player.setBidding(0);
+                    player.setPlaying(false);
+                    dealer = -1;
+                }
+                
                 message = "Analyzing...";
                 paintMessageMarker = true;
-                paintTakenMarker = false;
-                paintTrickMarker = false;
-                end = true;
                 client.goToPostGame();
-                gameState = "POSTGAME";
+                state = GameState.POSTGAME;
             }
             
             @Override
             public void onLastAction() {
-                postGamePage.buildTabs(thisCanvas);
+                playersForScore = new ArrayList<>(players.size());
+                playersForScore.addAll(players);
+                
+                postGamePage.buildTabs(playersForScore, client.getRounds(), thisCanvas);
                 
                 message = "";
                 paintMessageMarker = false;

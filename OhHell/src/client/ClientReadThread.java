@@ -67,7 +67,15 @@ public class ClientReadThread extends Thread {
         currentCommandId = id;
         LinkedList<String> parsedContent = parseCommandContent(content);
         
-        if (command.equals("UPDATEPLAYERS")) {
+        if (command.equals("IDREQUEST")) {
+            client.sendIdToServer();
+        } else if (command.equals("ADDPLAYERS")) {
+            client.addPlayers(contentToPlayers(parsedContent));
+        } else if (command.equals("REMOVEPLAYER")) {
+            client.removePlayer(parsedContent.get(0));
+        } else if (command.equals("UPDATEPLAYERS")) {
+            client.updatePlayers(contentToPlayers(parsedContent));
+        }/* else if (command.equals("UPDATEPLAYERS")) {
             List<ClientPlayer> newPlayers = new ArrayList<>();
             int myIndex = 0;
             
@@ -96,7 +104,7 @@ public class ClientReadThread extends Thread {
             }
             
             client.updatePlayersList(newPlayers, myIndex);
-        } else if (command.equals("UPDATEROUNDS")) {
+        }*/ else if (command.equals("UPDATEROUNDS")) {
             List<int[]> rounds = new ArrayList<>();
             int roundNumber = Integer.parseInt(parsedContent.remove());
             
@@ -192,7 +200,31 @@ public class ClientReadThread extends Thread {
             client.chat(parsedContent.get(0));
         } else if (command.equals("POKE")) {
             client.bePoked();
+        } else if (command.equals("PING")) {
+            client.endPing();
         }
+    }
+    
+    public List<ClientPlayer> contentToPlayers(List<String> content) {
+        int numParams = 9;
+        
+        int numPlayers = content.size() / numParams;
+        List<ClientPlayer> players = new ArrayList<>(numPlayers);
+        
+        for (int i = 0; i < numPlayers; i++) {
+            ClientPlayer cPlayer = new ClientPlayer();
+            cPlayer.setName(content.get(numParams * i + 0));
+            cPlayer.setId(content.get(numParams * i + 1));
+            cPlayer.setIndex(Integer.parseInt(content.get(numParams * i + 2)));
+            cPlayer.setHuman(content.get(numParams * i + 3).equals("true"));
+            cPlayer.setHost(content.get(numParams * i + 4).equals("true"));
+            cPlayer.setDisconnected(content.get(numParams * i + 5).equals("true"));
+            cPlayer.setKicked(content.get(numParams * i + 6).equals("true"));
+            cPlayer.setKibitzer(content.get(numParams * i + 7).equals("true"));
+            players.add(cPlayer);
+        }
+        
+        return players;
     }
     
     public LinkedList<String> parseCommandContent(String content) {

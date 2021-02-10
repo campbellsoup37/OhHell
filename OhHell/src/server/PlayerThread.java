@@ -45,14 +45,17 @@ public class PlayerThread extends Thread {
                                 socket.getOutputStream(), "UTF8"), 
                         true);
             
-            if (!dcPlayersAtAddress.isEmpty()) {
+            player.commandIdRequest();
+            
+            /*if (!dcPlayersAtAddress.isEmpty()) {
                 String command = dcPlayersAtAddress.stream()
                         .map(p -> "STRING " + p.getName().length() + ":" + p.getName() + ":")
                         .reduce("RECONNECT:", (sofar, pString) -> sofar + pString);
                 sendCommand(command);
             } else {
-                server.joinPlayer(player);
-            }
+                //server.joinPlayer(player);
+                player.commandIdRequest();
+            }*/
             
             while (running) {
                 String line = reader.readLine();
@@ -69,18 +72,17 @@ public class PlayerThread extends Thread {
                 
                 LinkedList<String> parsedContent = parseCommandContent(content);
                 
-                if (command.equals("CLOSE")) {
+                if (command.equals("ID")) {
+                    server.joinPlayer(player, parsedContent.get(0));
+                } else if (command.equals("CLOSE")) {
                     handleDisconnect();
                     break;
                 } else if (command.equals("KIBITZER")) {
-                    player.setKibitzer(parsedContent.get(0).equals("true"));
-                    server.putPlayerInRightList(player);
-                    server.updatePlayersList();
+                    server.setKibitzer(player, parsedContent.get(0).equals("true"));
                 } else if (command.equals("UPDATEPLAYERS")) {
                     server.updatePlayersList();
                 } else if (command.equals("RENAME")) {
-                    player.setName(parsedContent.get(0));
-                    server.updatePlayersList();
+                    server.renamePlayer(player, parsedContent.get(0));
                 } else if (command.equals("START")) {
                     if (player.isHost()) {
                         server.startGame(
@@ -98,14 +100,16 @@ public class PlayerThread extends Thread {
                 } else if (command.equals("CLAIMRESPONSE")) {
                     server.processClaimResponse(player, parsedContent.get(0).equals("ACCEPT"));
                 } else if (command.equals("RECONNECT")) {
-                    server.reconnectPlayer(player, 
-                            (HumanPlayer) dcPlayersAtAddress.get(Integer.parseInt(parsedContent.get(0))));
+                    /*server.reconnectPlayer(player, 
+                            (HumanPlayer) dcPlayersAtAddress.get(Integer.parseInt(parsedContent.get(0))));*/
                 } else if (command.equals("VOTEKICK")) {
                     server.addKickVote(Integer.parseInt(parsedContent.get(0)), player);
                 } else if (command.equals("CHAT")) {
                     server.sendChat(parsedContent.get(0));
                 } else if (command.equals("POKE")) {
                     server.pokePlayer();
+                } else if (command.equals("PING")) {
+                    player.ping();
                 }
             }
         } catch(IOException e) {
@@ -183,7 +187,7 @@ public class PlayerThread extends Thread {
     public void handleDisconnect() {
         if (server.gameStarted() && player.isJoined() && !player.isKibitzer()) {
             player.setDisconnected(true);
-            server.updatePlayersList();
+            server.removePlayer(player, false);
         } else {
             server.removePlayer(player, true);
         }

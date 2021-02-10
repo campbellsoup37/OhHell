@@ -6,6 +6,7 @@ import core.Card;
 
 public class ClientPlayer {
     private String name;
+    private String id;
     private int index = -1;
     private boolean human = true;
     private boolean host = false;
@@ -61,6 +62,14 @@ public class ClientPlayer {
         return name;
     }
     
+    public void setId(String id) {
+        this.id = id;
+    }
+    
+    public String getId() {
+        return id;
+    }
+    
     public void setIndex(int index) {
         this.index = index;
     }
@@ -99,6 +108,10 @@ public class ClientPlayer {
 
     public void setKibitzer(boolean kibitzer) {
         this.kibitzer = kibitzer;
+    }
+    
+    public boolean posNotSet() {
+        return pos == null;
     }
     
     public void setPos(CanvasPlayerPosition pos) {
