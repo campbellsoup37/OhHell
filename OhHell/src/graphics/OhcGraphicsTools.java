@@ -18,6 +18,7 @@ public class OhcGraphicsTools {
     public static final Font font = new Font("Arial", Font.PLAIN, 13);
     public static final Font fontBold = new Font("Arial", Font.BOLD, 13);
     public static final Font fontSmall = new Font("Arial", Font.BOLD, 9);
+    public static final Font fontLargeBold = new Font("Arial", Font.BOLD, 40);
     public static final Font fontTitle = new Font("Arial", Font.BOLD, 52);
     
     public static BufferedImage loadImage(String file, Object obj) {

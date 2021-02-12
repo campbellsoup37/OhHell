@@ -276,6 +276,16 @@ public class SinglePlayerPlayer extends Player {
     public void commandPostGame() {
         client.postGame();
     }
+    
+    @Override
+    public void commandPostGameFile(String file) {
+        client.receivePostGameFile(file);
+    }
+    
+    @Override
+    public void commandEndGame(Player player) {
+        client.endGame(player.getId());
+    }
 
     @Override
     public void commandChat(String text) {

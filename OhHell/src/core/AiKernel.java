@@ -103,11 +103,17 @@ public class AiKernel {
         aiPlayers.clear();
     }
     
+    /**
+     * TODO
+     * There is currently a flaw related to this function. It is possible that an AI player may 
+     * ask for its bid before the AiThread object has fully started running. In that case, this 
+     * function relies on the Timer thread in the else statement. This works and should not be 
+     * noticeable, but it is unintended.
+     */
     public void makeBid(AiPlayer player, int delay) {
         if (aiThread.isRunning()) {
             aiThread.makeBid(player, delay);
         } else {
-            System.out.println(player.getName() + " bid");
             Timer timer = new Timer();
             timer.schedule(new TimerTask() {
                 @Override

@@ -7,6 +7,7 @@ public class Player {
     private String id;
     private int index = 0;
     private int score;
+    private int place;
     private int bid;
     private int taken;
     
@@ -90,6 +91,14 @@ public class Player {
 
     public void setScore(int score) {
         this.score = score;
+    }
+    
+    public int getPlace() {
+        return place;
+    }
+    
+    public void setPlace(int place) {
+        this.place = place;
     }
     
     public void resetBid() {
@@ -251,6 +260,7 @@ public class Player {
         score = 0;
         clearTrick();
         bids = new ArrayList<>();
+        takens = new ArrayList<>();
         scores = new ArrayList<>();
         hands = new ArrayList<>();
     }
@@ -289,6 +299,8 @@ public class Player {
     }
     
     public void commandStart() {}
+    
+    public void commandEndGame(Player player) {}
     
     public void commandAddPlayers(List<? extends Player> player, List<? extends Player> kibitzers) {}
     
@@ -333,6 +345,8 @@ public class Player {
     public void commandPostGameHands(List<Player> players) {}
     
     public void commandPostGame() {}
+    
+    public void commandPostGameFile(String file) {}
     
     public void commandChat(String text) {}
     

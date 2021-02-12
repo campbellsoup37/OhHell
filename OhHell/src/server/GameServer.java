@@ -151,13 +151,11 @@ public class GameServer extends JFrame {
         eastPanel.add(kickButton);
         add(eastPanel, BorderLayout.EAST);
         
-        if (recording()) {
-            recorder = new Recorder();
-        }
-        
-        core = new OhHellCore(recording());
-        core.setPlayers(players);
-        core.setKibitzers(kibitzers);
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                revalidate();
+            }
+        });
     }
     
     public boolean recording() {
@@ -166,6 +164,14 @@ public class GameServer extends JFrame {
     
     public void goPressed() {
         try {
+            if (recording()) {
+                recorder = new Recorder();
+            }
+            
+            core = new OhHellCore(true);
+            core.setPlayers(players);
+            core.setKibitzers(kibitzers);
+            
             port = Integer.parseInt(portField.getText());
             if (serverSocket != null) {
                 serverSocket.close();
@@ -236,11 +242,13 @@ public class GameServer extends JFrame {
         
         boolean reconnect = false;
         for (Player p : players) {
-            if (p.getId().equals(player.getId())) {
-                players.remove(player);
+            if (p.getId().equals(player.getId()) && !p.isKicked()) {
+                //players.remove(player);
+                
+                p.commandKick();
                 ((HumanPlayer) p).getThread().endThread();
                 ((HumanPlayer) p).setThread(player.getThread());
-                ((HumanPlayer) p).getThread().setPlayer(((HumanPlayer) p));
+                ((HumanPlayer) p).getThread().setPlayer((HumanPlayer) p);
                 ((HumanPlayer) p).setDisconnected(false);
                 ((HumanPlayer) p).resetKickVotes();
                 player = (HumanPlayer) p;
@@ -282,6 +290,7 @@ public class GameServer extends JFrame {
         } else {
             if (!reconnect) {
                 players.add(player);
+                player.setIndex(players.size() - 1);
                 if (players.size() == 1) {
                     player.setHost(true);
                 }
@@ -336,29 +345,33 @@ public class GameServer extends JFrame {
         boolean wasKibitzer = player.isKibitzer();
         player.setKibitzer(kibitzer);
         if (!wasKibitzer && kibitzer) {
-            for (Player p : players) {
-                p.commandRemovePlayer(player);
-            }
-            for (Player p : kibitzers) {
-                p.commandRemovePlayer(player);
-            }
-            for (Player p : players) {
-                p.commandAddPlayers(null, Arrays.asList(player));
-            }
-            for (Player p : kibitzers) {
-                p.commandAddPlayers(null, Arrays.asList(player));
-            }
             players.remove(player);
+            for (int i = player.getIndex(); i < players.size(); i++) {
+                players.get(i).setIndex(i);
+            }
             kibitzers.add(player);
+            for (Player p : players) {
+                p.commandRemovePlayer(player);
+            }
+            for (Player p : kibitzers) {
+                p.commandRemovePlayer(player);
+            }
+            for (Player p : players) {
+                p.commandAddPlayers(null, Arrays.asList(player));
+            }
+            for (Player p : kibitzers) {
+                p.commandAddPlayers(null, Arrays.asList(player));
+            }
         } else if (wasKibitzer && !kibitzer) {
+            players.add(player);
+            player.setIndex(players.size() - 1);
+            kibitzers.remove(player);
             for (Player p : players) {
                 p.commandAddPlayers(Arrays.asList(player), null);
             }
             for (Player p : kibitzers) {
                 p.commandAddPlayers(Arrays.asList(player), null);
             }
-            players.add(player);
-            kibitzers.remove(player);
         }
     }
     
@@ -376,25 +389,34 @@ public class GameServer extends JFrame {
         player.setKicked(kick);
         
         // Change host if necessary
-        if (player.isHost() && players.stream().filter(Player::isHuman).count() > 1) {
-            Player newHost = player;
-            while (newHost == player && newHost.isHuman()) {
-                newHost = players.get(random.nextInt(players.size()));
-            }
-            player.setHost(false);
-            newHost.setHost(true);
-            for (Player p : players) {
-                p.commandUpdatePlayers(Arrays.asList(newHost));
-            }
-            for (Player p : kibitzers) {
-                p.commandUpdatePlayers(Arrays.asList(newHost));
+        if (player.isHost()) {
+            List<Player> potentialHosts = players.stream()
+                    .filter(p -> p.isHuman() && !p.isDisconnected() && !p.isKicked())
+                    .collect(Collectors.toList());
+            if (!potentialHosts.isEmpty()) {
+                Player newHost = potentialHosts.get(random.nextInt(potentialHosts.size()));
+                player.setHost(false);
+                newHost.setHost(true);
+                for (Player p : players) {
+                    p.commandUpdatePlayers(Arrays.asList(newHost));
+                }
+                for (Player p : kibitzers) {
+                    p.commandUpdatePlayers(Arrays.asList(newHost));
+                }
             }
         }
         
         // Remove if game hasn't started or player is kibitzer
         // Update otherwise
         if (!gameStarted() || !player.isJoined() || player.isKibitzer()) {
-            (player.isKibitzer() ? kibitzers : players).remove(player);
+            if (!player.isKibitzer()) {
+                players.remove(player);
+                for (int i = player.getIndex(); i < players.size(); i++) {
+                    players.get(i).setIndex(i);
+                }
+            } else {
+                kibitzers.remove(player);
+            }
             for (Player p : players) {
                 if (p != player) {
                     p.commandRemovePlayer(player);
@@ -451,6 +473,10 @@ public class GameServer extends JFrame {
     
     public void sendChat(String text) {
         core.sendChat(text);
+    }
+    
+    public void requestEndGame(Player player) {
+        core.requestEndGame(player);
     }
     
     public static void main(String[] args) {

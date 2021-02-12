@@ -121,6 +121,8 @@ public class ClientReadThread extends Thread {
             client.getKicked();
         } else if (command.equals("START")) {
             client.startGame();
+        } else if (command.equals("STOP")) {
+            client.endGame(parsedContent.get(0));
         } else if (command.equals("REDEAL")) {
             client.restartRound();
         } else if (command.equals("DEAL")) {
@@ -174,6 +176,10 @@ public class ClientReadThread extends Thread {
                     .stream()
                     .map(s -> new Card(s))
                     .collect(Collectors.toList()));
+        } else if (command.equals("POSTGAMEFILE")) {
+            client.receivePostGameFile(parsedContent.get(0));
+        } else if (command.equals("POSTGAMEFILEPIECE")) {
+            client.receivePostGameFilePiece(parsedContent.get(0));
         } else if (command.equals("RECONNECT")) {
             client.reconnect(parsedContent);
         } else if (command.equals("STATEDEALERLEADER")) {

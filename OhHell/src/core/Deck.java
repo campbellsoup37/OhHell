@@ -46,6 +46,9 @@ public class Deck {
     
     public List<List<Card>> deal(int numHands, int handSize) {
         initialize();
+        if (numHands * handSize + 1 > deck.size()) {
+            throw new IllegalCoreStateException("Attempted to deal " + handSize + " cards to " + numHands + " players.");
+        }
         List<List<Card>> out = new ArrayList<List<Card>>();
         for (int i = 0; i < numHands + 1; i++) {
             out.add(new ArrayList<Card>());

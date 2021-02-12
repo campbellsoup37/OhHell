@@ -45,6 +45,11 @@ public class HumanPlayer extends Player {
     }
     
     @Override
+    public void commandEndGame(Player player) {
+        thread.sendCommand("STOP:" + "STRING " + player.getId().length() + ":" + player.getId());
+    }
+    
+    @Override
     public void commandAddPlayers(List<? extends Player> players, List<? extends Player> kibitzers) {
         thread.sendCommand("ADDPLAYERS:" 
                 + (players != null ? players.stream().map(p -> playerInfoString(p)).reduce("", (a, b) -> a + b) : "")
@@ -233,6 +238,17 @@ public class HumanPlayer extends Player {
     @Override
     public void commandPostGame() {
         thread.sendCommand("FINALSCORES");
+    }
+    
+    @Override
+    public void commandPostGameFile(String file) {
+        /*int step = 100;
+        for (int i = 0; i < file.length(); i += step) {
+            String piece = file.substring(i, Math.min(i + step, file.length()));
+            thread.sendCommand("POSTGAMEFILEPIECE:" + "STRING " + piece.length() + ":" + piece);
+        }
+        thread.sendCommand("POSTGAMEFILEPIECE:STRING 0:");*/
+        thread.sendCommand("POSTGAMEFILE:" + "STRING " + file.length() + ":" + file);
     }
 
     @Override

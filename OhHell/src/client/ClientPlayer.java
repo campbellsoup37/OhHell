@@ -28,6 +28,7 @@ public class ClientPlayer {
     private List<Card> hand = new ArrayList<>();
     private List<List<Card>> hands = new ArrayList<>();
     
+    private double bidTimer = 1;
     private Card lastTrick = new Card();
     private Card trick = new Card();
     private int trickRad;
@@ -48,6 +49,7 @@ public class ClientPlayer {
         hasBid = false;
         hand = new ArrayList<>();
         hands = new ArrayList<>();
+        bidTimer = 1;
         lastTrick = new Card();
         trick = new Card();
         trickRad = -1;
@@ -126,6 +128,14 @@ public class ClientPlayer {
         return pos.y();
     }
     
+    public int getTrumpX() {
+        return pos.trumpX();
+    }
+    
+    public int getTrumpY() {
+        return pos.trumpY();
+    }
+    
     public int getJust() {
         return pos.justification();
     }
@@ -136,6 +146,14 @@ public class ClientPlayer {
     
     public int getTakenY() {
         return pos.takenY();
+    }
+    
+    public int getBidX() {
+        return pos.bidX();
+    }
+    
+    public int getBidY() {
+        return pos.bidY();
     }
     
     public int getBid() {
@@ -264,6 +282,14 @@ public class ClientPlayer {
         this.trick = trick;
         trickTimer = 1;
     }
+    
+    public void setBidTimer(double bidTimer) {
+        this.bidTimer = bidTimer;
+    }
+    
+    public double getBidTimer() {
+        return bidTimer;
+    }
 
     public int getTrickRad() {
         return trickRad;
@@ -311,6 +337,10 @@ public class ClientPlayer {
     
     public List<Integer> getTakens() {
         return takens;
+    }
+    
+    public void addTaken(int taken) {
+        takens.add(taken);
     }
     
     public void addPostGameHand(List<Card> hand) {

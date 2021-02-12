@@ -1,89 +1,87 @@
 package core;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.LinkedList;
 import java.util.List;
 
 public class Recorder {
-    private BufferedWriter writer;
-    private boolean ready = false;
-    private LinkedList<String> recordQueue = new LinkedList<>();
-    private boolean queueStarted = false;
+    private volatile StringBuilder file;
+    private volatile StringBuilder round;
     
     public Recorder() {}
     
     public void start() {
-        try {
-            writer = new BufferedWriter(new FileWriter(
-                    "OhHellServerStats/" + System.currentTimeMillis() + ".txt",
-                    true));
-            ready = true;
-        } catch (IOException e) {
-            e.printStackTrace();
+        file = new StringBuilder();
+    }
+    
+    public void recordInfo(int numDecks, List<Player> players) {
+        file.append("decks;" + numDecks + "|");
+        file.append("players");
+        for (Player player : players) {
+            file.append(";" + player.getId() + ":" + player.getName() + ":" + (player.isHuman() ? "human" : "ai"));
         }
+        file.append("|");
     }
     
-    public void recordPlayers(List<String> addresses) {
-        write(addresses.stream()
-                .reduce("", (sofar, s) -> sofar + s + ":"));
+    public void recordRoundInfo(int handSize, int dealer, List<Player> players, Card trump) {
+        round = new StringBuilder();
+        round.append("round;" + dealer + ";" + handSize + "|");
+        round.append("hands");
+        for (Player player : players) {
+            round.append(";" + player.getHand().get(0));
+            for (int i = 1; i < handSize; i++) {
+                round.append(":" + player.getHand().get(i));
+            }
+        }
+        round.append("|");
+        round.append("trump;" + trump + "|");
     }
     
-    public void recordTrump(Card card) {
-        write("TRUMP:" + card);
+    public void recordBids(List<Player> players, int leader) {
+        round.append("bids");
+        for (Player player : players) {
+            round.append(";" + (player.getIndex() == leader ? 1 : 0) + ":" + player.getBid());
+        }
+        round.append("|");
     }
     
-    public void recordDealer(int index) {
-        write("DEALER:" + index);
+    public void recordTrick(List<Player> players, int leader, int winner) {
+        round.append("trick");
+        for (Player player : players) {
+            round.append(";" 
+                + (player.getIndex() == leader ? 1 : 0) + ":" 
+                + (player.getIndex() == winner ? 1 : 0) + ":"            
+                + player.getTrick());
+        }
+        round.append("|");
     }
     
-    public void recordBids(List<Integer> bids) {
-        write(bids.stream()
-                .map(b -> b.toString())
-                .reduce("BIDS:", (sofar, s) -> sofar + s + ":"));
+    public void recordRoundEnd(List<Player> players) {
+        round.append("takens");
+        for (Player player : players) {
+            round.append(";" + player.getTaken());
+        }
+        round.append("|");
+        round.append("scores");
+        for (Player player : players) {
+            round.append(";" + player.getScore());
+        }
+        round.append("|");
+        file.append(round);
     }
     
-    public void recordTrick(List<Card> cards, int winner) {
-        write(cards.stream()
-                .map(c -> c.toString())
-                .reduce("TRICK:", (sofar, s) -> sofar + s + ":")
-                + winner);
-    }
-    
-    public void recordResults(List<Integer> results) {
-        write(results.stream()
-                .map(r -> r.toString())
-                .reduce("RESULTS:", (sofar, s) -> sofar + s + ":"));
+    public void recordFinalScores(List<Player> players) {
+        file.append("final scores");
+        for (Player player : players) {
+            file.append(";" + player.getScore() + ":" + player.getPlace());
+        }
     }
     
     public void recordKick(int index) {
-        write("KICK:" + index);
+        file.append("kick;" + index);
     }
     
-    public void write(String text) {
-        recordQueue.add(text + "\n");
-        if (!queueStarted && ready) {
-            queueStarted = true;
-            while (recordQueue.size() > 0) {
-                String line = recordQueue.remove();
-                try {
-                    writer.write(line);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            recordQueue = new LinkedList<String>();
-            queueStarted = false;
-        }
-    }
-    
-    public void stop() {
-        try {
-            writer.flush();
-            writer.close();
-            ready = false;
-        } catch (IOException e) {
-            e.printStackTrace();
+    public void sendFile(List<Player> players) {
+        String finishedFile = file.toString();
+        for (Player player : players) {
+            player.commandPostGameFile(finishedFile);
         }
     }
 }

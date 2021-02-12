@@ -90,12 +90,7 @@ public class CanvasPostGamePage extends CanvasInteractable {
         players = finalPlayers;
         sortedPlayers = new ArrayList<>(players.size());
         sortedPlayers.addAll(players);
-        sortedPlayers.sort((p1, p2) -> (int) Math.signum(p2.getScore() - p1.getScore()));
-        for (int place = 1, i = 0; i < sortedPlayers.size(); place = i + 1) {
-            for (int score = sortedPlayers.get(i).getScore(); i < sortedPlayers.size() && sortedPlayers.get(i).getScore() == score; i++) {
-                sortedPlayers.get(i).setPlace(place);
-            }
-        }
+        sortedPlayers.sort((p1, p2) -> (int) Math.signum(p1.getPlace() - p2.getPlace()));
         
         CanvasPostGamePage page = this;
         
@@ -421,8 +416,8 @@ public class CanvasPostGamePage extends CanvasInteractable {
             ClientPlayer player = sortedPlayers.get(i);
             graphics.setColor(GameCanvas.colors[player.getIndex()]);
             graphics.fillOval(
-                    (int) (GameCanvas.finalScoreOuterMargin + 2 * GameCanvas.finalScoreInnerMargin - GameCanvas.pointSize / 2), 
-                    (int) (GameCanvas.finalScoreOuterMargin + GameCanvas.finalScoreInnerMargin + 30 + 15 * (i + 1) - GameCanvas.pointSize / 2), 
+                    (int) (x() + 2 * GameCanvas.finalScoreInnerMargin - GameCanvas.pointSize / 2), 
+                    (int) (y() + GameCanvas.finalScoreInnerMargin + 30 + 15 * (i + 1) - GameCanvas.pointSize / 2), 
                     (int) (GameCanvas.pointSize),
                     (int) (GameCanvas.pointSize));
             graphics.setColor(Color.BLACK);
@@ -432,13 +427,13 @@ public class CanvasPostGamePage extends CanvasInteractable {
                             player.getPlace() + ". " 
                             + player.getName(), 
                             0.8 * GameCanvas.finalScoreListWidth - 2 * GameCanvas.finalScoreInnerMargin),
-                    GameCanvas.finalScoreOuterMargin + 2 * GameCanvas.finalScoreInnerMargin + GameCanvas.finalScoreInnerMargin / 2, 
-                    GameCanvas.finalScoreOuterMargin + GameCanvas.finalScoreInnerMargin + 30 + 15 * (i + 1), 
+                    x() + 2 * GameCanvas.finalScoreInnerMargin + GameCanvas.finalScoreInnerMargin / 2, 
+                    y() + GameCanvas.finalScoreInnerMargin + 30 + 15 * (i + 1), 
                     0, 1);
             OhcGraphicsTools.drawStringJustified(graphics, 
                     player.getScore() + "",
-                    GameCanvas.finalScoreOuterMargin + GameCanvas.finalScoreInnerMargin + (int) (0.8 * GameCanvas.finalScoreListWidth), 
-                    GameCanvas.finalScoreOuterMargin + GameCanvas.finalScoreInnerMargin + 30 + 15 * (i + 1), 
+                    x() + GameCanvas.finalScoreInnerMargin + (int) (0.8 * GameCanvas.finalScoreListWidth), 
+                    y() + GameCanvas.finalScoreInnerMargin + 30 + 15 * (i + 1), 
                     1, 1);
         }
         

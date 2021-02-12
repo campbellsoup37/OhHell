@@ -77,6 +77,8 @@ public class PlayerThread extends Thread {
                 } else if (command.equals("CLOSE")) {
                     handleDisconnect();
                     break;
+                } else if (command.equals("STOP")) {
+                    server.requestEndGame(player);
                 } else if (command.equals("KIBITZER")) {
                     server.setKibitzer(player, parsedContent.get(0).equals("true"));
                 } else if (command.equals("UPDATEPLAYERS")) {
@@ -114,6 +116,7 @@ public class PlayerThread extends Thread {
             }
         } catch(IOException e) {
             e.printStackTrace();
+            handleDisconnect();
         }
     }
     

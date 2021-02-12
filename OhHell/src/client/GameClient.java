@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Random;
 
 import javax.swing.JCheckBox;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -68,7 +69,7 @@ public class GameClient extends JFrame {
     private final boolean antialiasingOptionEnabled = true;
     ///////////////////////////////////
     
-    private final String version = "0.1.5.4";
+    private final String version = "0.1.5.4b";
     private boolean updateChecked = false;
     private String newVersion;
     
@@ -118,7 +119,7 @@ public class GameClient extends JFrame {
     private OhcCanvas singlePlayerCanvas;
     
     private int numRobots = 4;
-    private OhHellCore core = new OhHellCore(false);
+    private OhHellCore core = new OhHellCore(true);
     private SinglePlayerPlayer spPlayer;
     
     // LOGIN_MENU
@@ -138,6 +139,9 @@ public class GameClient extends JFrame {
     private ClientState state;
     private OhcCanvas stateCanvas;
     
+    private List<String> postGameFile;
+    private StringBuilder postGameFileBuilder;
+    
     public GameClient() {}
     
     public ClientState getClientState() {
@@ -146,51 +150,60 @@ public class GameClient extends JFrame {
     
     public void changeState(ClientState newState) {
         OhcCanvas oldStateCanvas = stateCanvas;
+        state = newState;
         
         switch (newState) {
         case MAIN_MENU:
+            setMaximized(windowMaximizedMenu);
             setLocation(windowLocationMenu);
             setMinimumSize(new Dimension(685, 500));
             setSize(windowSizeMenu);
-            setMaximized(windowMaximizedMenu);
             setResizable(false);
             stateCanvas = mainMenuCanvas;
             break;
         case SINGLE_PLAYER_MENU:
+            setMaximized(windowMaximizedMenu);
             setLocation(windowLocationMenu);
             setMinimumSize(new Dimension(685, 500));
             setSize(windowSizeMenu);
-            setMaximized(windowMaximizedMenu);
             setResizable(false);
             stateCanvas = singlePlayerCanvas;
             break;
         case IN_SINGLE_PLAYER_GAME:
+            setMaximized(windowMaximizedInGame);
             setLocation(windowLocationInGame);
             setMinimumSize(new Dimension(1200, 800));
             setSize(windowSizeInGame);
-            setMaximized(windowMaximizedInGame);
             setResizable(true);
             stateCanvas = canvas;
             break;
         case SINGLE_PLAYER_POST_GAME:
             break;
         case LOGIN_MENU:
+            setMaximized(windowMaximizedMenu);
             setMinimumSize(new Dimension(685, 500));
             setSize(windowSizeMenu);
-            setMaximized(windowMaximizedMenu);
             setResizable(false);
             stateCanvas = loginCanvas;
             myPlayer = null;
             break;
         case IN_MULTIPLAYER_GAME:
+            setMaximized(windowMaximizedInGame);
             setLocation(windowLocationInGame);
             setMinimumSize(new Dimension(1200, 800));
             setSize(windowSizeInGame);
-            setMaximized(windowMaximizedInGame);
             setResizable(true);
             stateCanvas = canvas;
             break;
         case MULTIPLAYER_POST_GAME:
+            break;
+        case FILE_VIEWER:
+            setMaximized(windowMaximizedInGame);
+            setLocation(windowLocationInGame);
+            setMinimumSize(new Dimension(1200, 800));
+            setSize(windowSizeInGame);
+            setResizable(true);
+            stateCanvas = canvas;
             break;
         }
         
@@ -205,8 +218,6 @@ public class GameClient extends JFrame {
                 }
             }
         });
-        
-        state = newState;
     }
     
     public void resizeCanvas() {
@@ -235,24 +246,27 @@ public class GameClient extends JFrame {
                 kibitzers.add(player);
             } else {
                 this.players.add(player);
-                player.setIndex(this.players.size() - 1);
+//                player.setIndex(this.players.size() - 1);
                 anyDc = anyDc || player.isDisconnected();
             }
             if (player.getId().equals(username)) {
                 myPlayer = player;
+                if (player.isKibitzer()) {
+                    myPlayer.setIndex(this.players.isEmpty() ? 0 : random.nextInt(this.players.size()));
+                }
             }
         }
 
         final boolean anyDcF = anyDc;
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                canvas.updatePlayerCalcs();
+//        SwingUtilities.invokeLater(new Runnable() {
+//            public void run() {
+                canvas.updatePlayersOnTimer();
                 
                 if (state == ClientState.IN_MULTIPLAYER_GAME && anyDcF) {
                     canvas.setConnectionStatusOnTimer(false);
                 }
-            }
-        });
+//            }
+//        });
     }
     
     public void removePlayer(String id) {
@@ -261,9 +275,9 @@ public class GameClient extends JFrame {
             if (players.get(i).getId().equals(id)) {
                 toRemove = i;
             }
-            /*if (i > toRemove) {
-                players.get(i).setIndex(i - 1);
-            }*/
+//            if (i > toRemove) {
+//                players.get(i).setIndex(i - 1);
+//            }
         }
         if (toRemove < players.size()) {
             players.remove(toRemove);
@@ -277,11 +291,11 @@ public class GameClient extends JFrame {
             kibitzers.remove(toRemove);
         }
         
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                canvas.updatePlayerCalcs();
-            }
-        });
+//        SwingUtilities.invokeLater(new Runnable() {
+//            public void run() {
+                canvas.updatePlayersOnTimer();
+//            }
+//        });
     }
     
     public void updatePlayers(List<ClientPlayer> newPlayers) {
@@ -305,15 +319,15 @@ public class GameClient extends JFrame {
         players.sort((p1, p2) -> (int) Math.signum(p1.getIndex() - p2.getIndex()));
 
         final boolean anyDcF = anyDc;
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                canvas.updatePlayerCalcs();
+//        SwingUtilities.invokeLater(new Runnable() {
+//            public void run() {
+                canvas.updatePlayersOnTimer();
                 
                 if (state == ClientState.IN_MULTIPLAYER_GAME) {
                     canvas.setConnectionStatusOnTimer(!anyDcF);
                 }
-            }
-        });
+//            }
+//        });
         
         if (state == ClientState.IN_MULTIPLAYER_GAME) {
             canvas.setConnectionStatusOnTimer(!anyDc);
@@ -372,33 +386,31 @@ public class GameClient extends JFrame {
         core.setKibitzers(kibitzers);
         
         spPlayer.setCore(core);
-        canvas.reset();
+        changeState(ClientState.IN_SINGLE_PLAYER_GAME);
         core.startGame(numRobots, false, null, 0);
     }
     
     public void startGame() {
         roundNumber = 0;
-        canvas.setState(GameState.BIDDING);
-
-        for (ClientPlayer player : players) {
-            player.reset();
-        }
-        if (myPlayer.isKibitzer()) {
-            myPlayer.setIndex(random.nextInt(players.size()));
-        }
+        postGameFileBuilder = new StringBuilder();
         
         switch (state) {
-        case SINGLE_PLAYER_MENU:
         case IN_SINGLE_PLAYER_GAME:
-        case SINGLE_PLAYER_POST_GAME:
-            changeState(ClientState.IN_SINGLE_PLAYER_GAME);
+            canvas.pregameOnTimer();
             break;
+        case IN_MULTIPLAYER_GAME:
+            break;
+        case LOGIN_MENU:
+            // This occurs when reconnecting. Same behavior as starting from post-game.
         case MULTIPLAYER_POST_GAME:
             changeState(ClientState.IN_MULTIPLAYER_GAME);
+            canvas.pregameOnTimer();
             break;
         default:
-            break;
+            throw new IllegalClientStateException("startGame() was called in state " + state);
         }
+
+        canvas.initializingOnTimer();
     }
     
     public List<ClientPlayer> getPlayers() {
@@ -419,7 +431,7 @@ public class GameClient extends JFrame {
             }
         }
 
-        canvas.showMessageOnTimer("Someone was kicked. Redealing this round.");
+        canvas.showMessageOnTimer("Someone was kicked. Redealing this round.", false);
     }
     
     public void notify(String text) {
@@ -496,27 +508,21 @@ public class GameClient extends JFrame {
     }
     
     public void setStatePlayer(int index, boolean hasBid, int bid, int taken, Card lastTrick, Card trick) {
-        ClientPlayer player = players.get(index);
-        player.setHasBid(hasBid);
-        player.setBid(bid);
-        player.setTaken(taken);
-        player.setLastTrick(lastTrick);
-        player.setTrick(trick);
-        if (!trick.isEmpty()) {
-            player.setTimerStarted(true);
-        }
+        canvas.setStatePlayerOnTimer(index, hasBid, bid, taken, lastTrick, trick);
     }
     
     public void setStatePlayerBids(int index, List<Integer> bids) {
-        players.get(index).setBids(bids);
+        canvas.setStatePlayerBidsOnTimer(index, bids);
     }
     
     public void setStatePlayerScores(int index, List<Integer> scores) {
-        players.get(index).setScores(scores);
+        canvas.setStatePlayerScoresOnTimer(index, scores);
     }
     
     public void execute() {
         try {
+            GameClient thisClient = this;
+            
             UIManager.setLookAndFeel(
                     UIManager.getSystemLookAndFeelClassName());
             setTitle("Oh Hell");
@@ -613,7 +619,7 @@ public class GameClient extends JFrame {
                         
                         @Override
                         public int y() {
-                            return 230;
+                            return 220;
                         }
                         
                         @Override
@@ -640,7 +646,7 @@ public class GameClient extends JFrame {
                         
                         @Override
                         public int y() {
-                            return 330;
+                            return 280;
                         }
                         
                         @Override
@@ -656,6 +662,57 @@ public class GameClient extends JFrame {
                         @Override
                         public void click() {
                             changeState(ClientState.LOGIN_MENU);
+                        }
+                    };
+                    
+                    CanvasButton openButton = new CanvasButton("View saved game") {
+                        @Override
+                        public int x() {
+                            return 267;
+                        }
+                        
+                        @Override
+                        public int y() {
+                            return 340;
+                        }
+                        
+                        @Override
+                        public int width() {
+                            return 151;
+                        }
+                        
+                        @Override
+                        public int height() {
+                            return 40;
+                        }
+                        
+                        @Override
+                        public void click() {
+                            JFileChooser chooser = new JFileChooser();
+                            try {
+                                chooser.setCurrentDirectory(new File(getDirectory()));
+                            } catch (URISyntaxException e1) {
+                                e1.printStackTrace();
+                            }
+                            if (chooser.showOpenDialog(thisClient) == JFileChooser.APPROVE_OPTION) {
+                                try {
+                                    BufferedReader reader = new BufferedReader(new FileReader(chooser.getSelectedFile()));
+                                    List<String> lines = new LinkedList<>();
+                                    for (String line = reader.readLine(); line != null; line = reader.readLine()) {
+                                        lines.add(line);
+                                    }
+                                    reader.close();
+                                    
+                                    postGameFile = lines;
+                                    changeState(ClientState.FILE_VIEWER);
+                                    canvas.pregameOnTimer();
+                                    canvas.loadPostGameOnTimer(lines);
+                                } catch (FileNotFoundException e1) {
+                                    e1.printStackTrace();
+                                } catch (IOException e1) {
+                                    e1.printStackTrace();
+                                }
+                            }
                         }
                     };
                     
@@ -702,7 +759,7 @@ public class GameClient extends JFrame {
                         }
                     };
                     
-                    setInteractables(Arrays.asList(Arrays.asList(spButton, mpButton, updateButton)));
+                    setInteractables(Arrays.asList(Arrays.asList(spButton, mpButton, openButton, updateButton)));
                 }
                 
                 @Override
@@ -735,7 +792,7 @@ public class GameClient extends JFrame {
                     CanvasButton minusButton = new CanvasButton("-") {
                         @Override
                         public int x() {
-                            return 350;
+                            return getWidth() / 2 + 25;
                         }
                         
                         @Override
@@ -762,7 +819,7 @@ public class GameClient extends JFrame {
                     CanvasButton plusButton = new CanvasButton("+") {
                         @Override
                         public int x() {
-                            return 400;
+                            return getWidth() / 2 + 75;
                         }
                         
                         @Override
@@ -794,7 +851,7 @@ public class GameClient extends JFrame {
                         
                         @Override
                         public int y() {
-                            return 230;
+                            return 260;
                         }
                         
                         @Override
@@ -852,11 +909,13 @@ public class GameClient extends JFrame {
                 public void customPaint(Graphics graphics) {
                     graphics.setColor(new Color(255, 255, 255, 180));
                     OhcGraphicsTools.drawBox(graphics, 200, 80, 285, 320, 20);
+                    graphics.setColor(new Color(255, 255, 255, 210));
+                    OhcGraphicsTools.drawBox(graphics, getWidth() / 2 + 20, 155, 80, 30, 20);
                     
                     graphics.setFont(OhcGraphicsTools.fontBold);
                     graphics.setColor(Color.BLACK);
-                    OhcGraphicsTools.drawStringJustified(graphics, "Robots:", 240, 170, 0, 1);
-                    OhcGraphicsTools.drawStringJustified(graphics, numRobots + "", 385, 170, 1, 1);
+                    OhcGraphicsTools.drawStringJustified(graphics, "Robots:", getWidth() / 2 - 20, 170, 2, 1);
+                    OhcGraphicsTools.drawStringJustified(graphics, numRobots + "", getWidth() / 2 + 60, 170, 1, 1);
                 }
             };
             
@@ -1027,13 +1086,24 @@ public class GameClient extends JFrame {
 
                     graphics.setFont(OhcGraphicsTools.fontBold);
                     graphics.setColor(Color.BLACK);
-                    OhcGraphicsTools.drawStringJustified(graphics, "Username:", 230, 120, 0, 1);
-                    OhcGraphicsTools.drawStringJustified(graphics, "Server:", 230, 170, 0, 1);
-                    OhcGraphicsTools.drawStringJustified(graphics, "Port:", 230, 220, 0, 1);
+                    OhcGraphicsTools.drawStringJustified(graphics, "Username:", 290, 120, 2, 1);
+                    OhcGraphicsTools.drawStringJustified(graphics, "Server:", 290, 170, 2, 1);
+                    OhcGraphicsTools.drawStringJustified(graphics, "Port:", 290, 220, 2, 1);
                 }
             };
             
-            canvas = new GameCanvas(this);
+            canvas = new GameCanvas(this) {
+                private static final long serialVersionUID = 1L;
+
+                @Override
+                public boolean isShown() {
+                    return state == ClientState.IN_SINGLE_PLAYER_GAME
+                            || state == ClientState.SINGLE_PLAYER_POST_GAME
+                            || state == ClientState.IN_MULTIPLAYER_GAME
+                            || state == ClientState.MULTIPLAYER_POST_GAME
+                            || state == ClientState.FILE_VIEWER;
+                }
+            };
             canvas.addMouseWheelListener(new MouseWheelListener() {
                 @Override
                 public void mouseWheelMoved(MouseWheelEvent e) {
@@ -1120,7 +1190,8 @@ public class GameClient extends JFrame {
                     if (state == ClientState.IN_SINGLE_PLAYER_GAME
                             || state == ClientState.IN_MULTIPLAYER_GAME
                             || state == ClientState.SINGLE_PLAYER_POST_GAME
-                            || state == ClientState.MULTIPLAYER_POST_GAME) {
+                            || state == ClientState.MULTIPLAYER_POST_GAME
+                            || state == ClientState.FILE_VIEWER) {
                         windowMaximizedInGame = (e.getNewState() & JFrame.MAXIMIZED_BOTH) != 0;
                     }
                     resizeCanvas();
@@ -1132,7 +1203,8 @@ public class GameClient extends JFrame {
                     if (state == ClientState.IN_SINGLE_PLAYER_GAME
                             || state == ClientState.IN_MULTIPLAYER_GAME
                             || state == ClientState.SINGLE_PLAYER_POST_GAME
-                            || state == ClientState.MULTIPLAYER_POST_GAME) {
+                            || state == ClientState.MULTIPLAYER_POST_GAME
+                            || state == ClientState.FILE_VIEWER) {
                         windowSizeInGame = getSize();
                     }
                     resizeCanvas();
@@ -1143,7 +1215,8 @@ public class GameClient extends JFrame {
                     if (state == ClientState.IN_SINGLE_PLAYER_GAME
                             || state == ClientState.IN_MULTIPLAYER_GAME
                             || state == ClientState.SINGLE_PLAYER_POST_GAME
-                            || state == ClientState.MULTIPLAYER_POST_GAME) {
+                            || state == ClientState.MULTIPLAYER_POST_GAME
+                            || state == ClientState.FILE_VIEWER) {
                         windowLocationInGame = getLocationOnScreen();
                     } else {
                         windowLocationMenu = getLocationOnScreen();
@@ -1168,17 +1241,34 @@ public class GameClient extends JFrame {
         case IN_SINGLE_PLAYER_GAME:
             core.stopGame();
         case SINGLE_PLAYER_POST_GAME:
-            changeState(ClientState.SINGLE_PLAYER_MENU);
+            changeState(ClientState.MAIN_MENU);
             break;
         case IN_MULTIPLAYER_GAME:
         case MULTIPLAYER_POST_GAME:
             if (connected) {
                 disconnect();
             }
-            changeState(ClientState.LOGIN_MENU);
+            changeState(ClientState.MAIN_MENU);
             break;
+        case FILE_VIEWER:
+            changeState(ClientState.MAIN_MENU);
         default:
             break;
+        }
+    }
+    
+    public void requestEndGame() {
+        if (state == ClientState.IN_SINGLE_PLAYER_GAME) {
+            core.requestEndGame(spPlayer);
+        } else {
+            sendCommandToServer("STOP");
+        }
+    }
+    
+    public void endGame(String id) {
+        canvas.endGameOnTimer();
+        if (state == ClientState.IN_MULTIPLAYER_GAME) {
+            canvas.showMessageOnTimer(id + " is ending the game.", true);
         }
     }
     
@@ -1240,7 +1330,6 @@ public class GameClient extends JFrame {
             } else if (numPlayers <= 1) {
                 notify("Not enough players.");
             } else {
-                players.removeIf(p -> !p.isHuman());
                 sendCommandToServer("START:" + numRobots + ":" + doubleDeck);
             }
         } else {
@@ -1290,7 +1379,7 @@ public class GameClient extends JFrame {
     
     public void undoBidReport(int index) {
         canvas.removeBidOnTimer(index);
-        canvas.showMessageOnTimer(players.get(index).getName() + " is changing their bid.");
+        canvas.showMessageOnTimer(players.get(index).getName() + " is changing their bid.", false);
     }
     
     public void makeClaim() {
@@ -1325,7 +1414,7 @@ public class GameClient extends JFrame {
     
     public void claimResult(boolean accept) {
         canvas.claimResultOnTimer(accept);
-        canvas.showMessageOnTimer("Claim " + (accept ? "accepted" : "refused") + ".");
+        canvas.showMessageOnTimer("Claim " + (accept ? "accepted" : "refused") + ".", false);
     }
     
     public void pokePlayer() {
@@ -1348,9 +1437,11 @@ public class GameClient extends JFrame {
     public void sendChat(String text) {
         switch (state) {
         case IN_SINGLE_PLAYER_GAME:
+        case SINGLE_PLAYER_POST_GAME:
             core.sendChat(text);
             break;
         case IN_MULTIPLAYER_GAME:
+        case MULTIPLAYER_POST_GAME:
             String command = "CHAT:STRING " 
                     + text.toCharArray().length + ":" 
                     + text;
@@ -1366,7 +1457,7 @@ public class GameClient extends JFrame {
             try {
                 socket = new Socket();
                 socket.connect(new InetSocketAddress(hostName, Integer.parseInt(port)), 10000);
-                
+
                 players.clear();
                 kibitzers.clear();
                 
@@ -1377,8 +1468,9 @@ public class GameClient extends JFrame {
                 readThread.start();
                 
                 connected = true;
-                canvas.reset();
+                canvas.pregameOnTimer();
                 changeState(ClientState.IN_MULTIPLAYER_GAME);
+                
                 startPing();
             } catch (UnknownHostException e) {
                 notify("That host does not exist.");
@@ -1456,7 +1548,42 @@ public class GameClient extends JFrame {
     }
     
     public void postGame() {
-        canvas.showPostGameOnTimer();
+        //canvas.showPostGameOnTimer();
+    }
+    
+    public void receivePostGameFile(String file) {
+        postGameFile = Arrays.asList(file.split("\\|"));
+        canvas.loadPostGameOnTimer(postGameFile);
+    }
+    
+    public void receivePostGameFilePiece(String piece) {
+        if (piece.isEmpty()) {
+            receivePostGameFile(postGameFile.toString());
+        } else {
+            postGameFileBuilder.append(piece);
+        }
+    }
+    
+    public void savePostGame() {
+        JFileChooser chooser = new JFileChooser();
+        try {
+            chooser.setCurrentDirectory(new File(getDirectory()));
+        } catch (URISyntaxException e1) {
+            e1.printStackTrace();
+        }
+        if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            try {
+                BufferedWriter writer = new BufferedWriter(new FileWriter(chooser.getSelectedFile()));
+                for (String line : postGameFile) {
+                    writer.write(line + "\n");
+                }
+                writer.close();
+            } catch (FileNotFoundException e1) {
+                e1.printStackTrace();
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+        }
     }
     
     public boolean soundSelected() {
@@ -1481,7 +1608,7 @@ public class GameClient extends JFrame {
     
     public void loadConfigFile() {
         try {
-            BufferedReader configReader = new BufferedReader(new FileReader("OhHellConfig.txt"));
+            BufferedReader configReader = new BufferedReader(new FileReader(getDirectory() + "/OhHellConfig.txt"));
             for (String line = configReader.readLine(); line != null; line = configReader.readLine()) {
                 String[] split = line.split("=");
                 if (split.length == 2) {
@@ -1524,12 +1651,14 @@ public class GameClient extends JFrame {
             System.out.println("Config file not found.");
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
         }
     }
     
     public void saveConfigFile() {
         try {
-            BufferedWriter configWriter = new BufferedWriter(new FileWriter("OhHellConfig.txt"));
+            BufferedWriter configWriter = new BufferedWriter(new FileWriter(getDirectory() + "/OhHellConfig.txt"));
             configWriter.write("windowlocationmenu = " + (int) windowLocationMenu.getX() + "," + (int) windowLocationMenu.getY() + "\n");
             configWriter.write("windowlocationingame = " + (int) windowLocationInGame.getX() + "," + (int) windowLocationInGame.getY() + "\n");
             configWriter.write("windowsizeingame = " + windowSizeInGame.width + "," + windowSizeInGame.height + "\n");
@@ -1540,7 +1669,7 @@ public class GameClient extends JFrame {
             configWriter.write("playsound = " + soundOption.isSelected() + "\n");
             configWriter.write("aidelay = " + getRobotDelay() + "\n");
             configWriter.close();
-        } catch (IOException e) {
+        } catch (IOException | URISyntaxException e) {
             e.printStackTrace();
         }
     }
@@ -1565,8 +1694,7 @@ public class GameClient extends JFrame {
         } else {
             try {
                 dispose();
-                String path = new File(GameClient.class.getProtectionDomain().getCodeSource()
-                        .getLocation().toURI()).getParent();
+                String path = getDirectory();
                 Runtime.getRuntime().exec("java -jar " + path + "/updater.jar " + newVersion);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -1574,6 +1702,11 @@ public class GameClient extends JFrame {
                 e.printStackTrace();
             }
         }
+    }
+    
+    public String getDirectory() throws URISyntaxException {
+        return new File(GameClient.class.getProtectionDomain().getCodeSource()
+                .getLocation().toURI()).getParent();
     }
     
     public static void main(String[] args) {

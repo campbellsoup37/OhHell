@@ -13,6 +13,7 @@ public class CanvasHandAnalysis extends CanvasInteractable {
     private final int margin = 4;
     private final int buttonSize = 18;
     
+    private final double trumpColumn = 3.0 / 16;
     private final double handColumn = 3.0 / 8;
     private final double plotColumn = 5.0 / 8;
     private final double bidColumn = 25.0 / 32;
@@ -155,12 +156,22 @@ public class CanvasHandAnalysis extends CanvasInteractable {
         OhcGraphicsTools.drawBox(graphics, x(), y(), width(), height(), 10);
         
         graphics.setColor(Color.BLACK);
-        canvas.drawCard(graphics, canvas.getTrumps().get(roundSelected), 
+        /*canvas.drawCard(graphics, canvas.getTrumps().get(roundSelected), 
                 x() + handColumn * width(), 
                 y() + trumpRowHeight / 2 + 30, 
                 GameCanvas.smallCardScale, true, false,
-                y() + trumpRowHeight);
+                y() + trumpRowHeight);*/
         graphics.setFont(OhcGraphicsTools.fontSmall);
+        OhcGraphicsTools.drawStringJustified(graphics, 
+                "Trump", 
+                x() + trumpColumn * width(), 
+                y() + trumpRowHeight / 2, 
+                1, 1);
+        OhcGraphicsTools.drawStringJustified(graphics, 
+                "Hand", 
+                x() + handColumn * width(), 
+                y() + trumpRowHeight / 2, 
+                1, 1);
         OhcGraphicsTools.drawStringJustified(graphics, 
                 "Predicted distribution", 
                 x() + plotColumn * width(), 
@@ -207,7 +218,7 @@ public class CanvasHandAnalysis extends CanvasInteractable {
                     y() + trumpRowHeight + i * h);
             if (i < players.size()) {
                 ClientPlayer player = players.get(i);
-                if (player.getIndex() == rounds.get(roundSelected)[0]) {
+                /*if (player.getIndex() == rounds.get(roundSelected)[0]) {
                     graphics.setColor(Color.CYAN);
                     graphics.fillOval(
                             x() + 2 * margin, 
@@ -218,14 +229,34 @@ public class CanvasHandAnalysis extends CanvasInteractable {
                             x() + 2 * margin + 8, 
                             y() + trumpRowHeight + i * h + h / 2, 
                             1, 1);
-                }
+                }*/
                 graphics.setColor(Color.BLACK);
                 OhcGraphicsTools.drawStringJustified(graphics, 
                         OhcGraphicsTools.fitString(graphics, player.getName(), 
-                                width() / 4 - 2 * margin + 25), 
-                        x() + 2 * margin + 25, 
+                                width() / 8 - 3 * margin), 
+                        x() + 2 * margin, 
                         y() + trumpRowHeight + i * h + h / 2, 
                         0, 1);
+                if (player.getIndex() == rounds.get(roundSelected)[0]) {
+                    canvas.drawCard(graphics, 
+                            new Card(), 
+                            x() + trumpColumn * width() - 4, 
+                            y() + trumpRowHeight + i * h + h / 2 + 30 - 4, 
+                            GameCanvas.smallCardScale, true, false,
+                            y() + trumpRowHeight + i * h + h);
+                    canvas.drawCard(graphics, 
+                            new Card(), 
+                            x() + trumpColumn * width() - 2, 
+                            y() + trumpRowHeight + i * h + h / 2 + 30 - 2, 
+                            GameCanvas.smallCardScale, true, false,
+                            y() + trumpRowHeight + i * h + h);
+                    canvas.drawCard(graphics, 
+                            canvas.getTrumps().get(roundSelected), 
+                            x() + trumpColumn * width(), 
+                            y() + trumpRowHeight + i * h + h / 2 + 30, 
+                            GameCanvas.smallCardScale, true, false,
+                            y() + trumpRowHeight + i * h + h);
+                }
                 
                 int j = 0;
                 for (Card card : player.getHands().get(roundSelected)) {

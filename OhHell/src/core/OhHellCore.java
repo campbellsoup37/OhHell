@@ -133,30 +133,21 @@ public class OhHellCore {
 
         if (record) {
             recorder.start();
-            recorder.recordPlayers(
-                    players.stream()
-                    .map(Player::realName)
-                    .collect(Collectors.toList()));
+            recorder.recordInfo(doubleDeck ? 2 : 1, players);
+//            recorder.recordPlayers(
+//                    players.stream()
+//                    .map(Player::realName)
+//                    .collect(Collectors.toList()));
         }
         
-        for (int i = 0; i < players.size(); i++) {
-            Player player = players.get(i);
-            player.setIndex(i);
-            player.reset();
-            player.commandStart();
-        }
-        for (Player player : kibitzers) {
-            player.commandStart();
-        }
-        
-        rounds = new ArrayList<RoundDetails>();
+        rounds = new ArrayList<>();
         roundNumber = 0;
 
-        //rounds.add(new RoundDetails(1));
-        //rounds.add(new RoundDetails(2));
-        /*rounds.add(new RoundDetails(6));
-        rounds.add(new RoundDetails(5));
-        rounds.add(new RoundDetails(4));*/
+//        rounds.add(new RoundDetails(10));
+//        rounds.add(new RoundDetails(2));
+//        rounds.add(new RoundDetails(6));
+//        rounds.add(new RoundDetails(5));
+//        rounds.add(new RoundDetails(4));
         
         int numDecks = doubleDeck ? 2 : 1;
         int maxHand = Math.min(10, (numDecks * 52 - 1) / players.size());
@@ -170,6 +161,16 @@ public class OhHellCore {
             rounds.add(new RoundDetails(i));
         }
         updateRounds();
+        
+        for (int i = 0; i < players.size(); i++) {
+            Player player = players.get(i);
+            player.setIndex(i);
+            player.reset();
+            player.commandStart();
+        }
+        for (Player player : kibitzers) {
+            player.commandStart();
+        }
         
         trumps = new ArrayList<>(rounds.size());
         
@@ -199,11 +200,33 @@ public class OhHellCore {
     
     public void stopGame() {
         gameStarted = false;
+        for (Player player : players) {
+            if (player.isKicked() || player.isDisconnected() || !player.isHuman()) {
+                for (Player p : players) {
+                    p.commandRemovePlayer(player);
+                }
+                for (Player p : kibitzers) {
+                    p.commandRemovePlayer(player);
+                }
+            }
+        }
         players.removeIf(p -> p.isKicked() || p.isDisconnected() || !p.isHuman());
-        if (record) {
-            recorder.stop();
+        for (int i = 0; i < players.size(); i++) {
+            players.get(i).setIndex(i);
         }
         aiKernel.stop();
+    }
+    
+    public void requestEndGame(Player player) {
+//        if (player.isHost()) {
+            for (Player p : players) {
+                p.commandEndGame(player);
+            }
+            for (Player p : kibitzers) {
+                p.commandEndGame(player);
+            }
+            stopGame();
+//        }
     }
     
     public void deal() {
@@ -223,8 +246,9 @@ public class OhHellCore {
         leader = turn;
         
         if (record) {
-            recorder.recordTrump(trump);
-            recorder.recordDealer(dealer);
+            recorder.recordRoundInfo(handSize, dealer, players, trump);
+//            recorder.recordTrump(trump);
+//            recorder.recordDealer(dealer);
         }
         
         for (Player player : players) {
@@ -275,11 +299,12 @@ public class OhHellCore {
         
         if (players.stream().filter(p -> !p.isKicked()).noneMatch(p -> !p.hasBid())) {
             if (record) {
-                recorder.recordBids(
-                        players.stream()
-                        .filter(p -> !p.isKicked())
-                        .map(p -> (Integer) p.getBid())
-                        .collect(Collectors.toList()));
+                recorder.recordBids(players, turn);
+//                recorder.recordBids(
+//                        players.stream()
+//                        .filter(p -> !p.isKicked())
+//                        .map(p -> (Integer) p.getBid())
+//                        .collect(Collectors.toList()));
             }
             state = "PLAYING";
         }
@@ -373,11 +398,12 @@ public class OhHellCore {
             }
             
             if (record) {
-                recorder.recordTrick(
-                        players.stream()
-                            .map(Player::getTrick)
-                            .collect(Collectors.toList()),
-                        turn);
+                recorder.recordTrick(players, leader, turn);
+//                recorder.recordTrick(
+//                        players.stream()
+//                            .map(Player::getTrick)
+//                            .collect(Collectors.toList()),
+//                        turn);
             }
             
             players.get(turn).incTaken();
@@ -427,10 +453,11 @@ public class OhHellCore {
         }
         
         if (record) {
-            recorder.recordResults(
-                    players.stream()
-                    .map(p -> (Integer) (p.getTaken() - p.getBid()))
-                    .collect(Collectors.toList()));
+            recorder.recordRoundEnd(players);
+//            recorder.recordResults(
+//                    players.stream()
+//                    .map(p -> (Integer) (p.getTaken() - p.getBid()))
+//                    .collect(Collectors.toList()));
         }
         
         rounds.get(roundNumber).setRoundOver();
@@ -438,18 +465,33 @@ public class OhHellCore {
         if (roundNumber < rounds.size()) {
             deal();
         } else {
-            for (Player p : players) {
-                p.commandPostGameTrumps(trumps);
-                p.commandPostGameHands(players);
-                p.commandPostGameTakens(players);
-                p.commandPostGame();
+            List<Player> sortedPlayers = new ArrayList<>(players.size());
+            sortedPlayers.addAll(players);
+            sortedPlayers.sort((p1, p2) -> (int) Math.signum(p2.getScore() - p1.getScore()));
+            for (int i = 0, place = 1; i < players.size(); place = i + 1) {
+                for (int score = sortedPlayers.get(i).getScore(); i < players.size() && sortedPlayers.get(i).getScore() == score; i++) {
+                    sortedPlayers.get(i).setPlace(place);
+                }
             }
-            for (Player p : kibitzers) {
-                p.commandPostGameTrumps(trumps);
-                p.commandPostGameHands(players);
-                p.commandPostGameTakens(players);
-                p.commandPostGame();
+            if (record) {
+                recorder.recordFinalScores(players);
             }
+            if (record) {
+                recorder.sendFile(players);
+                recorder.sendFile(kibitzers);
+            }
+//            for (Player p : players) {
+//                p.commandPostGameTrumps(trumps);
+//                p.commandPostGameHands(players);
+//                p.commandPostGameTakens(players);
+//                p.commandPostGame();
+//            }
+//            for (Player p : kibitzers) {
+//                p.commandPostGameTrumps(trumps);
+//                p.commandPostGameHands(players);
+//                p.commandPostGameTakens(players);
+//                p.commandPostGame();
+//            }
             if (aiTrainer != null) {
                 List<Player> playersCopy = new ArrayList<>(players.size());
                 playersCopy.addAll(players);
