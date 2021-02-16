@@ -8,9 +8,9 @@ import ml.Tree;
 
 public class WinnerBagTrainer {
     public static void main(String[] args) {
-        int N = 2;
+        int N = 10;
         int size = 100;
-        int alpha = 6;
+        int alpha = 18;
         int totalDataLimit = 500000;
         int bootstrapSampleSize = 100000;
         int printEvery = 1;
@@ -21,8 +21,10 @@ public class WinnerBagTrainer {
         double aStep = 1;
         boolean crossValidation = true;
         
+        String folder = "C:/Users/campb/Desktop/AiData/Win/";
+        
         if (examineAlpha) {
-            DataSet data = new DataSet("resources/ai workshop/AiData/Win/" + N + ".txt", totalDataLimit);
+            DataSet data = new DataSet(folder + N + ".txt", totalDataLimit);
             
             if (crossValidation) {
                 Tree.errorVsAlphaCv(N + 1, N, data.bootstrapSample(bootstrapSampleSize), 10, a1, a2, aStep);
@@ -30,7 +32,7 @@ public class WinnerBagTrainer {
                 Tree.errorVsAlpha(N + 1, N, data.bootstrapSample(bootstrapSampleSize), bootstrapSampleSize / 10, a1, a2, aStep);
             }
         } else {
-            DataSet data = new DataSet("resources/ai workshop/AiData/Win/" + N + ".txt", totalDataLimit);
+            DataSet data = new DataSet(folder + N + ".txt", totalDataLimit);
             
             BootstrapAggregator bag = new BootstrapAggregator(N + 1, N, size);
             bag.train(data, bootstrapSampleSize, alpha, printEvery);

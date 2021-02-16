@@ -15,16 +15,16 @@ import ml.MLTools;
 
 public class WinnerDataGenerator extends AiTrainer {
     public void run() {
-        int N = 2;
+        int N = 10;
         int reps = 100000;
         boolean verbose = true;
         boolean flush = true;
         
-        String folder = "resources/ai workshop/AiData/Win/";
+        String folder = "C:/Users/campb/Desktop/AiData/Win/";
         new File(folder).mkdirs();
         
-        strategyOI.OverallValueLearner ovl = new strategyOI.OverallValueLearner("resources/ai workshop/OhHellAIModels/OI/ovlN2.txt");
-        strategyOI.ImmediateValueLearner ivl = new strategyOI.ImmediateValueLearner("resources/ai workshop/OhHellAIModels/OI/ivlN2.txt");
+        strategyOI.OverallValueLearner ovl = new strategyOI.OverallValueLearner("resources/ai workshop/OhHellAIModels/OI/ovlN10o80i30.txt");
+        strategyOI.ImmediateValueLearner ivl = new strategyOI.ImmediateValueLearner("resources/ai workshop/OhHellAIModels/OI/ivlN10o80i30.txt");
         
         OhHellCore core = new OhHellCore(false);
         List<Player> players = new ArrayList<>();

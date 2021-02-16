@@ -174,6 +174,7 @@ public class CanvasPostGamePage extends CanvasInteractable {
                         - y();
             }
         };
+        ///////////////
         List<List<Double>> probs = new ArrayList<>(players.size());
         for (int k = 0; k < players.size(); k++) {
             probs.add(new ArrayList<>(players.get(0).getScores().size()));
@@ -197,8 +198,35 @@ public class CanvasPostGamePage extends CanvasInteractable {
             } else {
                 probs.get(k).set(players.get(0).getScores().size(), 0D);
             }
-            winProbPlot.addData(players.get(k).getName(), probs.get(k));
+            winProbPlot.addData(k, CanvasScorePlot.circlePoint, players.get(k).getName(), probs.get(k));
         }
+        ///////////////
+//        probs = new ArrayList<>(players.size());
+//        for (int k = 0; k < players.size(); k++) {
+//            probs.add(new ArrayList<>(players.get(0).getScores().size()));
+//            probs.get(k).add(100D / players.size());
+//        }
+//        GradientBooster winModel2 = new GradientBooster("resources/ai workshop/OtherModels/WinBoost/boost9000000.txt");
+//        for (int j = 0; j < players.get(0).getScores().size(); j++) {
+//            double[] in = new double[players.size() + 1];
+//            for (int k = 0; k < players.size(); k++) {
+//                in[k] = (double) players.get(k).getScores().get(j);
+//            }
+//            in[players.size()] = (double) (players.get(0).getScores().size() - 1 - j);
+//            double[] out = winModel2.testValue(new BasicVector(in)).get(1).toArray();
+//            for (int k = 0; k < players.size(); k++) {
+//                probs.get(k).add(out[k] * 100);
+//            }
+//        }
+//        for (int k = 0; k < players.size(); k++) {
+//            if (players.get(k).getPlace() == 1) {
+//                probs.get(k).set(players.get(0).getScores().size(), 100D);
+//            } else {
+//                probs.get(k).set(players.get(0).getScores().size(), 0D);
+//            }
+//            winProbPlot.addData(k, CanvasScorePlot.starPoint, "boost: " + players.get(k).getName(), probs.get(k));
+//        }
+        ///////////////
         winProbPlot.setTicks(ticks);
         
         // Analysis

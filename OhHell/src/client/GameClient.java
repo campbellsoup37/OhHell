@@ -67,9 +67,11 @@ public class GameClient extends JFrame {
     private final boolean fpsOptionEnabled = true;
     private final boolean lowGraphicsOptionEnabled = true;
     private final boolean antialiasingOptionEnabled = true;
+    
+    public static final int maxPlayers = 10;
     ///////////////////////////////////
     
-    private final String version = "0.1.5.4b";
+    private final String version = "0.1.5.4c";
     private boolean updateChecked = false;
     private String newVersion;
     
@@ -128,10 +130,10 @@ public class GameClient extends JFrame {
     // IN_GAME
     private GameCanvas canvas;
     
-    private List<ClientPlayer> players = new ArrayList<>();
-    private List<ClientPlayer> kibitzers = new ArrayList<>();
-    private ClientPlayer myPlayer;
-    private List<int[]> rounds = new ArrayList<>();
+    private volatile List<ClientPlayer> players = new ArrayList<>();
+    private volatile List<ClientPlayer> kibitzers = new ArrayList<>();
+    private volatile ClientPlayer myPlayer;
+    private volatile List<int[]> rounds = new ArrayList<>();
     private int roundNumber = 0;
     
     private Random random = new Random();
@@ -154,54 +156,54 @@ public class GameClient extends JFrame {
         
         switch (newState) {
         case MAIN_MENU:
+            setMinimumSize(new Dimension(685, 500));
             setMaximized(windowMaximizedMenu);
             setLocation(windowLocationMenu);
-            setMinimumSize(new Dimension(685, 500));
             setSize(windowSizeMenu);
             setResizable(false);
             stateCanvas = mainMenuCanvas;
             break;
         case SINGLE_PLAYER_MENU:
+            setMinimumSize(new Dimension(685, 500));
             setMaximized(windowMaximizedMenu);
             setLocation(windowLocationMenu);
-            setMinimumSize(new Dimension(685, 500));
             setSize(windowSizeMenu);
             setResizable(false);
             stateCanvas = singlePlayerCanvas;
             break;
         case IN_SINGLE_PLAYER_GAME:
+            setMinimumSize(new Dimension(1200, 700));
+            setSize(windowSizeInGame);
             setMaximized(windowMaximizedInGame);
             setLocation(windowLocationInGame);
-            setMinimumSize(new Dimension(1200, 800));
-            setSize(windowSizeInGame);
             setResizable(true);
             stateCanvas = canvas;
             break;
         case SINGLE_PLAYER_POST_GAME:
             break;
         case LOGIN_MENU:
-            setMaximized(windowMaximizedMenu);
             setMinimumSize(new Dimension(685, 500));
+            setMaximized(windowMaximizedMenu);
             setSize(windowSizeMenu);
             setResizable(false);
             stateCanvas = loginCanvas;
             myPlayer = null;
             break;
         case IN_MULTIPLAYER_GAME:
+            setMinimumSize(new Dimension(1200, 700));
+            setSize(windowSizeInGame);
             setMaximized(windowMaximizedInGame);
             setLocation(windowLocationInGame);
-            setMinimumSize(new Dimension(1200, 800));
-            setSize(windowSizeInGame);
             setResizable(true);
             stateCanvas = canvas;
             break;
         case MULTIPLAYER_POST_GAME:
             break;
         case FILE_VIEWER:
+            setMinimumSize(new Dimension(1200, 700));
+            setSize(windowSizeInGame);
             setMaximized(windowMaximizedInGame);
             setLocation(windowLocationInGame);
-            setMinimumSize(new Dimension(1200, 800));
-            setSize(windowSizeInGame);
             setResizable(true);
             stateCanvas = canvas;
             break;
@@ -393,10 +395,12 @@ public class GameClient extends JFrame {
     public void startGame() {
         roundNumber = 0;
         postGameFileBuilder = new StringBuilder();
+
+        canvas.initializingOnTimer(true);
         
         switch (state) {
         case IN_SINGLE_PLAYER_GAME:
-            canvas.pregameOnTimer();
+            canvas.pregameOnTimer(true);
             break;
         case IN_MULTIPLAYER_GAME:
             break;
@@ -404,13 +408,11 @@ public class GameClient extends JFrame {
             // This occurs when reconnecting. Same behavior as starting from post-game.
         case MULTIPLAYER_POST_GAME:
             changeState(ClientState.IN_MULTIPLAYER_GAME);
-            canvas.pregameOnTimer();
+            canvas.pregameOnTimer(true);
             break;
         default:
             throw new IllegalClientStateException("startGame() was called in state " + state);
         }
-
-        canvas.initializingOnTimer();
     }
     
     public List<ClientPlayer> getPlayers() {
@@ -547,10 +549,9 @@ public class GameClient extends JFrame {
                         break;
                     case IN_SINGLE_PLAYER_GAME:
                     case SINGLE_PLAYER_POST_GAME:
-                        leaveGame();
-                        break;
                     case IN_MULTIPLAYER_GAME:
                     case MULTIPLAYER_POST_GAME:
+                    case FILE_VIEWER:
                         leaveGame();
                         break;
                     default:
@@ -705,7 +706,7 @@ public class GameClient extends JFrame {
                                     
                                     postGameFile = lines;
                                     changeState(ClientState.FILE_VIEWER);
-                                    canvas.pregameOnTimer();
+                                    canvas.pregameOnTimer(false);
                                     canvas.loadPostGameOnTimer(lines);
                                 } catch (FileNotFoundException e1) {
                                     e1.printStackTrace();
@@ -812,7 +813,7 @@ public class GameClient extends JFrame {
                         
                         @Override
                         public void click() {
-                            numRobots = Math.max(0, numRobots - 1);
+                            numRobots = Math.max(1, numRobots - 1);
                         }
                     };
                     
@@ -839,7 +840,7 @@ public class GameClient extends JFrame {
                         
                         @Override
                         public void click() {
-                            numRobots = Math.min(6, numRobots + 1);
+                            numRobots = Math.min(maxPlayers - (botsOnlyOption.isSelected() ? 0 : 1), numRobots + 1);
                         }
                     };
                     
@@ -1327,6 +1328,8 @@ public class GameClient extends JFrame {
         if (myPlayer != null && myPlayer.isHost()) {
             if (numRobots > 0 && doubleDeck) {
                 notify("Double deck with robots is not yet supported.");
+            } else if (numRobots > 0 && numPlayers >= 11) {
+                notify("Playing with robots and more than 10 players is not yet supported.");
             } else if (numPlayers <= 1) {
                 notify("Not enough players.");
             } else {
@@ -1468,7 +1471,7 @@ public class GameClient extends JFrame {
                 readThread.start();
                 
                 connected = true;
-                canvas.pregameOnTimer();
+                canvas.pregameOnTimer(false);
                 changeState(ClientState.IN_MULTIPLAYER_GAME);
                 
                 startPing();

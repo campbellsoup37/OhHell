@@ -28,7 +28,7 @@ public class AiTrainerOI extends AiTrainer {
     }
     
     public void run() {
-        int N = 5;
+        int N = 10;
         int reps = 1000000;
         boolean verbose = true;
         boolean forMathematica = false;
@@ -39,8 +39,8 @@ public class AiTrainerOI extends AiTrainer {
         double ovlBEta = 10;
         double ivlWEta = 1;
         double ivlBEta = 1;
-        double scale = 0.01;
-        int groupingSize = 1000;
+        double scale = 0.05;
+        int groupingSize = 3;
 
         int maxH = Math.min(10, 51 / N);
         int[] ovlLayers = {
@@ -52,7 +52,7 @@ public class AiTrainerOI extends AiTrainer {
                 + 2               // Card is trump
                 + 13              // That suit left
                 + 13,             // Card's adjusted number
-                40,               // Hidden layer
+                80,               // Hidden layer
                 1                 // Card's predicted value
         };
         int[] ivlLayers = {
@@ -70,7 +70,7 @@ public class AiTrainerOI extends AiTrainer {
         
         boolean openFromFile = true;
         boolean saveToFile = true;
-        int saveEvery = 1000;
+        int saveEvery = 100;
         
         String folder = "resources/ai workshop/OhHellAIModels/OI/";
 
@@ -110,7 +110,7 @@ public class AiTrainerOI extends AiTrainer {
         }
         
         int M = 10000;
-        int[] toAve = {1000, 10000};
+        int[] toAve = {1, 100};
         double[] scores = new double[M];
         double[] mades = new double[M];
         double[] aves = new double[toAve.length];
@@ -121,6 +121,7 @@ public class AiTrainerOI extends AiTrainer {
         if (showDash) {
             dash = new Dashboard();
             dash.execute();
+            dash.setGraphCount(3);
             dash.setGraphLabel(0, "Average score");
             dash.setGraphLabel(1, "OVL mean squared error");
             dash.setGraphLabel(2, "IVL mean squared error");

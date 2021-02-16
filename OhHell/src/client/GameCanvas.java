@@ -29,7 +29,7 @@ public class GameCanvas extends OhcCanvas {
     ////// Parameters /////////////////
     public static final int cardSeparation = 40;
     public static final double smallCardScale = 0.6667;
-    public static final double trumpCardScale = 0.6667;
+    public static final double trumpCardScale = 1;
     public static final double trickCardScale = 1;
     public static final int handYOffset = 105;
     public static final int takenXSeparation = 10;
@@ -38,7 +38,7 @@ public class GameCanvas extends OhcCanvas {
     
     public static final int scoreVSpacing = 20;
     public static final int scoreMargin = 10;
-    public static final int bidStayTime = 1000;
+    public static final int bidStayTime = 1500;
     public static final int trickStayTime = 1500;
     public static final int animationTime = 150;
     public static final int messageTime = 2000;
@@ -60,13 +60,14 @@ public class GameCanvas extends OhcCanvas {
             Color.ORANGE,
             Color.PINK,
             Color.YELLOW,
-            Color.DARK_GRAY
+            Color.GRAY,
+            Color.BLACK
     };
     
     public static final int pokeWaitTime = 25000;
     ///////////////////////////////////
     
-    private GameClient client;
+    private volatile GameClient client;
     
     private List<ClientPlayer> players;
     private ClientPlayer myPlayer;
@@ -264,8 +265,8 @@ public class GameCanvas extends OhcCanvas {
             if (players.size() >= 6 && getHeight() < 600) {
                 scaleFix = 0.75;
             }
-            int x = state == GameState.PREGAME ? 50 : players.get(dealer).getTrumpX();
-            int y = state == GameState.PREGAME ? 66 : players.get(dealer).getTrumpY();
+            int x = 50;//state == GameState.PREGAME ? 50 : players.get(dealer).getTrumpX();
+            int y = 66;//state == GameState.PREGAME ? 66 : players.get(dealer).getTrumpY();
             
             drawCard(graphics, new Card(), x - 4, y - 4, trumpCardScale * scaleFix, true, true);
             drawCard(graphics, new Card(), x - 2, y - 2, trumpCardScale * scaleFix, true, true);
@@ -383,8 +384,15 @@ public class GameCanvas extends OhcCanvas {
                 if (state != GameState.PREGAME) {
                     // Bid chip
                     if (player.hasBid()) {
-                        double startX = player.getBidX();
-                        double startY = player.getBidY();
+//                        double startX = player.getBidX();
+//                        double startY = player.getBidY();
+                        
+                        int iRelToMe = player.getIndex() - myPlayer.getIndex();
+                        double startX = (getWidth() - 450) / 2
+                                - 100 * Math.sin(2 * Math.PI * iRelToMe / players.size());
+                        double startY = getHeight()/2 - 50
+                                + 100 * Math.cos(2 * Math.PI * iRelToMe / players.size());
+                        
                         double endX = x - pos * maxWid / 2 + 10;
                         double endY = y;
                         
@@ -415,7 +423,7 @@ public class GameCanvas extends OhcCanvas {
                     }
                     
                     // Dealer chip
-                    /*if (player.getIndex() == dealer) {
+                    if (player.getIndex() == dealer) {
                         graphics.setColor(Color.CYAN);
                         graphics.fillOval((int) (x - (pos - 2) * maxWid / 2) - 19, y - 8, 16, 16);
                         graphics.setColor(Color.BLACK);
@@ -423,7 +431,7 @@ public class GameCanvas extends OhcCanvas {
                                 (int) (x - (pos - 2) * maxWid / 2) - 11, 
                                 y, 
                                 1, 1);
-                    }*/
+                    }
                 }
             }
         }
@@ -525,6 +533,7 @@ public class GameCanvas extends OhcCanvas {
         if (state != GameState.PREGAME) {
             List<ClientPlayer> playersToShow;
             List<int[]> rounds;
+            
             if (state == GameState.POSTGAME) {
                 playersToShow = postGamePlayers;
                 rounds = postGameRounds;
@@ -534,6 +543,14 @@ public class GameCanvas extends OhcCanvas {
             }
             int numRounds = rounds.size();
             
+            if (playersToShow.isEmpty()) {
+                throw new IllegalClientStateException("Attempted to paint scores before players were loaded into the canvas.");
+            }
+            if (playersToShow.isEmpty()) {
+                throw new IllegalClientStateException("Attempted to paint scores before rounds could be loaded into the canvas.");
+            }
+            
+            // box
             graphics.setColor(Color.WHITE);
             OhcGraphicsTools.drawBox(graphics, 
                     getWidth() - (450 - scoreMargin), 
@@ -544,6 +561,7 @@ public class GameCanvas extends OhcCanvas {
             
             double wid = (double) (450 - 2 * scoreMargin - 50) / playersToShow.size();
 
+            // horizontal line
             graphics.setColor(Color.BLACK);
             graphics.drawLine(
                     getWidth() - (450 - scoreMargin - 45), 
@@ -553,6 +571,7 @@ public class GameCanvas extends OhcCanvas {
             for (ClientPlayer player : playersToShow) {
                 int index = player.getIndex();
                 graphics.setColor(Color.BLACK);
+                // vertical line
                 if (index > 0) {
                     graphics.drawLine(
                             (int) (getWidth() - (450 - scoreMargin - 45) + index * wid), 
@@ -561,6 +580,7 @@ public class GameCanvas extends OhcCanvas {
                             scoreMargin + scoreVSpacing * (numRounds + 1));
                 }
                 
+                // name
                 graphics.setColor(Color.BLACK);
                 if (player.isDisconnected()) {
                     graphics.setColor(Color.GRAY);
@@ -582,6 +602,7 @@ public class GameCanvas extends OhcCanvas {
                 graphics.setFont(OhcGraphicsTools.font);
             }
             
+            // dealers and hand sizes
             graphics.setColor(Color.BLACK);
             for (int i = 0; i < numRounds; i++) {
                 int[] round = rounds.get(i);
@@ -599,6 +620,7 @@ public class GameCanvas extends OhcCanvas {
         
             for (ClientPlayer player : playersToShow) {
                 int index = player.getIndex();
+                // bid chips
                 for (int j = 0; j < player.getBids().size(); j++) {
                     graphics.setColor(new Color(200, 200, 200, 180));
                     graphics.fillOval(
@@ -612,6 +634,10 @@ public class GameCanvas extends OhcCanvas {
                             scoreMargin + scoreVSpacing * (2 + j), 
                             1, 0);
                 }
+                // scores
+                if (players.size() >= 8) {
+                    graphics.setFont(OhcGraphicsTools.fontSmall);
+                }
                 for (int j = 0; j < player.getScores().size(); j++) {
                     OhcGraphicsTools.drawStringJustified(graphics, 
                             Integer.toString(player.getScores().get(j)), 
@@ -619,6 +645,7 @@ public class GameCanvas extends OhcCanvas {
                             scoreMargin + scoreVSpacing * (2 + j), 
                             0, 0);
                 }
+                graphics.setFont(OhcGraphicsTools.font);
             }
         }
     }
@@ -1168,7 +1195,7 @@ public class GameCanvas extends OhcCanvas {
             
             @Override
             public void click() {
-                numRobots = Math.min(6, numRobots + 1);
+                numRobots = Math.min(GameClient.maxPlayers, numRobots + 1);
             }
         });
         
@@ -1525,7 +1552,7 @@ public class GameCanvas extends OhcCanvas {
                     client.changeState(ClientState.SINGLE_PLAYER_MENU);
                 } else if (client.getClientState() == ClientState.MULTIPLAYER_POST_GAME) {
                     client.changeState(ClientState.IN_MULTIPLAYER_GAME);
-                    pregameOnTimer();
+                    pregameOnTimer(false);
                     updatePlayersOnTimer();
                 } else {
                     client.changeState(ClientState.MAIN_MENU);
@@ -1735,6 +1762,11 @@ public class GameCanvas extends OhcCanvas {
             public int height() {
                 return getHeight() - y() - 40 - scoreMargin;
             }
+            
+            @Override
+            public boolean isShown() {
+                return client.getClientState() != ClientState.FILE_VIEWER;
+            }
         };
         
         JTextField chatJField = new OhcTextField("Enter text");
@@ -1778,6 +1810,11 @@ public class GameCanvas extends OhcCanvas {
             @Override
             public int height() {
                 return 30;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return client.getClientState() != ClientState.FILE_VIEWER;
             }
         };
         
@@ -1984,8 +2021,8 @@ public class GameCanvas extends OhcCanvas {
         resetKickButtons();
     }
     
-    public void pregameOnTimer() {
-        new CanvasTimerEntry(0, this, actionQueue, false) {
+    public void pregameOnTimer(boolean immediate) {
+        new CanvasTimerEntry(0, this, actionQueue, immediate) {
             @Override
             public void onFirstAction() {
                 pregame();
@@ -2004,8 +2041,8 @@ public class GameCanvas extends OhcCanvas {
         takenTimer = 1;
     }
     
-    public void initializingOnTimer() {
-        new CanvasTimerEntry(0, this, actionQueue, false) {
+    public void initializingOnTimer(boolean immediate) {
+        new CanvasTimerEntry(0, this, actionQueue, immediate) {
             @Override
             public void onFirstAction() {
                 updatePlayers();
@@ -2428,9 +2465,13 @@ public class GameCanvas extends OhcCanvas {
                 trumps = new ArrayList<>();
                 postGamePlayers = new ArrayList<>();
                 postGameRounds = new ArrayList<>();
-                loadPostGameFromFile(lines, trumps, postGamePlayers, postGameRounds);
-                
-                postGamePage.buildTabs(postGamePlayers, postGameRounds, thisCanvas);
+                try {
+                    loadPostGameFromFile(lines, trumps, postGamePlayers, postGameRounds);
+                    postGamePage.buildTabs(postGamePlayers, postGameRounds, thisCanvas);
+                } catch (Exception e) {
+                    client.notify("Unable to load post-game page.");
+                    state = GameState.PREGAME;
+                }
                 
                 message = "";
                 paintMessageMarker = false;

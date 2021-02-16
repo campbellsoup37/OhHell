@@ -18,13 +18,16 @@ public class GradientBooster {
     private int dIn;
     private int dOut;
     private int size;
-    private List<Tree> trees;
+    private List<List<Tree>> trees;
 
     public GradientBooster(int dIn, int dOut, int size) {
         this.dIn = dIn;
         this.dOut = dOut;
         this.size = size;
-        trees = new ArrayList<>(size);
+        trees = new ArrayList<>(dOut);
+        for (int i = 0; i < dOut; i++) {
+            trees.add(new ArrayList<>(size));
+        }
     }
     
     public GradientBooster(String file) {
@@ -37,14 +40,23 @@ public class GradientBooster {
                 reader = new BufferedReader(new FileReader(file));
             }
             empty = false;
-            trees = new LinkedList<>();
+            trees = new ArrayList<>();
+            int i = -1;
             for (String line = reader.readLine(); line != null; line = reader.readLine()) {
-                trees.add(new Tree(line));
+                if (line.length() >= 1 && line.charAt(0) == '/') {
+                    i++;
+                    if (i >= 1) {
+                        trees.set(i - 1, new ArrayList<>(trees.get(i - 1)));
+                    }
+                    trees.add(new LinkedList<>());
+                } else {
+                    trees.get(i).add(new Tree(line));
+                }
             }
             trees = new ArrayList<>(trees);
-            dIn = trees.get(0).getDIn();
-            dOut = trees.get(0).getDOut();
-            size = trees.size();
+            dIn = trees.get(0).get(0).getDIn();
+            dOut = trees.size();
+            size = trees.get(0).size();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -54,8 +66,11 @@ public class GradientBooster {
         try {
             file.getParentFile().mkdirs();
             BufferedWriter writer = new BufferedWriter(new FileWriter(file));
-            for (Tree tree : trees) {
-                writer.write(tree + "\n");
+            for (int i = 0; i < dOut; i++) {
+                writer.write("/\n");
+                for (Tree tree : trees.get(i)) {
+                    writer.write(tree + "\n");
+                }
             }
             writer.close();
         } catch (IOException e) {
@@ -70,11 +85,13 @@ public class GradientBooster {
         if (in.size() != dIn) {
             throw new MLException("Attempted to input a vector of size " + in.size() + " into a model that takes vectors of size " + dIn + ".");
         }
-        Vector out = new BasicVector(new double[dOut]);
-        for (Tree tree : trees) {
-            out.add(tree.testValue(in).get(1));
+        double[] out = new double[dOut];
+        for (int i = 0; i < dOut; i++) {
+            for (Tree tree : trees.get(i)) {
+                out[i] += tree.testValue(in).get(1).get(0);
+            }
         }
-        return Arrays.asList(in, out);
+        return Arrays.asList(in, new SoftmaxFunction().a(new BasicVector(out)));
     }
     
     public double testError(DataSet data, LossFunction L) {
@@ -86,29 +103,29 @@ public class GradientBooster {
     }
     
     public void train(DataSet data, int treeSize, int printEvery) {
-        if (!empty) {
-            throw new MLException("Attempted to train a nonempty gradient booster.");
-        }
-        empty = false;
-        
-        DataSet dataCopy = data.deepCopy();
-        
-        for (int i = 0; i < size; i++) {
-            long time = System.currentTimeMillis();
-            Tree tree = new Tree(dIn, dOut);
-            tree.trainTopDown(dataCopy, treeSize);
-            trees.add(tree);
-            
-            dataCopy.map(inOut -> Arrays.asList(
-                    inOut.get(0),
-                    inOut.get(1).add(tree.testValue(inOut.get(0)).get(1), -1)
-                    ));
-
-            if (printEvery > 0 && i % printEvery == 0) {
-                System.out.println(i + " / " + size);
-                System.out.println("   Error: " + testError(data.complement(), new MeanSquaredError()));
-                System.out.println("   In time: " + (System.currentTimeMillis() - time) + " ms");
-            }
-        }
+//        if (!empty) {
+//            throw new MLException("Attempted to train a nonempty gradient booster.");
+//        }
+//        empty = false;
+//        
+//        DataSet dataCopy = data.deepCopy();
+//        
+//        for (int i = 0; i < size; i++) {
+//            long time = System.currentTimeMillis();
+//            Tree tree = new Tree(dIn, dOut);
+//            tree.trainTopDown(dataCopy, treeSize);
+//            trees.add(tree);
+//            
+//            dataCopy.map(inOut -> Arrays.asList(
+//                    inOut.get(0),
+//                    inOut.get(1).add(tree.testValue(inOut.get(0)).get(1), -1)
+//                    ));
+//
+//            if (printEvery > 0 && i % printEvery == 0) {
+//                System.out.println(i + " / " + size);
+//                System.out.println("   Error: " + testError(data.complement(), new MeanSquaredError()));
+//                System.out.println("   In time: " + (System.currentTimeMillis() - time) + " ms");
+//            }
+//        }
     }
 }

@@ -11,10 +11,55 @@ public class CanvasScorePlot extends CanvasInteractable {
     private final double tooltipWidth = 150;
     private final double tooltipMargin = 4;
     
+    public static abstract class PointStyle {
+        public void paint(Graphics graphics, double x, double y) {}
+    }
+    
+    public static final PointStyle circlePoint = new PointStyle() {
+        @Override
+        public void paint(Graphics graphics, double x, double y) {
+            graphics.fillOval(
+                    (int) (x - GameCanvas.pointSize / 2), 
+                    (int) (y - GameCanvas.pointSize / 2), 
+                    (int) GameCanvas.pointSize, 
+                    (int) GameCanvas.pointSize);
+        }
+    };
+    public static final PointStyle squarePoint = new PointStyle() {
+        @Override
+        public void paint(Graphics graphics, double x, double y) {
+            graphics.fillRect(
+                    (int) (x - GameCanvas.pointSize / 2), 
+                    (int) (y - GameCanvas.pointSize / 2), 
+                    (int) GameCanvas.pointSize, 
+                    (int) GameCanvas.pointSize);
+        }
+    };
+    public static final PointStyle starPoint = new PointStyle() {
+        int N = 5;
+        
+        @Override
+        public void paint(Graphics graphics, double x, double y) {
+            int[] xs = new int[2 * N];
+            int[] ys = new int[2 * N];
+            for (int i = 0; i < 2 * N; i++) {
+                // Sweet formula for points of a star
+                double r = i % 2 == 0 ? 
+                        GameCanvas.pointSize : 
+                        GameCanvas.pointSize / (1.0 + 2.0 * Math.cos(Math.PI / N));
+                xs[i] = (int) (x + r * Math.sin(Math.PI * i / N));
+                ys[i] = (int) (y - r * Math.cos(Math.PI * i / N));
+            }
+            graphics.fillPolygon(xs, ys, 2 * N);
+        }
+    };
+    
     private boolean boxed = true;
     private boolean axes = true;
     
     private List<List<Double>> datas = new ArrayList<>();
+    private List<Integer> dataColorIndices = new ArrayList<>();
+    private List<PointStyle> dataPointStyles = new ArrayList<>();
     private List<String> dataNames = new ArrayList<>();
     private List<String> dataTicks = new ArrayList<>();
     private double minX = 0;
@@ -49,12 +94,18 @@ public class CanvasScorePlot extends CanvasInteractable {
     }
     
     public void addData(String name, List<Double> data) {
+        addData(datas.size(), circlePoint, name, data);
+    }
+    
+    public void addData(int colorIndex, PointStyle pointStyle, String name, List<Double> data) {
         maxX = Math.max(data.size() - 1, maxX);
         for (Double y : data) {
             minY = Math.min(y, minY);
             maxY = Math.max(y, maxY);
         }
         datas.add(data);
+        dataColorIndices.add(colorIndex);
+        dataPointStyles.add(pointStyle);
         dataNames.add(name);
     }
     
@@ -105,11 +156,11 @@ public class CanvasScorePlot extends CanvasInteractable {
         
         int p = 0;
         for (List<Double> data : datas) {
-            graphics.setColor(GameCanvas.colors[p]);
+            graphics.setColor(GameCanvas.colors[dataColorIndices.get(p)]);
             double x = 0;
             double y = 0;
             for (Double newY : data) {
-                drawPoint(graphics, x, newY);
+                dataPointStyles.get(p).paint(graphics, canvasX(x), canvasY(newY));
                 if (x > 0) {
                     drawLine(graphics, x - 1, y, x, newY);
                 }
@@ -142,12 +193,16 @@ public class CanvasScorePlot extends CanvasInteractable {
                     0, 2);
             
             for (int k = 0; k < boxData.size(); k++) {
-                graphics.setColor(GameCanvas.colors[(int) boxData.get(k)[0]]);
-                graphics.fillOval(
-                        (int) (ttX + tooltipMargin - GameCanvas.pointSize / 2), 
-                        (int) (ttY + tooltipMargin + 15 * (k + 1) - GameCanvas.pointSize / 2 + 6), 
-                        (int) GameCanvas.pointSize, 
-                        (int) GameCanvas.pointSize);
+                graphics.setColor(GameCanvas.colors[dataColorIndices.get((int) boxData.get(k)[0])]);
+                dataPointStyles.get((int) boxData.get(k)[0]).paint(
+                        graphics, 
+                        ttX + tooltipMargin, 
+                        ttY + tooltipMargin + 15 * (k + 1) + 6);
+//                graphics.fillOval(
+//                        (int) (ttX + tooltipMargin - GameCanvas.pointSize / 2), 
+//                        (int) (ttY + tooltipMargin + 15 * (k + 1) - GameCanvas.pointSize / 2 + 6), 
+//                        (int) GameCanvas.pointSize, 
+//                        (int) GameCanvas.pointSize);
                 graphics.setColor(Color.BLACK);
                 OhcGraphicsTools.drawStringJustified(graphics, 
                         OhcGraphicsTools.fitString(
@@ -186,14 +241,6 @@ public class CanvasScorePlot extends CanvasInteractable {
     private double plotY(double y) {
         return minY
                 - (y - y() - (double) height() * (1 - paddingY)) * (maxY - minY) / ((1 - 2 * paddingY) * (double) height());
-    }
-    
-    private void drawPoint(Graphics graphics, double x, double y) {
-        graphics.fillOval(
-                (int) (canvasX(x) - GameCanvas.pointSize / 2), 
-                (int) (canvasY(y) - GameCanvas.pointSize / 2), 
-                (int) GameCanvas.pointSize, 
-                (int) GameCanvas.pointSize);
     }
     
     private void drawLine(Graphics graphics, double x1, double y1, double x2, double y2) {

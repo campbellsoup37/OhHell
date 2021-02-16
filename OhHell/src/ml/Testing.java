@@ -2,11 +2,19 @@ package ml;
 
 public class Testing {
     public static void main(String[] args) {
-        DataSet data = new DataSet("C:/Users/campb/Desktop/AiData/Win/5.txt", 10000);
+        DataSet data = new DataSet("C:/Users/campb/Desktop/AiData/Win/5.txt", 1000000);
         
-        data.allocateTestData(1000);
+        data.allocateTestData(100000);
         
-        BootstrapAggregator bag = new BootstrapAggregator(6, 5, 100);
+        BootstrapAggregator bag = new BootstrapAggregator("resources/models/wb5.txt");
+        
+        System.out.println(bag.testError(data.complement(), new ClassificationError()));
+        
+        GradientBooster boost = new GradientBooster("resources/ai workshop/OtherModels/WinBoost/boost900.txt");
+        
+        System.out.println(boost.testError(data.complement(), new ClassificationError()));
+        
+        /*BootstrapAggregator bag = new BootstrapAggregator(6, 5, 100);
         bag.train(data, 1000, 10, 1);
         System.out.println("bag error: " + bag.testError(data.complement(), new MeanSquaredError()));
         
@@ -25,6 +33,6 @@ public class Testing {
         System.out.println(tree.numLeaves() + "-node tree error: " + tree.testError(data.complement(), new MeanSquaredError()));
         System.out.println(System.currentTimeMillis() - time + " ms");
         
-        System.out.println("done");
+        System.out.println("done");*/
     }
 }
