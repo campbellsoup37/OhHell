@@ -22,7 +22,7 @@ public class Deck {
     }
     
     public void initialize() {
-        deck = new ArrayList<Card>();
+        deck = new ArrayList<>();
         for (int d = 1; d <= (doubleDeck ? 2 : 1); d++) {
             for (int i = 2; i <= 14; i++) {
                 deck.add(new Card(i, "clubs"));
@@ -45,7 +45,6 @@ public class Deck {
     }
     
     public List<List<Card>> deal(int numHands, int handSize) {
-        initialize();
         if (numHands * handSize + 1 > deck.size()) {
             throw new IllegalCoreStateException("Attempted to deal " + handSize + " cards to " + numHands + " players.");
         }

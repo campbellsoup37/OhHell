@@ -6,12 +6,12 @@ import java.util.LinkedList;
 import java.util.List;
 
 import ml.ActivationFunction;
-import ml.ArcTanFunction;
 import ml.BasicVector;
 import ml.Vector;
 import ml.Learner;
 import ml.MeanSquaredError;
 import ml.ReLuFunction;
+import ml.SigmoidFunction;
 
 public class BiddingLearner extends Learner {
     Hashtable<Integer, List<Vector>> playerIns = new Hashtable<>();
@@ -32,7 +32,7 @@ public class BiddingLearner extends Learner {
         for (int i = 0; i < length - 1; i++) {
             actFuncs[i] = new ReLuFunction();
         }
-        actFuncs[length - 1] = new ArcTanFunction();
+        actFuncs[length - 1] = new SigmoidFunction();
         //actFuncs[length - 1] = new IdentityFunction();
         return actFuncs;
     }

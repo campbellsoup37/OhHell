@@ -18,7 +18,8 @@ import ml.SparseVector;
 import ml.Vector;
 
 public class AiStrategyModuleRBP extends AiStrategyModule {
-    private static boolean debug = true;
+    private static boolean debugBid = false;
+    private static boolean debugPlay = false;
     
     private OhHellCore core;
     private List<Player> players;
@@ -31,7 +32,6 @@ public class AiStrategyModuleRBP extends AiStrategyModule {
     private Random r = new Random();
     private double bidExploration = 0;
     private double playExploration = 0;
-    private final double bScale = 100;
     
     private AiTrainer aiTrainer;
     
@@ -281,7 +281,7 @@ public class AiStrategyModuleRBP extends AiStrategyModule {
         double[] expects = new double[player.getHand().size() + 1];
         for (int i = 0; i <= player.getHand().size(); i++) {
             allIns[i] = getBlInputs(i);
-            expects[i] = bl.testValue(allIns[i].get(0)).get(1).get(0) * bScale;
+            expects[i] = (bl.testValue(allIns[i].get(0)).get(1).get(0) - 5.0 / 7.0) * 385.0;
         }
         
         int[] bestBids = chooseBestBid(expects);
@@ -291,7 +291,7 @@ public class AiStrategyModuleRBP extends AiStrategyModule {
             bl.putIn(player.getIndex(), allIns[myBid]);
         }
         
-        if (debug) {
+        if (debugBid) {
             System.out.println("BIDDING: " + player.getName() + " ===========================================");
             System.out.println("Bid: " + bestBids[0] + " (" + bestBids[1] + ")");
             System.out.println("Hand: ");
@@ -371,7 +371,7 @@ public class AiStrategyModuleRBP extends AiStrategyModule {
             ivl.putIn(cardToPlay, ivlIns.get(cardToPlay));
         }
         
-        /*if (debug) {
+        if (debugPlay) {
             System.out.println("PLAYING: " + player.getName() + " -------------------------------------------");
             System.out.println("Play: " + cardToPlay);
             System.out.println("Prob. of making bid: " + adjustedProbs.get(cardToPlay));
@@ -396,7 +396,7 @@ public class AiStrategyModuleRBP extends AiStrategyModule {
                 ivlIns.get(cardToPlay).get(0).print();
             }
             System.out.println();
-        }*/
+        }
         
         return cardToPlay;
     }
@@ -423,7 +423,7 @@ public class AiStrategyModuleRBP extends AiStrategyModule {
     @Override
     public void endOfRound(int points) {
         if (aiTrainer != null && aiTrainer.backprop()) {
-            bl.putOut(player.getIndex(), (double) points / bScale);
+            bl.putOut(player.getIndex(), (double) points * 1.0 / 385.0 + 5.0 / 7.0);
         }
     }
     

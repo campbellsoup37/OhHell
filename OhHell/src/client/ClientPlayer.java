@@ -1,5 +1,6 @@
 package client;
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 
 import core.Card;
@@ -26,7 +27,6 @@ public class ClientPlayer {
     private boolean hasBid;
     
     private List<Card> hand = new ArrayList<>();
-    private List<List<Card>> hands = new ArrayList<>();
     
     private double bidTimer = 1;
     private Card lastTrick = new Card();
@@ -36,6 +36,14 @@ public class ClientPlayer {
     private boolean timerStarted;
     
     private int place;
+    private List<List<Card>> hands = new ArrayList<>();
+    private List<List<Card>> plays = new ArrayList<>();
+    private List<List<Boolean>> leds = new ArrayList<>();
+    private List<List<Boolean>> wons = new ArrayList<>();
+    private List<double[]> bidQs = new ArrayList<>();
+    private List<List<Hashtable<Card, Double>>> makingProbs = new ArrayList<>();
+    private List<Integer> aiBids = new ArrayList<>();
+    private List<Double> diffs = new ArrayList<>();
     
     public ClientPlayer() {}
     
@@ -48,12 +56,20 @@ public class ClientPlayer {
         playing = false;
         hasBid = false;
         hand = new ArrayList<>();
-        hands = new ArrayList<>();
         bidTimer = 1;
         lastTrick = new Card();
         trick = new Card();
         trickRad = -1;
         trickTimer = 0;
+        
+        hands = new ArrayList<>();
+        plays = new ArrayList<>();
+        leds = new ArrayList<>();
+        wons = new ArrayList<>();
+        bidQs = new ArrayList<>();
+        makingProbs = new ArrayList<>();
+        aiBids = new ArrayList<>();
+        diffs = new ArrayList<>();
     }
     
     public void setName(String name) {
@@ -349,5 +365,67 @@ public class ClientPlayer {
     
     public List<List<Card>> getHands() {
         return hands;
+    }
+    
+    public void addPostGamePlay(Card card, boolean led, boolean won) {
+        if (plays.isEmpty() || 
+                plays.get(plays.size() - 1).size() 
+                == hands.get(plays.size() - 1).size()) {
+            plays.add(new ArrayList<>(hands.get(plays.size()).size()));
+            leds.add(new ArrayList<>(hands.get(leds.size()).size()));
+            wons.add(new ArrayList<>(hands.get(wons.size()).size()));
+        }
+        plays.get(plays.size() - 1).add(card);
+        leds.get(leds.size() - 1).add(led);
+        wons.get(wons.size() - 1).add(won);
+    }
+    
+    public List<List<Card>> getPlays() {
+        return plays;
+    }
+    
+    public List<List<Boolean>> getLeds() {
+        return leds;
+    }
+    
+    public List<List<Boolean>> getWons() {
+        return wons;
+    }
+    
+    public void addBidQs(double[] qs) {
+        bidQs.add(qs);
+    }
+    
+    public List<double[]> getBidQs() {
+        return bidQs;
+    }
+    
+    public void addAiBid(int bid) {
+        aiBids.add(bid);
+    }
+    
+    public List<Integer> getAiBids() {
+        return aiBids;
+    }
+    
+    public void addDiff(double diff) {
+        diffs.add(diff);
+    }
+    
+    public List<Double> getDiffs() {
+        return diffs;
+    }
+    
+    public void addMakingProbs(Hashtable<Card, Double> probs) {
+        if (makingProbs.isEmpty() || 
+                makingProbs.get(makingProbs.size() - 1).size() 
+                == hands.get(makingProbs.size() - 1).size()) {
+            makingProbs.add(new ArrayList<>(hands.get(makingProbs.size()).size()));
+        }
+        makingProbs.get(makingProbs.size() - 1).add(probs);
+    }
+    
+    public List<List<Hashtable<Card, Double>>> getMakingProbs() {
+        return makingProbs;
     }
 }

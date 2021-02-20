@@ -40,21 +40,21 @@ public class AiTrainerRBP extends AiTrainer {
         boolean printError = true;
         boolean showDash = true;
         
-        double blEta = 1;
+        double blEta = 5;
         double ovlEta = 1;
         double ivlEta = 1;
         double scale = 1;
-        int groupingSize = 1;
+        int groupingSize = 3;
         
-        double bidExploration = 0.01;
-        double playExploration = 0.01;
+        double bidExploration = 0;
+        double playExploration = 0;
 
         int maxH = Math.min(10, 51 / N);
         int[] blLayers = {
                 maxH + 1                   // Bid
                 + 51                       // Hand
                 + (maxH + 2) * (N - 1),    // Hasn't bids/bids
-                100,
+                100, 
                 1
         };
         int[] ovlLayers = {

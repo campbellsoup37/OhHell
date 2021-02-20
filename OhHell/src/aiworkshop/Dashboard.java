@@ -1,5 +1,6 @@
 package aiworkshop;
 import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -18,6 +19,10 @@ import javax.swing.SwingUtilities;
 
 public class Dashboard extends JFrame {
     private static final long serialVersionUID = 1L;
+    
+    private static final int m = 10;
+    private static final int width = 900;
+    private static final int height = 600;
     
     private int epochCount = 0;
     private long lastEpochTime = 0;
@@ -227,13 +232,13 @@ public class Dashboard extends JFrame {
     
     public void setGraphCount(int count) {
         graphs = new ArrayList<>(count);
-        int h = 555 / count - 30;
+        int h = (height - 2 * 40 - 4 * m - 40) / count;
         for (int i = 0; i < count; i++) {
             Graph graph = new Graph(i);
             graphs.add(graph);
-            graph.getLabel().setBounds(40, 180 + (h + 30) * i, 440, 15);
+            graph.getLabel().setBounds(m, 2 * 40 + 3 * m + h * i, 2 * 200 + m, 15);
             add(graph.getLabel());
-            graph.setBounds(40, 180 + (h + 30) * i + 15, 440, h);
+            graph.setBounds(m, 2 * 40 + 3 * m + h * i + 15, 2 * 200 + m, h - 15);
             add(graph);
         }
     }
@@ -255,38 +260,39 @@ public class Dashboard extends JFrame {
     public void execute() {
         setTitle("Dashboard");
         
-        epochPanel.setBounds(40, 40, 200, 40);
+        epochPanel.setBounds(m, m, 200, 40);
         add(epochPanel);
         
-        epochTimePanel.setBounds(280, 40, 200, 40);
+        epochTimePanel.setBounds(200 + 2 * m, m, 200, 40);
         add(epochTimePanel);
         
-        datumPanel.setBounds(40, 120, 200, 40);
+        datumPanel.setBounds(m, 40 + 2 * m, 200, 40);
         add(datumPanel);
         
-        datumTimePanel.setBounds(280, 120, 200, 40);
+        datumTimePanel.setBounds(200 + 2 * m, 40 + 2 * m, 200, 40);
         add(datumTimePanel);
-        
-        logScrollPane.setBounds(520, 40, 440, 800);
+
+        logArea.setFont(new Font("Arial", Font.PLAIN, 8));
+        logScrollPane.setBounds(2 * 200 + 3 * m, m, width - 2 * 200 - 4 * m - 15, height - 2 * m - 40);
         add(logScrollPane);
         
-        goButton.setBounds(40, 760, 200, 40);
-        goButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                
-            }
-        });
-        add(goButton);
-        
-        closeButton.setBounds(280, 760, 200, 40);
-        closeButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                close();
-            }
-        });
-        add(closeButton);
+//        goButton.setBounds(40, 760, 200, 40);
+//        goButton.addActionListener(new ActionListener() {
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                
+//            }
+//        });
+//        add(goButton);
+//        
+//        closeButton.setBounds(280, 760, 200, 40);
+//        closeButton.addActionListener(new ActionListener() {
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                close();
+//            }
+//        });
+//        add(closeButton);
         
         addWindowListener(new WindowListener() {
             @Override
@@ -313,7 +319,7 @@ public class Dashboard extends JFrame {
             }
         });
         
-        setSize(1000, 900);
+        setSize(width, height);
         setResizable(false);
         setLayout(null);
         setVisible(true);

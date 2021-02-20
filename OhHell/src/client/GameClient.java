@@ -71,7 +71,7 @@ public class GameClient extends JFrame {
     public static final int maxPlayers = 10;
     ///////////////////////////////////
     
-    private final String version = "0.1.5.4c";
+    private final String version = "0.1.5.5";
     private boolean updateChecked = false;
     private String newVersion;
     

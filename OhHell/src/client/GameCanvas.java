@@ -18,10 +18,16 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.text.DefaultCaret;
 
+import core.AiStrategyModule;
 import core.Card;
+import core.OhHellCore;
+import core.Player;
 import graphics.OhcGraphicsTools;
 import graphics.OhcScrollPane;
 import graphics.OhcTextField;
+import strategyOI.AiStrategyModuleOI;
+import strategyOI.ImmediateValueLearner;
+import strategyOI.OverallValueLearner;
 
 public class GameCanvas extends OhcCanvas {
     private static final long serialVersionUID = 1L;
@@ -112,7 +118,7 @@ public class GameCanvas extends OhcCanvas {
     
     private boolean showOneCard = false;
 
-    private CanvasPostGamePage postGamePage;
+    private PostGamePage postGamePage;
     private List<ClientPlayer> postGamePlayers;
     private List<int[]> postGameRounds;
     
@@ -1702,7 +1708,7 @@ public class GameCanvas extends OhcCanvas {
         });
         
         // Post-game page
-        postGamePage = new CanvasPostGamePage() {
+        postGamePage = new PostGamePage() {
             @Override
             public int x() {
                 return Math.max((getWidth() - 450) / 2 - finalScoreMaxWidth / 2, finalScoreOuterMargin);
@@ -2415,35 +2421,7 @@ public class GameCanvas extends OhcCanvas {
         };
     }
     
-    public void showPostGameOnTimer() {
-        GameCanvas thisCanvas = this;
-        new CanvasTimerEntry(1, this, actionQueue, false) {
-            @Override
-            public void onFirstAction() {
-                for (ClientPlayer player : players) {
-                    player.setBidding(0);
-                    player.setPlaying(false);
-                    dealer = -1;
-                }
-                
-                message = "Analyzing...";
-                paintMessageMarker = true;
-                client.goToPostGame();
-                state = GameState.POSTGAME;
-            }
-            
-            @Override
-            public void onLastAction() {
-                postGamePage.buildTabs(players, client.getRounds(), thisCanvas);
-                
-                message = "";
-                paintMessageMarker = false;
-            }
-        };
-    }
-    
     public void loadPostGameOnTimer(List<String> lines) {
-        GameCanvas thisCanvas = this;
         new CanvasTimerEntry(1, this, actionQueue, false) {
             @Override
             public void onFirstAction() {
@@ -2467,14 +2445,12 @@ public class GameCanvas extends OhcCanvas {
                 postGameRounds = new ArrayList<>();
                 try {
                     loadPostGameFromFile(lines, trumps, postGamePlayers, postGameRounds);
-                    postGamePage.buildTabs(postGamePlayers, postGameRounds, thisCanvas);
+                    simulateGame();
                 } catch (Exception e) {
                     client.notify("Unable to load post-game page.");
+                    e.printStackTrace();
                     state = GameState.PREGAME;
                 }
-                
-                message = "";
-                paintMessageMarker = false;
             }
         };
     }
@@ -2523,7 +2499,13 @@ public class GameCanvas extends OhcCanvas {
                     players.get(j).addBid(Integer.parseInt(info[info.length - 1]));
                 }
             } else if (type.equals("trick")) {
-                
+                for (int j = 0; j < players.size(); j++) {
+                    String[] info = content[j].split(":");
+                    players.get(j).addPostGamePlay(
+                            new Card(info[info.length - 1]),
+                            info[0].equals("1"),
+                            info[1].equals("1"));
+                }
             } else if (type.equals("takens")) {
                 for (int j = 0; j < players.size(); j++) {
                     players.get(j).addTaken(Integer.parseInt(content[j]));
@@ -2541,6 +2523,91 @@ public class GameCanvas extends OhcCanvas {
                 
             }
         }
+    }
+    
+    public void simulateGame() {
+        OhHellCore simCore = new OhHellCore(false) {
+            @Override
+            public List<List<Card>> getNextHands() {
+                List<List<Card>> hands = new ArrayList<>(postGamePlayers.size() + 1);
+                for (ClientPlayer player : postGamePlayers) {
+                    List<Card> hand = player.getHands().get(getRoundNumber());
+                    List<Card> handCopy = new ArrayList<>(hand.size());
+                    handCopy.addAll(hand);
+                    hands.add(handCopy);
+                }
+                hands.add(Arrays.asList(trumps.get(getRoundNumber())));
+                return hands;
+            }
+            
+            @Override
+            public void stopGame() {
+                stopKernel();
+                buildPostGameTabsOnTimer();
+            }
+        };
+        List<Player> simPlayers = new ArrayList<>(postGamePlayers.size());
+        simCore.setPlayers(simPlayers);
+        
+        OverallValueLearner ovl = new OverallValueLearner("resources/models/" + "ovlN" + postGamePlayers.size() + ".txt");
+        ImmediateValueLearner ivl = new ImmediateValueLearner("resources/models/" + "ivlN" + postGamePlayers.size() + ".txt");
+        List<AiStrategyModule> aiStrategyModules = new ArrayList<>(postGamePlayers.size());
+        for (int i = 0; i < postGamePlayers.size(); i++) {
+            aiStrategyModules.add(new AiStrategyModuleOI(simCore, postGamePlayers.size(), ovl, ivl) {
+                private int roundNumber = 0;
+                private int playNumber = 0;
+                
+                public ClientPlayer clientPlayer() {
+                    return postGamePlayers.get(player.getIndex());
+                }
+                
+                @Override
+                public void makeBid() {
+                    double[] ps = getOvlPs();
+                    double[] qs = AiStrategyModuleOI.subsetProb(ps, ps.length);
+                    clientPlayer().addBidQs(qs);
+                    clientPlayer().addAiBid(AiStrategyModuleOI.optimalBid(ps)[0]);
+                    clientPlayer().addDiff(difficulty(qs));
+                    
+                    simCore.incomingBid(player, clientPlayer().getBids().get(roundNumber));
+                }
+                
+                @Override
+                public void makePlay() {
+                    getMyPlay();
+                    clientPlayer().addMakingProbs(getMakingProbs());
+                    
+                    simCore.incomingPlay(player, clientPlayer().getPlays().get(roundNumber).get(playNumber));
+                    
+                    playNumber++;
+                    if (playNumber == clientPlayer().getPlays().get(roundNumber).size()) {
+                        roundNumber++;
+                        playNumber = 0;
+                    }
+                }
+            });
+        }
+        
+        simCore.startGame(postGamePlayers.size(), false, aiStrategyModules, 0);
+    }
+    
+    public void buildPostGameTabsOnTimer() {
+        GameCanvas thisCanvas = this;
+        new CanvasTimerEntry(0, this, actionQueue, false) {
+            @Override
+            public void onFirstAction() {
+                try {
+                    postGamePage.buildTabs(postGamePlayers, postGameRounds, thisCanvas);
+                } catch (Exception e) {
+                    client.notify("Unable to load post-game page.");
+                    e.printStackTrace();
+                    state = GameState.PREGAME;
+                }
+                
+                message = "";
+                paintMessageMarker = false;
+            }
+        };
     }
     
     public void setConnectionStatusOnTimer(boolean connected) {

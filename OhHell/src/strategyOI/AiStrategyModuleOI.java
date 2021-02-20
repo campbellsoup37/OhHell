@@ -26,6 +26,8 @@ public class AiStrategyModuleOI extends AiStrategyModule {
     
     private AiTrainer aiTrainer;
     
+    private Hashtable<Card, Double> adjustedProbs;
+    
     public AiStrategyModuleOI(OhHellCore core, int N,
             OverallValueLearner ovl, ImmediateValueLearner ivl) {
         this.core = core;
@@ -227,7 +229,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
             ovlValsSingleton.put(player.getHand().get(0), 0.0);
         }
         
-        Hashtable<Card, Double> adjustedProbs = new Hashtable<>();
+        adjustedProbs = new Hashtable<>();
         HashMap<Card, Vector> ivlIns = new HashMap<>();
         for (Card card : canPlay) {
             SparseVector in = null;
@@ -279,6 +281,10 @@ public class AiStrategyModuleOI extends AiStrategyModule {
             }
         }
         return cardToPlay;
+    }
+    
+    public Hashtable<Card, Double> getMakingProbs() {
+        return adjustedProbs;
     }
     
     /**
@@ -363,14 +369,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
         double[] E = {0, 0};
         for (int k = 0; k <= 1; k++) {
             for (int l = 0; l <= n; l++) {
-                double points = 0;
-                int diff = Math.abs(k - l);
-                if (diff == 0) {
-                    points = 10 + k * k;
-                } else {
-                    points = -5 * diff * (diff + 1) / 2;
-                }
-                E[k] += qs[l] * points;
+                E[k] += qs[l] * points(k, l);
             }
         }
 
@@ -404,12 +403,58 @@ public class AiStrategyModuleOI extends AiStrategyModule {
         return ans;
     }
     
-    public static double max(double[] qs) {
-        double max = 0;
-        for (double q : qs) {
-            max = Math.max(q, max);
+    public static double points(int bid, int took) {
+        if (bid == took) {
+            return 10 + bid * bid;
+        } else {
+            int diff = Math.abs(bid - took);
+            return -5.0 * diff * (diff + 1) / 2.0;
         }
-        return max;
+    }
+    
+    public static double[] pointsMean(double[] qs) {
+        int n = qs.length - 1;
+        
+        double[] E = {0, 0};
+        for (int k = 0; k <= 1; k++) {
+            for (int l = 0; l <= n; l++) {
+                E[k] += qs[l] * points(k, l);
+            }
+        }
+
+        double[] ans = new double[n + 1];
+        ans[0] = E[0];
+        ans[1] = E[1];
+        
+        for (int k = 2; k <= n; k++) {
+            ans[k] = E[1] * 2
+                    - E[0]
+                    - 5
+                    + qs[k - 2] * (14 - 4 * k + k * k)
+                    + qs[k - 1] * (-27 + 4 * k - 2 * k * k)
+                    + qs[k] * (10 + k * k);
+            E = new double[] {E[1], ans[k]};
+        }
+        return ans;
+    }
+    
+    public static double pointsMean(double[] qs, int bid) {
+        double ans = 0;
+        for (int l = 0; l <= qs.length - 1; l++) {
+            ans += qs[l] * points(bid, l);
+        }
+        
+        return ans;
+    }
+    
+    public static double pointsVariance(double[] qs, int bid) {
+        double ans = 0;
+        for (int l = 0; l <= qs.length - 1; l++) {
+            ans += qs[l] * points(bid, l) * points(bid, l);
+        }
+        double E = pointsMean(qs, bid);
+        
+        return ans - E * E;
     }
     
     /**
@@ -427,13 +472,16 @@ public class AiStrategyModuleOI extends AiStrategyModule {
         double B = 0.025;
         double u = 0;
         
-        double p = max(qs);
+        double max = 0;
+        for (double q : qs) {
+            max = Math.max(q, max);
+        }
         double r = A - B * (qs.length - 1);
         double s = 0;
         if (u == 0) {
-            s = Math.log(p) / Math.log(r);
+            s = Math.log(max) / Math.log(r);
         } else {
-            s = (Math.pow(p, u) - 1) / (Math.pow(r, u) - 1);
+            s = (Math.pow(max, u) - 1) / (Math.pow(r, u) - 1);
         }
         return Math.max(1, Math.min(10, 1 + 9D * s));
     }

@@ -58,7 +58,7 @@ public class Layer {
 		Random r = new Random();
 		for (int i = 0; i < d; i++) {
 		    for (int j = 0; j < prev.d; j++) {
-		        w[i][j] = r.nextGaussian();
+		        w[i][j] = r.nextGaussian() / 100;
 		    }
 		    //b[i] = r.nextGaussian();
 		}

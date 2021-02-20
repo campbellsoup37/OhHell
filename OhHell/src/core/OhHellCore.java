@@ -214,6 +214,10 @@ public class OhHellCore {
         for (int i = 0; i < players.size(); i++) {
             players.get(i).setIndex(i);
         }
+        stopKernel();
+    }
+    
+    public void stopKernel() {
         aiKernel.stop();
     }
     
@@ -229,9 +233,18 @@ public class OhHellCore {
 //        }
     }
     
-    public void deal() {
+    public int getRoundNumber() {
+        return roundNumber;
+    }
+    
+    public List<List<Card>> getNextHands() {
         int handSize = rounds.get(roundNumber).getHandSize();
-        List<List<Card>> hands = deck.deal(players.size(), handSize);
+        return deck.deal(players.size(), handSize);
+    }
+    
+    public void deal() {
+        deck.initialize();
+        List<List<Card>> hands = getNextHands();
         
         for (int i = 0; i < hands.size() - 1; i++) {
             players.get(i).setHand(hands.get(i));
@@ -246,7 +259,7 @@ public class OhHellCore {
         leader = turn;
         
         if (record) {
-            recorder.recordRoundInfo(handSize, dealer, players, trump);
+            recorder.recordRoundInfo(rounds.get(roundNumber).getHandSize(), dealer, players, trump);
 //            recorder.recordTrump(trump);
 //            recorder.recordDealer(dealer);
         }
@@ -480,18 +493,6 @@ public class OhHellCore {
                 recorder.sendFile(players);
                 recorder.sendFile(kibitzers);
             }
-//            for (Player p : players) {
-//                p.commandPostGameTrumps(trumps);
-//                p.commandPostGameHands(players);
-//                p.commandPostGameTakens(players);
-//                p.commandPostGame();
-//            }
-//            for (Player p : kibitzers) {
-//                p.commandPostGameTrumps(trumps);
-//                p.commandPostGameHands(players);
-//                p.commandPostGameTakens(players);
-//                p.commandPostGame();
-//            }
             if (aiTrainer != null) {
                 List<Player> playersCopy = new ArrayList<>(players.size());
                 playersCopy.addAll(players);

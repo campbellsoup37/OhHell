@@ -28,7 +28,7 @@ public class AiTrainerOI extends AiTrainer {
     }
     
     public void run() {
-        int N = 10;
+        int N = 5;
         int reps = 1000000;
         boolean verbose = true;
         boolean forMathematica = false;
@@ -39,8 +39,8 @@ public class AiTrainerOI extends AiTrainer {
         double ovlBEta = 10;
         double ivlWEta = 1;
         double ivlBEta = 1;
-        double scale = 0.05;
-        int groupingSize = 3;
+        double scale = 0.01;
+        int groupingSize = 1;
 
         int maxH = Math.min(10, 51 / N);
         int[] ovlLayers = {
