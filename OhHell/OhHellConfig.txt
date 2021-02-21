@@ -1,7 +1,7 @@
 windowlocationmenu = 325,43
 windowlocationingame = -7,-7
-windowsizeingame = 1295,695
-windowmaximizedingame = true
+windowsizeingame = 1295,700
+windowmaximizedingame = false
 recentusername = cam
 recentaddress = localhost
 recentport = 6066
