@@ -1066,7 +1066,7 @@ public class GameCanvas extends OhcCanvas {
             public boolean isShown() {
                 boolean ans = state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
                 if (!showing && ans) {
-                    nameField.setText(client.getUsername());
+                    nameField.setText(myPlayer != null ? myPlayer.getName() : client.getUsername());
                     showing = true;
                 } else if (showing && !ans) {
                     showing = false;
@@ -2071,6 +2071,7 @@ public class GameCanvas extends OhcCanvas {
         trickTaken = false;
         animatingTaken = false;
         takenTimer = 1;
+        canUndoBid = false;
     }
     
     public void initializingOnTimer(boolean immediate) {

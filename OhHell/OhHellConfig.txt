@@ -1,8 +1,8 @@
 windowlocationmenu = 669,166
-windowlocationingame = 127,196
-windowsizeingame = 1616,877
+windowlocationingame = 301,54
+windowsizeingame = 1487,943
 windowmaximizedingame = false
-recentusername = cam2
+recentusername = soup2
 recentaddress = localhost
 recentport = 6066
 playsound = false

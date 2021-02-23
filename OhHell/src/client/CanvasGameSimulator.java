@@ -30,7 +30,7 @@ public class CanvasGameSimulator {
     public void simulate() {
         core = new OhHellCore(false) {
             @Override
-            public void buildRounds() {
+            public void buildRounds(boolean doubleDeck) {
                 for (int[] round : rounds) {
                     getRounds().add(new RoundDetails(round[1]));
                 }
@@ -71,7 +71,7 @@ public class CanvasGameSimulator {
         ImmediateValueLearner ivl = new ImmediateValueLearner("resources/models/" + "ivlN" + N + ".txt");
         List<AiStrategyModule> aiStrategyModules = new ArrayList<>(cPlayers.size());
         for (int i = 0; i < cPlayers.size(); i++) {
-            aiStrategyModules.add(new AiStrategyModuleOI(core, cPlayers.size(), ovl, ivl) {
+            aiStrategyModules.add(new AiStrategyModuleOI(core, N, ovl, ivl) {
                 public ClientPlayer clientPlayer() {
                     return cPlayers.get(player.getIndex());
                 }

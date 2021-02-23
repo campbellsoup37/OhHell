@@ -147,7 +147,7 @@ public class OhHellCore {
         roundNumber = 0;
         playNumber = 0;
         
-        buildRounds();
+        buildRounds(doubleDeck);
         updateRounds();
         
         for (int i = 0; i < players.size(); i++) {
@@ -169,27 +169,27 @@ public class OhHellCore {
         return rounds;
     }
     
-    public void buildRounds() {
-        rounds.add(new RoundDetails(2));
-        rounds.add(new RoundDetails(2));
-        rounds.add(new RoundDetails(2));
+    public void buildRounds(boolean doubleDeck) {
+//        rounds.add(new RoundDetails(2));
+//        rounds.add(new RoundDetails(2));
+//        rounds.add(new RoundDetails(2));
 //        rounds.add(new RoundDetails(10));
 //        rounds.add(new RoundDetails(2));
 //        rounds.add(new RoundDetails(6));
 //        rounds.add(new RoundDetails(5));
 //        rounds.add(new RoundDetails(4));
         
-//        int numDecks = doubleDeck ? 2 : 1;
-//        int maxHand = Math.min(10, (numDecks * 52 - 1) / players.size());
-//        for (int i = maxHand; i >= 2; i--) {
-//            rounds.add(new RoundDetails(i));
-//        }
-//        for (int i = 0; i < players.size(); i++) {
-//            rounds.add(new RoundDetails(1));
-//        }
-//        for (int i = 2; i <= maxHand; i++) {
-//            rounds.add(new RoundDetails(i));
-//        }
+        int numDecks = doubleDeck ? 2 : 1;
+        int maxHand = Math.min(10, (numDecks * 52 - 1) / players.size());
+        for (int i = maxHand; i >= 2; i--) {
+            rounds.add(new RoundDetails(i));
+        }
+        for (int i = 0; i < players.size(); i++) {
+            rounds.add(new RoundDetails(1));
+        }
+        for (int i = 2; i <= maxHand; i++) {
+            rounds.add(new RoundDetails(i));
+        }
     }
     
     public void updateRounds() {
