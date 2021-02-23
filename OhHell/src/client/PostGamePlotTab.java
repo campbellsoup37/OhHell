@@ -4,7 +4,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.util.List;
 
-import graphics.OhcGraphicsTools;
+import common.GraphicsTools;
 
 public class PostGamePlotTab extends CanvasInteractable {
     private List<ClientPlayer> sortedPlayers;
@@ -47,19 +47,19 @@ public class PostGamePlotTab extends CanvasInteractable {
     @Override
     public void paint(Graphics graphics) {
         graphics.setColor(Color.WHITE);
-        OhcGraphicsTools.drawBox(graphics, 
+        GraphicsTools.drawBox(graphics, 
                 x(),
                 y(),
                 GameCanvas.finalScoreListWidth,
                 height(),
                 10);
-        graphics.setFont(OhcGraphicsTools.fontBold);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        graphics.setFont(GraphicsTools.fontBold);
+        GraphicsTools.drawStringJustified(graphics, 
                 "Final scores", 
                 x() + GameCanvas.finalScoreListWidth / 2, 
                 y() + 20,
                 1, 1);
-        graphics.setFont(OhcGraphicsTools.font);
+        graphics.setFont(GraphicsTools.font);
         for (int i = 0; i < sortedPlayers.size(); i++) {
             ClientPlayer player = sortedPlayers.get(i);
             graphics.setColor(GameCanvas.colors[player.getIndex()]);
@@ -69,8 +69,8 @@ public class PostGamePlotTab extends CanvasInteractable {
                     (int) (GameCanvas.pointSize),
                     (int) (GameCanvas.pointSize));
             graphics.setColor(Color.BLACK);
-            OhcGraphicsTools.drawStringJustified(graphics, 
-                    OhcGraphicsTools.fitString(
+            GraphicsTools.drawStringJustified(graphics, 
+                    GraphicsTools.fitString(
                             graphics, 
                             player.getPlace() + ". " 
                             + player.getName(), 
@@ -78,7 +78,7 @@ public class PostGamePlotTab extends CanvasInteractable {
                     x() + GameCanvas.finalScoreInnerMargin + GameCanvas.finalScoreInnerMargin / 2, 
                     y() + 30 + 15 * (i + 1), 
                     0, 1);
-            OhcGraphicsTools.drawStringJustified(graphics, 
+            GraphicsTools.drawStringJustified(graphics, 
                     player.getScore() + "",
                     x() + (int) (0.8 * GameCanvas.finalScoreListWidth), 
                     y() + 30 + 15 * (i + 1), 

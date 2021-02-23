@@ -8,8 +8,7 @@ import core.RoundDetails;
 public class HumanPlayer extends Player {
     private PlayerThread thread;
     
-    public HumanPlayer(String name, PlayerThread thread) {
-        setName(name);
+    public HumanPlayer(PlayerThread thread) {
         this.thread = thread;
     }
     
@@ -31,8 +30,8 @@ public class HumanPlayer extends Player {
         this.thread = thread;
     }
     
-    public void commandIdRequest() {
-        thread.sendCommand("IDREQUEST");
+    public void commandIdRequest(String version) {
+        thread.sendCommand("IDREQUEST:" + version);
     }
     
     public void ping() {

@@ -52,6 +52,10 @@ public class AiPlayer extends Player {
     
     @Override
     public void commandNewScores(List<Integer> scores) {
+        if (scores.get(getIndex()) == null) {
+            return;
+        }
+        
         int round = getScores().size() - 1;
         int points = getScores().get(round) - (round == 0 ? 0 : getScores().get(round - 1));
         getAiStrategyModule().endOfRound(points);

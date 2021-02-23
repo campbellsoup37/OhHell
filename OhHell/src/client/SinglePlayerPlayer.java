@@ -271,11 +271,6 @@ public class SinglePlayerPlayer extends Player {
             }
         }
     }
-
-    @Override
-    public void commandPostGame() {
-        client.postGame();
-    }
     
     @Override
     public void commandPostGameFile(String file) {

@@ -22,9 +22,11 @@ import core.AiStrategyModule;
 import core.Card;
 import core.OhHellCore;
 import core.Player;
-import graphics.OhcGraphicsTools;
-import graphics.OhcScrollPane;
-import graphics.OhcTextField;
+import core.Recorder;
+import common.FileTools;
+import common.GraphicsTools;
+import common.OhcScrollPane;
+import common.OhcTextField;
 import strategyOI.AiStrategyModuleOI;
 import strategyOI.ImmediateValueLearner;
 import strategyOI.OverallValueLearner;
@@ -50,7 +52,7 @@ public class GameCanvas extends OhcCanvas {
     public static final int messageTime = 2000;
     
     public static final int finalScoreMaxWidth = 900;
-    public static final int finalScoreMaxHeight = 500;
+    public static final int finalScoreMaxHeight = 550;
     public static final int finalScoreOuterMargin = 25;
     public static final int finalScoreInnerMargin = 10;
     public static final int finalScoreListWidth = 200;
@@ -152,14 +154,14 @@ public class GameCanvas extends OhcCanvas {
         super(client);
         this.client = client;
         
-        deckImg = OhcGraphicsTools.loadImage("resources/client/deck2.png", this);
-        deckImgDark = OhcGraphicsTools.loadImage("resources/client/deck2.png", this);
+        deckImg = FileTools.loadImage("resources/client/deck2.png", this);
+        deckImgDark = FileTools.loadImage("resources/client/deck2.png", this);
         Graphics didg = deckImgDark.getGraphics();
         didg.setColor(new Color(127, 127, 127, 64));
         didg.fillRect(0, 0, deckImg.getWidth(), deckImg.getHeight());
         
-        deckImgSmall = OhcGraphicsTools.loadImage("resources/client/deck2small.png", this);
-        deckImgSmallDark = OhcGraphicsTools.loadImage("resources/client/deck2small.png", this);
+        deckImgSmall = FileTools.loadImage("resources/client/deck2small.png", this);
+        deckImgSmallDark = FileTools.loadImage("resources/client/deck2small.png", this);
         Graphics disdg = deckImgSmallDark.getGraphics();
         disdg.setColor(new Color(127, 127, 127, 64));
         disdg.fillRect(0, 0, deckImg.getWidth(), deckImg.getHeight());
@@ -168,8 +170,8 @@ public class GameCanvas extends OhcCanvas {
         cardHeight = (double) deckImg.getHeight() / 6;
         cardWidthSmall = cardWidth * smallCardScale;
         
-        cardPlayClip = OhcGraphicsTools.loadSound("resources/client/Card play.wav", this);
-        pokeClip = OhcGraphicsTools.loadSound("resources/client/shortpoke.wav", this);
+        cardPlayClip = FileTools.loadSound("resources/client/Card play.wav", this);
+        pokeClip = FileTools.loadSound("resources/client/shortpoke.wav", this);
         
         players = new ArrayList<>();
     }
@@ -208,11 +210,11 @@ public class GameCanvas extends OhcCanvas {
             frameTimes[framePointer] = newFrameTime;
             framePointer = (framePointer + 1) % frameQueueSize;
             if (frameTimes[frameQueueSize - 1] != 0 && client.showFpsSelected()) {
-                OhcGraphicsTools.drawStringJustified(graphics, "FPS: " + String.format("%.2f", (double) 1000 * frameQueueSize / frameTotalTime), getWidth() - 450 - 100, 10, 0, 1);
+                GraphicsTools.drawStringJustified(graphics, "FPS: " + String.format("%.2f", (double) 1000 * frameQueueSize / frameTotalTime), getWidth() - 450 - 100, 10, 0, 1);
             }
         }
         if (client.showPingSelected()) {
-            OhcGraphicsTools.drawStringJustified(graphics, "Ping: " + String.format("%.2f", client.getPing()) + "ms", getWidth() - 450 - 100, 25, 0, 1);
+            GraphicsTools.drawStringJustified(graphics, "Ping: " + String.format("%.2f", client.getPing()) + "ms", getWidth() - 450 - 100, 25, 0, 1);
         }
         
         if (!performingAction && !actionQueue.isEmpty()) {
@@ -224,43 +226,43 @@ public class GameCanvas extends OhcCanvas {
     public void paintPregame(Graphics graphics) {
         if (state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME) {
             graphics.setColor(new Color(255, 255, 255, 180));
-            OhcGraphicsTools.drawBox(graphics, 
+            GraphicsTools.drawBox(graphics, 
                     (getWidth() - 450) / 2 - 200, 
                     getHeight() / 2 - 150, 
                     400, 300, 20);
             graphics.setColor(new Color(255, 255, 255, 210));
-            OhcGraphicsTools.drawBox(graphics, 
+            GraphicsTools.drawBox(graphics, 
                     (getWidth() - 450) / 2 + 20, 
                     getHeight() / 2 - 15, 
                     80, 30, 20);
             graphics.setColor(Color.BLACK);
-            graphics.setFont(OhcGraphicsTools.fontBold);
-            OhcGraphicsTools.drawStringJustified(graphics, 
+            graphics.setFont(GraphicsTools.fontBold);
+            GraphicsTools.drawStringJustified(graphics, 
                     "Name:", 
                     (getWidth() - 450) / 2 - 140, 
                     getHeight() / 2 - 105, 
                     2, 1);
-            OhcGraphicsTools.drawStringJustified(graphics, 
+            GraphicsTools.drawStringJustified(graphics, 
                     "Join as kibitzer:", 
                     (getWidth() - 450) / 2 - 20, 
                     getHeight() / 2 - 60, 
                     2, 1);
-            OhcGraphicsTools.drawStringJustified(graphics, 
+            GraphicsTools.drawStringJustified(graphics, 
                     "Robots:", 
                     (getWidth() - 450) / 2 - 20, 
                     getHeight() / 2, 
                     2, 1);
-            OhcGraphicsTools.drawStringJustified(graphics, 
+            GraphicsTools.drawStringJustified(graphics, 
                     numRobots + "", 
                     (getWidth() - 450) / 2 + 60, 
                     getHeight() / 2, 
                     1, 1);
-            OhcGraphicsTools.drawStringJustified(graphics, 
+            GraphicsTools.drawStringJustified(graphics, 
                     "Double deck:", 
                     (getWidth() - 450) / 2 - 20, 
                     getHeight() / 2 + 40, 
                     2, 1);
-            graphics.setFont(OhcGraphicsTools.font);
+            graphics.setFont(GraphicsTools.font);
         }
     }
     
@@ -287,7 +289,7 @@ public class GameCanvas extends OhcCanvas {
     }
     
     public void paintMessage(Graphics graphics) {
-        OhcGraphicsTools.drawStringJustifiedBacked(graphics, message, (getWidth() - 450) / 2, getHeight() / 2);
+        GraphicsTools.drawStringJustifiedBacked(graphics, message, (getWidth() - 450) / 2, getHeight() / 2);
     }
     
     public void paintTrick(Graphics graphics) {
@@ -372,7 +374,7 @@ public class GameCanvas extends OhcCanvas {
                 } else {
                     graphics.setColor(new Color(210, 255, 255));
                 }
-                OhcGraphicsTools.drawBox(graphics, x - pos * maxWid / 2, y - 10, maxWid, 20, 20);
+                GraphicsTools.drawBox(graphics, x - pos * maxWid / 2, y - 10, maxWid, 20, 20);
                 
                 // Name
                 if (player.isDisconnected()) {
@@ -381,8 +383,8 @@ public class GameCanvas extends OhcCanvas {
                 if (player.isKicked()) {
                     graphics.setColor(Color.RED);
                 }
-                OhcGraphicsTools.drawStringJustified(graphics, 
-                        OhcGraphicsTools.fitString(graphics, player.getName(), maxWid), 
+                GraphicsTools.drawStringJustified(graphics, 
+                        GraphicsTools.fitString(graphics, player.getName(), maxWid), 
                         (int) (x - (pos - 1) * maxWid / 2), 
                         y, 
                         1, 1);
@@ -419,13 +421,13 @@ public class GameCanvas extends OhcCanvas {
                         graphics.setColor(Color.BLACK);
                         if (player.getBidTimer() == 0) {
                             graphics.drawOval((int) (bidX - radius / 2), (int) (bidY - radius / 2), (int) radius, (int) radius);
-                            graphics.setFont(OhcGraphicsTools.fontLargeBold);
+                            graphics.setFont(GraphicsTools.fontLargeBold);
                         }
-                        OhcGraphicsTools.drawStringJustified(graphics, player.getBid() + "", 
+                        GraphicsTools.drawStringJustified(graphics, player.getBid() + "", 
                                 bidX, 
                                 bidY, 
                                 1, 1);
-                        graphics.setFont(OhcGraphicsTools.font);
+                        graphics.setFont(GraphicsTools.font);
                     }
                     
                     // Dealer chip
@@ -433,7 +435,7 @@ public class GameCanvas extends OhcCanvas {
                         graphics.setColor(Color.CYAN);
                         graphics.fillOval((int) (x - (pos - 2) * maxWid / 2) - 19, y - 8, 16, 16);
                         graphics.setColor(Color.BLACK);
-                        OhcGraphicsTools.drawStringJustified(graphics, "D", 
+                        GraphicsTools.drawStringJustified(graphics, "D", 
                                 (int) (x - (pos - 2) * maxWid / 2) - 11, 
                                 y, 
                                 1, 1);
@@ -558,7 +560,7 @@ public class GameCanvas extends OhcCanvas {
             
             // box
             graphics.setColor(Color.WHITE);
-            OhcGraphicsTools.drawBox(graphics, 
+            GraphicsTools.drawBox(graphics, 
                     getWidth() - (450 - scoreMargin), 
                     scoreMargin, 
                     450 - 2 * scoreMargin, 
@@ -596,28 +598,28 @@ public class GameCanvas extends OhcCanvas {
                 }
                 
                 if (player.equals(myPlayer)) {
-                    graphics.setFont(OhcGraphicsTools.fontBold);
+                    graphics.setFont(GraphicsTools.fontBold);
                 } else {
-                    graphics.setFont(OhcGraphicsTools.font);
+                    graphics.setFont(GraphicsTools.font);
                 }
-                OhcGraphicsTools.drawStringJustified(graphics, 
-                        OhcGraphicsTools.fitString(graphics, player.getName(), wid - 2), 
+                GraphicsTools.drawStringJustified(graphics, 
+                        GraphicsTools.fitString(graphics, player.getName(), wid - 2), 
                         (int) (getWidth() - (450 - scoreMargin - 45) + index * wid + wid / 2), 
                         scoreMargin + 15, 
                         1, 0);
-                graphics.setFont(OhcGraphicsTools.font);
+                graphics.setFont(GraphicsTools.font);
             }
             
             // dealers and hand sizes
             graphics.setColor(Color.BLACK);
             for (int i = 0; i < numRounds; i++) {
                 int[] round = rounds.get(i);
-                OhcGraphicsTools.drawStringJustified(graphics, 
+                GraphicsTools.drawStringJustified(graphics, 
                         playersToShow.get(round[0]).getName().substring(0, 1), 
                         getWidth() - (450 - scoreMargin - 5), 
                         scoreMargin + scoreVSpacing * (i + 2), 
                         0, 0);
-                OhcGraphicsTools.drawStringJustified(graphics, 
+                GraphicsTools.drawStringJustified(graphics, 
                         "" + round[1], 
                         getWidth() - (450 - scoreMargin - 25), 
                         scoreMargin + scoreVSpacing * (i + 2), 
@@ -627,14 +629,15 @@ public class GameCanvas extends OhcCanvas {
             for (ClientPlayer player : playersToShow) {
                 int index = player.getIndex();
                 // bid chips
-                for (int j = 0; j < player.getBids().size(); j++) {
+                for (int j = 0; j < player.getBids().size()
+                        && (player.getKickedAtRound() == -1 || j < player.getKickedAtRound()); j++) {
                     graphics.setColor(new Color(200, 200, 200, 180));
                     graphics.fillOval(
                             (int) (getWidth() - (450 - scoreMargin - 45) + (index + 1) * wid - 18), 
                             scoreMargin + 5 + scoreVSpacing * (1 + j) + 2, 
                             16, 16);
                     graphics.setColor(Color.BLACK);
-                    OhcGraphicsTools.drawStringJustified(graphics, 
+                    GraphicsTools.drawStringJustified(graphics, 
                             Integer.toString(player.getBids().get(j)), 
                             (int) (getWidth() - (450 - scoreMargin - 45) + (index + 1) * wid - 10), 
                             scoreMargin + scoreVSpacing * (2 + j), 
@@ -642,16 +645,17 @@ public class GameCanvas extends OhcCanvas {
                 }
                 // scores
                 if (players.size() >= 8) {
-                    graphics.setFont(OhcGraphicsTools.fontSmall);
+                    graphics.setFont(GraphicsTools.fontSmall);
                 }
-                for (int j = 0; j < player.getScores().size(); j++) {
-                    OhcGraphicsTools.drawStringJustified(graphics, 
+                for (int j = 0; j < player.getScores().size()
+                        && (player.getKickedAtRound() == -1 || j < player.getKickedAtRound()); j++) {
+                    GraphicsTools.drawStringJustified(graphics, 
                             Integer.toString(player.getScores().get(j)), 
                             (int) (getWidth() - (450 - scoreMargin - 45) + index * wid + 10), 
                             scoreMargin + scoreVSpacing * (2 + j), 
                             0, 0);
                 }
-                graphics.setFont(OhcGraphicsTools.font);
+                graphics.setFont(GraphicsTools.font);
             }
         }
     }
@@ -670,7 +674,7 @@ public class GameCanvas extends OhcCanvas {
     }
     
     public void drawCard(Graphics graphics, Card card, double x, double y, double scale, boolean small, 
-            boolean dark, int maxY) {
+            boolean dark, double maxY) {
         int cardNumber = card.toNumber();
         int col = cardNumber % 9;
         int row = (cardNumber - col) / 9;
@@ -692,20 +696,20 @@ public class GameCanvas extends OhcCanvas {
         }
         
         if (maxY < 0) {
-            maxY = (int) (y + ch1 * scale / 2);
+            maxY = y + ch1 * scale / 2;
         }
-        maxY = (int) Math.min(maxY, y + ch1 * scale / 2);
+        maxY = Math.min(maxY, y + ch1 * scale / 2);
         double diff = maxY - (y - ch1 * scale / 2);
         
-        OhcGraphicsTools.makeGraphics2D(graphics, 
+        GraphicsTools.makeGraphics2D(graphics, 
                 client.antialiasingSelected(),
                 !client.lowGraphicsSelected())
-        .drawImage(img, 
-                (int) (x - cw1 * scale / 2), (int) (y - ch1 * scale / 2), 
-                (int) (x + cw1 * scale / 2), maxY, 
-                (int) (col * cw1), (int) (row * ch1), 
-                (int) ((col + 1) * cw1), (int) (row * ch1 + diff / scale), 
-                null);
+                    .drawImage(img, 
+                            (int) (x - cw1 * scale / 2), (int) (y - ch1 * scale / 2), 
+                            (int) (x + cw1 * scale / 2), (int) maxY, 
+                            (int) (col * cw1), (int) (row * ch1), 
+                            (int) ((col + 1) * cw1), (int) (row * ch1 + diff / scale), 
+                            null);
     }
     
     public void doShowOneCard() {
@@ -1036,6 +1040,8 @@ public class GameCanvas extends OhcCanvas {
             }
         });
         embeddedSwings.add(new CanvasEmbeddedSwing(nameField, this) {
+            private boolean showing = false;
+            
             @Override
             public int x() {
                 return (getWidth() - 450) / 2 - 130;
@@ -1058,7 +1064,14 @@ public class GameCanvas extends OhcCanvas {
             
             @Override
             public boolean isShown() {
-                return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
+                boolean ans = state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
+                if (!showing && ans) {
+                    nameField.setText(client.getUsername());
+                    showing = true;
+                } else if (showing && !ans) {
+                    showing = false;
+                }
+                return ans;
             }
         });
         
@@ -1746,6 +1759,8 @@ public class GameCanvas extends OhcCanvas {
                         JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
                         JScrollPane.HORIZONTAL_SCROLLBAR_NEVER),
                 this) {
+            private boolean showing = false;
+            
             @Override
             public int x() {
                 return getWidth() - 450 + scoreMargin;
@@ -1771,7 +1786,18 @@ public class GameCanvas extends OhcCanvas {
             
             @Override
             public boolean isShown() {
-                return client.getClientState() != ClientState.FILE_VIEWER;
+                boolean ans = client.getClientState() != ClientState.FILE_VIEWER;
+                if (!showing && ans) {
+                    SwingUtilities.invokeLater(new Runnable() {
+                        public void run() {
+                            chatArea.updateUI();
+                        }
+                    });
+                    showing = true;
+                } else if (showing && !ans) {
+                    showing = false;
+                }
+                return ans;
             }
         };
         
@@ -2260,6 +2286,7 @@ public class GameCanvas extends OhcCanvas {
                     player.setHasBid(false);
                     player.setBid(0);
                     player.setTaken(0);
+                    player.resetTrick();
                 }
                 trickTaken = false;
             }
@@ -2464,9 +2491,9 @@ public class GameCanvas extends OhcCanvas {
                 break;
             }
             
-            String[] typeContent = line.split(";", 2);
+            String[] typeContent = line.split(Recorder.splitPreceder + Recorder.commandDelimiter1, 2);
             String type = typeContent[0];
-            String[] content = typeContent[1].split(";");
+            String[] content = typeContent[1].split(Recorder.splitPreceder + Recorder.commandDelimiter1);
             
             if (type.equals("decks")) {
                 
@@ -2474,19 +2501,19 @@ public class GameCanvas extends OhcCanvas {
                 int index = 0;
                 for (String playerInfo : content) {
                     ClientPlayer player = new ClientPlayer();
-                    String[] info = playerInfo.split(":");
-                    player.setId(info[0]);
-                    player.setName(info[1]);
+                    String[] info = playerInfo.split(Recorder.splitPreceder + Recorder.commandDelimiter2);
+                    player.setId(Recorder.decodeString(info[0]));
+                    player.setName(Recorder.decodeString(info[1]));
                     player.setHuman(info[2].equals("human"));
                     player.setIndex(index);
                     players.add(player);
                     index++;
                 }
             } else if (type.equals("round")) {
-                rounds.add(new int[] {Integer.parseInt(content[0]), Integer.parseInt(content[1])});
+                rounds.add(new int[] {Integer.parseInt(content[0]), Integer.parseInt(content[1]), 0});
             } else if (type.equals("hands")) {
                 for (int j = 0; j < players.size(); j++) {
-                    List<Card> hand = Arrays.stream(content[j].split(":"))
+                    List<Card> hand = Arrays.stream(content[j].split(Recorder.splitPreceder + Recorder.commandDelimiter2))
                             .map(s -> new Card(s))
                             .collect(Collectors.toList());
                     players.get(j).addPostGameHand(hand);
@@ -2495,17 +2522,26 @@ public class GameCanvas extends OhcCanvas {
                 trumps.add(new Card(content[0]));
             } else if (type.equals("bids")) {
                 for (int j = 0; j < players.size(); j++) {
-                    String[] info = content[j].split(":");
+                    String[] info = content[j].split(Recorder.splitPreceder + Recorder.commandDelimiter2);
                     players.get(j).addBid(Integer.parseInt(info[info.length - 1]));
                 }
             } else if (type.equals("trick")) {
                 for (int j = 0; j < players.size(); j++) {
-                    String[] info = content[j].split(":");
-                    players.get(j).addPostGamePlay(
-                            new Card(info[info.length - 1]),
-                            info[0].equals("1"),
-                            info[1].equals("1"));
+                    String[] info = content[j].split(Recorder.splitPreceder + Recorder.commandDelimiter2);
+                    Card card = new Card(info[info.length - 1]);
+                    if (!card.isEmpty()) {
+                        players.get(j).addPostGamePlay(
+                                card,
+                                info[0].equals("1"),
+                                info[1].equals("1"));
+                    }
                 }
+                rounds.get(rounds.size() - 1)[2]++;
+            } else if (type.equals("claim")) {
+                for (int j = 0; j < players.size(); j++) {
+                    players.get(j).addPostGameClaim(j == Integer.parseInt(content[0]));
+                }
+                rounds.get(rounds.size() - 1)[2]++;
             } else if (type.equals("takens")) {
                 for (int j = 0; j < players.size(); j++) {
                     players.get(j).addTaken(Integer.parseInt(content[j]));
@@ -2516,79 +2552,22 @@ public class GameCanvas extends OhcCanvas {
                 }
             } else if (type.equals("final scores")) {
                 for (int j = 0; j < players.size(); j++) {
-                    String[] info = content[j].split(":");
+                    String[] info = content[j].split(Recorder.splitPreceder + Recorder.commandDelimiter2);
                     players.get(j).setPlace(Integer.parseInt(info[1]));
                 }
             } else if (type.equals("kick")) {
-                
+                players.get(Integer.parseInt(content[0])).setKickedAtRound(rounds.size());
             }
         }
     }
     
     public void simulateGame() {
-        OhHellCore simCore = new OhHellCore(false) {
+        new CanvasGameSimulator(postGamePlayers, postGameRounds, trumps) {
             @Override
-            public List<List<Card>> getNextHands() {
-                List<List<Card>> hands = new ArrayList<>(postGamePlayers.size() + 1);
-                for (ClientPlayer player : postGamePlayers) {
-                    List<Card> hand = player.getHands().get(getRoundNumber());
-                    List<Card> handCopy = new ArrayList<>(hand.size());
-                    handCopy.addAll(hand);
-                    hands.add(handCopy);
-                }
-                hands.add(Arrays.asList(trumps.get(getRoundNumber())));
-                return hands;
-            }
-            
-            @Override
-            public void stopGame() {
-                stopKernel();
+            public void whenFinished() {
                 buildPostGameTabsOnTimer();
             }
-        };
-        List<Player> simPlayers = new ArrayList<>(postGamePlayers.size());
-        simCore.setPlayers(simPlayers);
-        
-        OverallValueLearner ovl = new OverallValueLearner("resources/models/" + "ovlN" + postGamePlayers.size() + ".txt");
-        ImmediateValueLearner ivl = new ImmediateValueLearner("resources/models/" + "ivlN" + postGamePlayers.size() + ".txt");
-        List<AiStrategyModule> aiStrategyModules = new ArrayList<>(postGamePlayers.size());
-        for (int i = 0; i < postGamePlayers.size(); i++) {
-            aiStrategyModules.add(new AiStrategyModuleOI(simCore, postGamePlayers.size(), ovl, ivl) {
-                private int roundNumber = 0;
-                private int playNumber = 0;
-                
-                public ClientPlayer clientPlayer() {
-                    return postGamePlayers.get(player.getIndex());
-                }
-                
-                @Override
-                public void makeBid() {
-                    double[] ps = getOvlPs();
-                    double[] qs = AiStrategyModuleOI.subsetProb(ps, ps.length);
-                    clientPlayer().addBidQs(qs);
-                    clientPlayer().addAiBid(AiStrategyModuleOI.optimalBid(ps)[0]);
-                    clientPlayer().addDiff(difficulty(qs));
-                    
-                    simCore.incomingBid(player, clientPlayer().getBids().get(roundNumber));
-                }
-                
-                @Override
-                public void makePlay() {
-                    getMyPlay();
-                    clientPlayer().addMakingProbs(getMakingProbs());
-                    
-                    simCore.incomingPlay(player, clientPlayer().getPlays().get(roundNumber).get(playNumber));
-                    
-                    playNumber++;
-                    if (playNumber == clientPlayer().getPlays().get(roundNumber).size()) {
-                        roundNumber++;
-                        playNumber = 0;
-                    }
-                }
-            });
-        }
-        
-        simCore.startGame(postGamePlayers.size(), false, aiStrategyModules, 0);
+        }.simulate();
     }
     
     public void buildPostGameTabsOnTimer() {

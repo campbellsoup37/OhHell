@@ -2,7 +2,7 @@ package client;
 import java.awt.Color;
 import java.awt.Graphics;
 
-import graphics.OhcGraphicsTools;
+import common.GraphicsTools;
 
 public class CanvasButton extends CanvasInteractable {
     private String text = "";
@@ -49,10 +49,10 @@ public class CanvasButton extends CanvasInteractable {
                     }
                 }
             }
-            OhcGraphicsTools.drawBox(graphics, x(), y(), width(), height(), 15);
-            graphics.setFont(OhcGraphicsTools.fontBold);
-            OhcGraphicsTools.drawStringJustified(graphics, text(), x() + width() / 2, y() + height() / 2, 1, 1);
-            graphics.setFont(OhcGraphicsTools.font);
+            GraphicsTools.drawBox(graphics, x(), y(), width(), height(), 15);
+            graphics.setFont(GraphicsTools.fontBold);
+            GraphicsTools.drawStringJustified(graphics, text(), x() + width() / 2, y() + height() / 2, 1, 1);
+            graphics.setFont(GraphicsTools.font);
         }
     }
 }

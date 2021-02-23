@@ -5,7 +5,7 @@ import java.awt.Graphics;
 import java.util.ArrayList;
 import java.util.List;
 
-import graphics.OhcGraphicsTools;
+import common.GraphicsTools;
 
 public class CanvasScorePlot extends CanvasInteractable {
     private final double tooltipWidth = 150;
@@ -120,7 +120,7 @@ public class CanvasScorePlot extends CanvasInteractable {
     public void paint(Graphics graphics) {
         if (boxed) {
             graphics.setColor(Color.WHITE);
-            OhcGraphicsTools.drawBox(graphics, x(), y(), width(), height(), 10);
+            GraphicsTools.drawBox(graphics, x(), y(), width(), height(), 10);
         }
         
         double nearestX = 0;
@@ -143,15 +143,15 @@ public class CanvasScorePlot extends CanvasInteractable {
         }
         
         if (!dataTicks.isEmpty()) {
-            graphics.setFont(OhcGraphicsTools.fontSmall);
+            graphics.setFont(GraphicsTools.fontSmall);
             for (int x = 0; x <= maxX; x++) {
-                OhcGraphicsTools.drawStringJustified(graphics, 
+                GraphicsTools.drawStringJustified(graphics, 
                         dataTicks.get(x), 
                         (int) canvasX(x), 
                         y() + height() - 10, 
                         1, 1);
             }
-            graphics.setFont(OhcGraphicsTools.font);
+            graphics.setFont(GraphicsTools.font);
         }
         
         int p = 0;
@@ -184,9 +184,9 @@ public class CanvasScorePlot extends CanvasInteractable {
             int ttHeight = (int) (tooltipMargin * 2 + 15 + 15 * boxData.size());
             int ttY = (int) canvasY((minY + maxY) / 2) - ttHeight / 2;
             graphics.setColor(Color.WHITE);
-            OhcGraphicsTools.drawBox(graphics, ttX, ttY, tooltipWidth, ttHeight, 10);
+            GraphicsTools.drawBox(graphics, ttX, ttY, tooltipWidth, ttHeight, 10);
             
-            OhcGraphicsTools.drawStringJustified(graphics, 
+            GraphicsTools.drawStringJustified(graphics, 
                     dataTicks.get((int) nearestX),
                     (int) (ttX + tooltipMargin), 
                     (int) (ttY + tooltipMargin), 
@@ -204,15 +204,15 @@ public class CanvasScorePlot extends CanvasInteractable {
 //                        (int) GameCanvas.pointSize, 
 //                        (int) GameCanvas.pointSize);
                 graphics.setColor(Color.BLACK);
-                OhcGraphicsTools.drawStringJustified(graphics, 
-                        OhcGraphicsTools.fitString(
+                GraphicsTools.drawStringJustified(graphics, 
+                        GraphicsTools.fitString(
                                 graphics,
                                 dataNames.get((int) boxData.get(k)[0]), 
                                 tooltipWidth * 0.8 - 2 * tooltipMargin),
                         (int) (ttX + 2 * tooltipMargin), 
                         (int) (ttY + tooltipMargin + 15 * (k + 1)), 
                         0, 2);
-                OhcGraphicsTools.drawStringJustified(graphics, 
+                GraphicsTools.drawStringJustified(graphics, 
                         String.format("%.1f", boxData.get(k)[1]), 
                         (int) (ttX + tooltipMargin + tooltipWidth * 0.8), 
                         (int) (ttY + tooltipMargin + 15 * (k + 1)), 

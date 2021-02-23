@@ -11,9 +11,9 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JScrollPane;
 
-import graphics.OhcButton;
-import graphics.OhcGraphicsTools;
-import graphics.OhcScrollPane;
+import common.OhcButton;
+import common.FileTools;
+import common.OhcScrollPane;
 
 public class ReconnectFrame extends JFrame {
     private static final long serialVersionUID = 1L;
@@ -39,7 +39,7 @@ public class ReconnectFrame extends JFrame {
     
     public void execute() {
         setTitle("Reconnect");
-        setIconImage(OhcGraphicsTools.loadImage("resources/icon/cw.png", this));
+        setIconImage(FileTools.loadImage("resources/icon/cw.png", this));
         message.setBounds(20,10,500,20);
         add(message);
         

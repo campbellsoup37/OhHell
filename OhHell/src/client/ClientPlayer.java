@@ -35,11 +35,49 @@ public class ClientPlayer {
     private double trickTimer;
     private boolean timerStarted;
     
+    public class Play {
+        private Card card;
+        private boolean led;
+        private boolean won;
+        private boolean claiming;
+        
+        public Play(Card card, boolean led, boolean won) {
+            this.card = card;
+            this.led = led;
+            this.won = won;
+            claiming = false;
+        }
+        
+        public Play(boolean claiming) {
+            card = new Card();
+            this.claiming = claiming;
+        }
+        
+        public Card getCard() {
+            return card;
+        }
+        
+        public boolean isLed() {
+            return led;
+        }
+        
+        public boolean isWon() {
+            return won;
+        }
+        
+        public boolean isClaimed() {
+            return card.isEmpty();
+        }
+        
+        public boolean isClaiming() {
+            return claiming;
+        }
+    }
+    
     private int place;
     private List<List<Card>> hands = new ArrayList<>();
-    private List<List<Card>> plays = new ArrayList<>();
-    private List<List<Boolean>> leds = new ArrayList<>();
-    private List<List<Boolean>> wons = new ArrayList<>();
+    private List<List<Play>> plays = new ArrayList<>();
+    private int kickedAtRound = -1;
     private List<double[]> bidQs = new ArrayList<>();
     private List<List<Hashtable<Card, Double>>> makingProbs = new ArrayList<>();
     private List<Integer> aiBids = new ArrayList<>();
@@ -64,8 +102,7 @@ public class ClientPlayer {
         
         hands = new ArrayList<>();
         plays = new ArrayList<>();
-        leds = new ArrayList<>();
-        wons = new ArrayList<>();
+        kickedAtRound = -1;
         bidQs = new ArrayList<>();
         makingProbs = new ArrayList<>();
         aiBids = new ArrayList<>();
@@ -368,28 +405,33 @@ public class ClientPlayer {
     }
     
     public void addPostGamePlay(Card card, boolean led, boolean won) {
-        if (plays.isEmpty() || 
-                plays.get(plays.size() - 1).size() 
-                == hands.get(plays.size() - 1).size()) {
+        if (plays.isEmpty() 
+                || plays.get(plays.size() - 1).size() == hands.get(plays.size() - 1).size()
+                || plays.get(plays.size() - 1).get(plays.get(plays.size() - 1).size() - 1).isClaimed()) {
             plays.add(new ArrayList<>(hands.get(plays.size()).size()));
-            leds.add(new ArrayList<>(hands.get(leds.size()).size()));
-            wons.add(new ArrayList<>(hands.get(wons.size()).size()));
         }
-        plays.get(plays.size() - 1).add(card);
-        leds.get(leds.size() - 1).add(led);
-        wons.get(wons.size() - 1).add(won);
+        plays.get(plays.size() - 1).add(new Play(card, led, won));
     }
     
-    public List<List<Card>> getPlays() {
+    public void addPostGameClaim(boolean claimer) {
+        if (plays.isEmpty() 
+                || plays.get(plays.size() - 1).size() == hands.get(plays.size() - 1).size()
+                || plays.get(plays.size() - 1).get(plays.get(plays.size() - 1).size() - 1).isClaimed()) {
+            plays.add(new ArrayList<>(hands.get(plays.size()).size()));
+        }
+        plays.get(plays.size() - 1).add(new Play(claimer));
+    }
+    
+    public List<List<Play>> getPlays() {
         return plays;
     }
     
-    public List<List<Boolean>> getLeds() {
-        return leds;
+    public void setKickedAtRound(int kickedAtRound) {
+        this.kickedAtRound = kickedAtRound;
     }
     
-    public List<List<Boolean>> getWons() {
-        return wons;
+    public int getKickedAtRound() {
+        return kickedAtRound;
     }
     
     public void addBidQs(double[] qs) {
@@ -416,11 +458,9 @@ public class ClientPlayer {
         return diffs;
     }
     
-    public void addMakingProbs(Hashtable<Card, Double> probs) {
-        if (makingProbs.isEmpty() || 
-                makingProbs.get(makingProbs.size() - 1).size() 
-                == hands.get(makingProbs.size() - 1).size()) {
-            makingProbs.add(new ArrayList<>(hands.get(makingProbs.size()).size()));
+    public void addMakingProbs(Hashtable<Card, Double> probs, int index) {
+        for (int i = makingProbs.size(); i <= index; i++) {
+            makingProbs.add(new ArrayList<>(hands.get(i).size()));
         }
         makingProbs.get(makingProbs.size() - 1).add(probs);
     }

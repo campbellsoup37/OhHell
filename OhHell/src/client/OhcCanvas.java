@@ -9,7 +9,7 @@ import java.util.List;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
-import graphics.OhcGraphicsTools;
+import common.GraphicsTools;
 
 public abstract class OhcCanvas extends JPanel {
     private static final long serialVersionUID = 1L;
@@ -48,10 +48,10 @@ public abstract class OhcCanvas extends JPanel {
         
         super.paintComponent(graphics);
         
-        Graphics2D graphics2 = OhcGraphicsTools.makeGraphics2D(graphics, 
+        Graphics2D graphics2 = GraphicsTools.makeGraphics2D(graphics, 
                 client.antialiasingSelected(),
                 false);
-        graphics2.setFont(OhcGraphicsTools.font);
+        graphics2.setFont(GraphicsTools.font);
         
         graphics.drawImage(background, 
                 0, 0, 

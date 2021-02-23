@@ -8,8 +8,8 @@ import javax.swing.JLabel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 
-import graphics.OhcButton;
-import graphics.OhcGraphicsTools;
+import common.OhcButton;
+import common.FileTools;
 
 public class GameOptionsFrame extends JFrame {
     private static final long serialVersionUID = 1L;
@@ -32,7 +32,7 @@ public class GameOptionsFrame extends JFrame {
     
     public void execute() {
         setTitle("Game Options");
-        setIconImage(OhcGraphicsTools.loadImage("resources/icon/cw.png", this));
+        setIconImage(FileTools.loadImage("resources/icon/cw.png", this));
 
         robotsLabel.setBounds(57, 30, 200, 40);
         add(robotsLabel);

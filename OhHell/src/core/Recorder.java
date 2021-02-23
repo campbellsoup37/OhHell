@@ -1,85 +1,128 @@
 package core;
+import java.util.LinkedList;
 import java.util.List;
 
 public class Recorder {
-    private volatile StringBuilder file;
-    private volatile StringBuilder round;
+    public static final String lineDelimiter = "|";
+    public static final String lineDelimiterRegex = "\\|";
+    public static final String commandDelimiter1 = ";";
+    public static final String commandDelimiter2 = ":";
+    /**
+     * The following regex is a positive look-behind that checks for an even number of 
+     * backslashes. For example, if we ask for str.split(splitPreceder + ";"), the string str will
+     * be split at all ; characters that are not preceded by an even number of backslashes.
+     */
+    public static final String splitPreceder = "(?<=[^\\\\](\\\\\\\\){0,999})";
+    
+    private volatile LinkedList<String> file;
+    private volatile LinkedList<String> round;
     
     public Recorder() {}
     
     public void start() {
-        file = new StringBuilder();
+        file = new LinkedList<>();
+    }
+    
+    public static String encodeString(String s) {
+        return s.replace("\\", "\\\\")
+                .replace(lineDelimiter, "\\" + lineDelimiter)
+                .replace(commandDelimiter1, "\\" + commandDelimiter1)
+                .replace(commandDelimiter2, "\\" + commandDelimiter2);
+    }
+    
+    public static String decodeString(String s) {
+        return s.replace("\\\\", "\\")
+                .replace("\\" + lineDelimiter, lineDelimiter)
+                .replace("\\" + commandDelimiter1, commandDelimiter1)
+                .replace("\\" + commandDelimiter2, commandDelimiter2);
     }
     
     public void recordInfo(int numDecks, List<Player> players) {
-        file.append("decks;" + numDecks + "|");
-        file.append("players");
+        file.add("decks" + commandDelimiter1 + numDecks);
+        String line = "players";
         for (Player player : players) {
-            file.append(";" + player.getId() + ":" + player.getName() + ":" + (player.isHuman() ? "human" : "ai"));
+            line += commandDelimiter1
+                    + encodeString(player.getId()) + commandDelimiter2
+                    + encodeString(player.getName()) + commandDelimiter2
+                    + (player.isHuman() ? "human" : "ai");
         }
-        file.append("|");
+        file.add(line);
     }
     
     public void recordRoundInfo(int handSize, int dealer, List<Player> players, Card trump) {
-        round = new StringBuilder();
-        round.append("round;" + dealer + ";" + handSize + "|");
-        round.append("hands");
+        round = new LinkedList<>();
+        round.add("round" + commandDelimiter1 + dealer + commandDelimiter1 + handSize);
+        String line = "hands";
         for (Player player : players) {
-            round.append(";" + player.getHand().get(0));
+            line += commandDelimiter1 + player.getHand().get(0);
             for (int i = 1; i < handSize; i++) {
-                round.append(":" + player.getHand().get(i));
+                line += commandDelimiter2 + player.getHand().get(i);
             }
         }
-        round.append("|");
-        round.append("trump;" + trump + "|");
+        round.add(line);
+        round.add("trump" + commandDelimiter1 + trump);
     }
     
     public void recordBids(List<Player> players, int leader) {
-        round.append("bids");
+        String line = "bids";
         for (Player player : players) {
-            round.append(";" + (player.getIndex() == leader ? 1 : 0) + ":" + player.getBid());
+            line += commandDelimiter1
+                    + (player.getIndex() == leader ? 1 : 0) + commandDelimiter2
+                    + player.getBid();
         }
-        round.append("|");
+        round.add(line);
+    }
+    
+    public void unrecordBids() {
+        round.removeLast();
     }
     
     public void recordTrick(List<Player> players, int leader, int winner) {
-        round.append("trick");
+        String line = "trick";
         for (Player player : players) {
-            round.append(";" 
-                + (player.getIndex() == leader ? 1 : 0) + ":" 
-                + (player.getIndex() == winner ? 1 : 0) + ":"            
-                + player.getTrick());
+            line += commandDelimiter1 
+                + (player.getIndex() == leader ? 1 : 0) + commandDelimiter2
+                + (player.getIndex() == winner ? 1 : 0) + commandDelimiter2
+                + player.getTrick();
         }
-        round.append("|");
+        round.add(line);
+    }
+    
+    public void recordClaim(int index) {
+        round.add("claim" + commandDelimiter1 + index);
     }
     
     public void recordRoundEnd(List<Player> players) {
-        round.append("takens");
+        String line1 = "takens";
         for (Player player : players) {
-            round.append(";" + player.getTaken());
+            line1 += commandDelimiter1 + player.getTaken();
         }
-        round.append("|");
-        round.append("scores");
+        round.add(line1);
+        String line2 = "scores";
         for (Player player : players) {
-            round.append(";" + player.getScore());
+            line2 += commandDelimiter1 + player.getScore();
         }
-        round.append("|");
-        file.append(round);
+        round.add(line2);
+        file.addAll(round);
     }
     
     public void recordFinalScores(List<Player> players) {
-        file.append("final scores");
+        String line = "final scores";
         for (Player player : players) {
-            file.append(";" + player.getScore() + ":" + player.getPlace());
+            line += commandDelimiter1
+                    + player.getScore() + commandDelimiter2
+                    + player.getPlace();
         }
+        file.add(line);
     }
     
     public void recordKick(int index) {
-        file.append("kick;" + index);
+        file.add("kick" + commandDelimiter1 + index);
     }
     
     public void sendFile(List<Player> players) {
-        String finishedFile = file.toString();
+        String finishedFile = file.stream()
+                .reduce("", (s1, s2) -> s1 + (s1.isEmpty() ? "" : lineDelimiter) + s2);
         for (Player player : players) {
             player.commandPostGameFile(finishedFile);
         }

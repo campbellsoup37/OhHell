@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import graphics.OhcGraphicsTools;
+import common.GraphicsTools;
 import ml.BasicVector;
 import ml.BootstrapAggregator;
 
@@ -381,7 +381,7 @@ public class PostGamePage extends CanvasInteractable {
         }
         
         graphics.setColor(new Color(255, 255, 255, 180));
-        OhcGraphicsTools.drawBox(graphics, x(), y(), width(), height(), 10);
+        GraphicsTools.drawBox(graphics, x(), y(), width(), height(), 10);
         
         tabs.get(tabSelected).paint(graphics);
         

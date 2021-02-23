@@ -19,7 +19,8 @@ import javax.swing.JRootPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
-import graphics.OhcGraphicsTools;
+import common.FileTools;
+import common.GraphicsTools;
 
 public class OhHellUpdater extends JFrame {
     private static final long serialVersionUID = 1L;
@@ -35,7 +36,7 @@ public class OhHellUpdater extends JFrame {
             graphics.setColor(new Color(175, 255, 175));
             graphics.fillRect(0, 0, (int) (progress * getWidth()), getHeight());
             graphics.setColor(Color.BLACK);
-            OhcGraphicsTools.drawStringJustified(graphics, "Downloading v" + newVersion, getWidth() / 2, getHeight() / 2, 1, 1);
+            GraphicsTools.drawStringJustified(graphics, "Downloading v" + newVersion, getWidth() / 2, getHeight() / 2, 1, 1);
         }
     };
 
@@ -58,7 +59,7 @@ public class OhHellUpdater extends JFrame {
             setTitle("");
             setLayout(null);
             
-            setIconImage(OhcGraphicsTools.loadImage("resources/icon/cw.png", this));
+            setIconImage(FileTools.loadImage("resources/icon/cw.png", this));
             setUndecorated(true);
             getRootPane().setWindowDecorationStyle(JRootPane.NONE);
             

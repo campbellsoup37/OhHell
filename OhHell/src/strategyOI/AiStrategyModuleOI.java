@@ -39,12 +39,6 @@ public class AiStrategyModuleOI extends AiStrategyModule {
         aiTrainer = core.getAiTrainer();
     }
     
-    public void reload(int N, OverallValueLearner ovl, ImmediateValueLearner ivl) {
-        maxH = Math.min(10, 51 / N);
-        this.ovl = ovl;
-        this.ivl = ivl;
-    }
-    
     @Override
     public void makeBid() {
         double[] ps = getOvlPs();

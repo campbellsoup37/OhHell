@@ -52,8 +52,10 @@ import javax.swing.UIManager;
 import core.Card;
 import core.OhHellCore;
 import core.Player;
-import graphics.OhcGraphicsTools;
-import graphics.OhcTextField;
+import core.Recorder;
+import common.FileTools;
+import common.GraphicsTools;
+import common.OhcTextField;
 
 public class GameClient extends JFrame {
     private static final long serialVersionUID = 1L;
@@ -71,7 +73,7 @@ public class GameClient extends JFrame {
     public static final int maxPlayers = 10;
     ///////////////////////////////////
     
-    private final String version = "0.1.5.5";
+    private String version;
     private boolean updateChecked = false;
     private String newVersion;
     
@@ -249,7 +251,7 @@ public class GameClient extends JFrame {
             } else {
                 this.players.add(player);
 //                player.setIndex(this.players.size() - 1);
-                anyDc = anyDc || player.isDisconnected();
+                anyDc = anyDc || player.isDisconnected() && !player.isKicked();
             }
             if (player.getId().equals(username)) {
                 myPlayer = player;
@@ -313,7 +315,7 @@ public class GameClient extends JFrame {
                     oldPlayer.setDisconnected(newPlayer.isDisconnected());
                     oldPlayer.setKicked(newPlayer.isKicked());
                     oldPlayer.setKibitzer(newPlayer.isKibitzer());
-                    anyDc = anyDc || newPlayer.isDisconnected();
+                    anyDc = anyDc || newPlayer.isDisconnected() && !newPlayer.isKicked();
                 }
             }
         }
@@ -336,7 +338,10 @@ public class GameClient extends JFrame {
         }
     }
     
-    public void sendIdToServer() {
+    public void sendIdToServer(String serverVersion) {
+        if (!serverVersion.equals(version)) {
+            notify("Your version (" + version + ") does not match the server version (" + serverVersion + ").");
+        }
         sendCommandToServer("ID:" + "STRING " + username.length() + ":" + username);
     }
     
@@ -425,15 +430,13 @@ public class GameClient extends JFrame {
     
     public void restartRound() {
         for (ClientPlayer player : players) {
-            player.setBid(0);
-            player.setTaken(0);
-            player.resetTrick();
             if (player.getBids().size() >= roundNumber + 1) {
                 player.getBids().remove(roundNumber);
             }
         }
 
         canvas.showMessageOnTimer("Someone was kicked. Redealing this round.", false);
+        canvas.clearRoundOnTimer();
     }
     
     public void notify(String text) {
@@ -529,9 +532,9 @@ public class GameClient extends JFrame {
                     UIManager.getSystemLookAndFeelClassName());
             setTitle("Oh Hell");
             
-            setIconImage(OhcGraphicsTools.loadImage("resources/icon/cw.png", this));
+            setIconImage(FileTools.loadImage("resources/icon/cw.png", this));
             
-            BufferedImage tableImg = OhcGraphicsTools.loadImage("resources/client/table.jpg", this);
+            BufferedImage tableImg = FileTools.loadImage("resources/client/table.jpg", this);
             
             aiSpeedOption.add(aiSpeedOptionSlider);
 
@@ -771,15 +774,15 @@ public class GameClient extends JFrame {
                 @Override
                 public void customPaint(Graphics graphics) {
                     graphics.setColor(new Color(255, 255, 255, 180));
-                    OhcGraphicsTools.drawBox(graphics, 200, 80, 285, 320, 20);
+                    GraphicsTools.drawBox(graphics, 200, 80, 285, 320, 20);
                     
-                    graphics.setFont(OhcGraphicsTools.fontTitle);
-                    OhcGraphicsTools.drawStringJustified(graphics, "Oh Hell", 342, 100, 1, 2);
+                    graphics.setFont(GraphicsTools.fontTitle);
+                    GraphicsTools.drawStringJustified(graphics, "Oh Hell", 342, 100, 1, 2);
                     
-                    graphics.setFont(OhcGraphicsTools.fontBold);
-                    OhcGraphicsTools.drawStringJustified(graphics, "v" + version, 610, 460, 0, 1);
+                    graphics.setFont(GraphicsTools.fontBold);
+                    GraphicsTools.drawStringJustified(graphics, "v" + version, 610, 460, 0, 1);
                     
-                    graphics.setFont(OhcGraphicsTools.font);
+                    graphics.setFont(GraphicsTools.font);
                 }
             };
             
@@ -909,14 +912,14 @@ public class GameClient extends JFrame {
                 @Override
                 public void customPaint(Graphics graphics) {
                     graphics.setColor(new Color(255, 255, 255, 180));
-                    OhcGraphicsTools.drawBox(graphics, 200, 80, 285, 320, 20);
+                    GraphicsTools.drawBox(graphics, 200, 80, 285, 320, 20);
                     graphics.setColor(new Color(255, 255, 255, 210));
-                    OhcGraphicsTools.drawBox(graphics, getWidth() / 2 + 20, 155, 80, 30, 20);
+                    GraphicsTools.drawBox(graphics, getWidth() / 2 + 20, 155, 80, 30, 20);
                     
-                    graphics.setFont(OhcGraphicsTools.fontBold);
+                    graphics.setFont(GraphicsTools.fontBold);
                     graphics.setColor(Color.BLACK);
-                    OhcGraphicsTools.drawStringJustified(graphics, "Robots:", getWidth() / 2 - 20, 170, 2, 1);
-                    OhcGraphicsTools.drawStringJustified(graphics, numRobots + "", getWidth() / 2 + 60, 170, 1, 1);
+                    GraphicsTools.drawStringJustified(graphics, "Robots:", getWidth() / 2 - 20, 170, 2, 1);
+                    GraphicsTools.drawStringJustified(graphics, numRobots + "", getWidth() / 2 + 60, 170, 1, 1);
                 }
             };
             
@@ -1083,13 +1086,13 @@ public class GameClient extends JFrame {
                 @Override
                 public void customPaint(Graphics graphics) {
                     graphics.setColor(new Color(255, 255, 255, 180));
-                    OhcGraphicsTools.drawBox(graphics, 200, 80, 285, 320, 20);
+                    GraphicsTools.drawBox(graphics, 200, 80, 285, 320, 20);
 
-                    graphics.setFont(OhcGraphicsTools.fontBold);
+                    graphics.setFont(GraphicsTools.fontBold);
                     graphics.setColor(Color.BLACK);
-                    OhcGraphicsTools.drawStringJustified(graphics, "Username:", 290, 120, 2, 1);
-                    OhcGraphicsTools.drawStringJustified(graphics, "Server:", 290, 170, 2, 1);
-                    OhcGraphicsTools.drawStringJustified(graphics, "Port:", 290, 220, 2, 1);
+                    GraphicsTools.drawStringJustified(graphics, "Username:", 290, 120, 2, 1);
+                    GraphicsTools.drawStringJustified(graphics, "Server:", 290, 170, 2, 1);
+                    GraphicsTools.drawStringJustified(graphics, "Port:", 290, 220, 2, 1);
                 }
             };
             
@@ -1226,6 +1229,9 @@ public class GameClient extends JFrame {
             });
             setDefaultCloseOperation(EXIT_ON_CLOSE);
             changeState(ClientState.MAIN_MENU);
+            
+            BufferedReader versionReader = FileTools.getInternalFile("version", this);
+            version = versionReader.readLine();
             checkForUpdates();
             
             /*ClientPlayer myPlayer = new ClientPlayer();
@@ -1538,6 +1544,10 @@ public class GameClient extends JFrame {
         changeState(ClientState.LOGIN_MENU);
     }
     
+    public String getUsername() {
+        return username;
+    }
+    
     public void setPostGameTrumps(List<Card> trumps) {
         canvas.setTrumps(trumps);
     }
@@ -1550,12 +1560,8 @@ public class GameClient extends JFrame {
         players.get(index).addPostGameHand(hand);
     }
     
-    public void postGame() {
-        //canvas.showPostGameOnTimer();
-    }
-    
     public void receivePostGameFile(String file) {
-        postGameFile = Arrays.asList(file.split("\\|"));
+        postGameFile = Arrays.asList(file.split(Recorder.splitPreceder + Recorder.lineDelimiterRegex));
         canvas.loadPostGameOnTimer(postGameFile);
     }
     

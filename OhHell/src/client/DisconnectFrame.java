@@ -9,7 +9,7 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JScrollPane;
 
-import graphics.OhcGraphicsTools;
+import common.FileTools;
 
 public class DisconnectFrame extends JFrame {
     private static final long serialVersionUID = 1L;
@@ -31,7 +31,7 @@ public class DisconnectFrame extends JFrame {
     
     public void execute() {
         setTitle("Message");
-        setIconImage(OhcGraphicsTools.loadImage("resources/cw.png", this));
+        setIconImage(FileTools.loadImage("resources/cw.png", this));
         message.setBounds(20, 10, 500, 20);
         add(message);
         

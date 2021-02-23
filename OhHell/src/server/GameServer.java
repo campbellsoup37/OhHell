@@ -4,6 +4,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -16,7 +17,6 @@ import java.util.stream.Collectors;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
@@ -32,21 +32,21 @@ import javax.swing.UnsupportedLookAndFeelException;
 import core.Card;
 import core.OhHellCore;
 import core.Player;
-import core.Recorder;
-import graphics.OhcButton;
-import graphics.OhcGraphicsTools;
-import graphics.OhcScrollPane;
-import graphics.OhcTextField;
+import common.OhcButton;
+import common.FileTools;
+import common.OhcScrollPane;
+import common.OhcTextField;
 
 public class GameServer extends JFrame {
     private static final long serialVersionUID = 1L;
     
     private final int robotDelay = 0;
     
+    private String version;
+    
     private JLabel portLabel = new JLabel("Port:");
     private JTextField portField = new OhcTextField("Port");
     private JButton goButton = new OhcButton("Go");
-    private JCheckBox recordCheckBox = new JCheckBox("Record");
     private JTextArea logTextArea = new JTextArea();
     private JScrollPane logScrollPane = new OhcScrollPane(logTextArea,
             JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
@@ -72,8 +72,6 @@ public class GameServer extends JFrame {
     
     private Random random = new Random();
     
-    private Recorder recorder;
-    
     public GameServer() {
         
     }
@@ -90,9 +88,8 @@ public class GameServer extends JFrame {
                 | UnsupportedLookAndFeelException e1) {
             e1.printStackTrace();
         }
-        setTitle("Oh Hell Server");
         
-        setIconImage(OhcGraphicsTools.loadImage("resources/icon/cw.png", this));
+        setIconImage(FileTools.loadImage("resources/icon/cw.png", this));
         
         setSize(640, 480);
         setResizable(false);
@@ -116,7 +113,6 @@ public class GameServer extends JFrame {
             }
         });
         northPanel.add(goButton);
-        northPanel.add(recordCheckBox);
         add(northPanel, BorderLayout.NORTH);
         
         logTextArea.setEditable(false);
@@ -150,6 +146,14 @@ public class GameServer extends JFrame {
         });
         eastPanel.add(kickButton);
         add(eastPanel, BorderLayout.EAST);
+
+        BufferedReader versionReader = FileTools.getInternalFile("version", this);
+        try {
+            version = versionReader.readLine();
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        }
+        setTitle("Oh Hell Server (v" + version + ")");
         
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
@@ -158,16 +162,8 @@ public class GameServer extends JFrame {
         });
     }
     
-    public boolean recording() {
-        return recordCheckBox.isSelected();
-    }
-    
     public void goPressed() {
         try {
-            if (recording()) {
-                recorder = new Recorder();
-            }
-            
             core = new OhHellCore(true);
             core.setPlayers(players);
             core.setKibitzers(kibitzers);
@@ -217,9 +213,6 @@ public class GameServer extends JFrame {
     }
 
     public void connectPlayer(Socket socket) {
-        String name = "Player " + random.nextInt(10000);
-        logMessage("Player connected: " + name + " at " + socket.getInetAddress());
-        
         // TODO Make a better fix for the issue of someone disconnecting
         // and then having a different address.
         List<Player> dcPlayersAtAddress = players.stream()
@@ -229,9 +222,13 @@ public class GameServer extends JFrame {
                 .collect(Collectors.toList());
         
         PlayerThread thread = new PlayerThread(socket, this, dcPlayersAtAddress);
-        HumanPlayer player = new HumanPlayer(name, thread);
+        HumanPlayer player = new HumanPlayer(thread);
         thread.setPlayer(player);
         thread.start();
+    }
+    
+    public void requestId(HumanPlayer player) {
+        player.commandIdRequest(version);
     }
     
     public void joinPlayer(HumanPlayer player, String id) {
@@ -267,6 +264,12 @@ public class GameServer extends JFrame {
                 reconnect = true;
                 break;
             }
+        }
+        
+        if (reconnect) {
+            logMessage("Player reconnected: " + player.getId() + " at " + player.getThread().getSocket().getInetAddress());
+        } else {
+            logMessage("Player connected: " + player.getId() + " at " + player.getThread().getSocket().getInetAddress());
         }
         
         if (gameStarted()) {
@@ -443,9 +446,7 @@ public class GameServer extends JFrame {
         
         // Restart round if kicked
         if (kick && gameStarted() && !player.isKibitzer()) {
-            if (recording()) {
-                recorder.recordKick(player.getIndex());
-            }
+            core.recordKick(player.getIndex());
             core.updateRounds();
             core.restartRound();
         }

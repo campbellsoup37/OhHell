@@ -9,6 +9,8 @@ import java.util.Random;
 import java.util.stream.Collectors;
 
 public class OhHellCore {
+    private final boolean verbose = false;
+    
     private List<Player> players = new ArrayList<Player>();
     private List<Player> kibitzers = new ArrayList<Player>();
     
@@ -26,6 +28,7 @@ public class OhHellCore {
     
     private List<RoundDetails> rounds;
     private int roundNumber;
+    private int playNumber;
     private int leader;
     private int turn;
     
@@ -142,24 +145,9 @@ public class OhHellCore {
         
         rounds = new ArrayList<>();
         roundNumber = 0;
-
-//        rounds.add(new RoundDetails(10));
-//        rounds.add(new RoundDetails(2));
-//        rounds.add(new RoundDetails(6));
-//        rounds.add(new RoundDetails(5));
-//        rounds.add(new RoundDetails(4));
+        playNumber = 0;
         
-        int numDecks = doubleDeck ? 2 : 1;
-        int maxHand = Math.min(10, (numDecks * 52 - 1) / players.size());
-        for (int i = maxHand; i >= 2; i--) {
-            rounds.add(new RoundDetails(i));
-        }
-        for (int i = 0; i < players.size(); i++) {
-            rounds.add(new RoundDetails(1));
-        }
-        for (int i = 2; i <= maxHand; i++) {
-            rounds.add(new RoundDetails(i));
-        }
+        buildRounds();
         updateRounds();
         
         for (int i = 0; i < players.size(); i++) {
@@ -175,6 +163,33 @@ public class OhHellCore {
         trumps = new ArrayList<>(rounds.size());
         
         deal();
+    }
+    
+    public List<RoundDetails> getRounds() {
+        return rounds;
+    }
+    
+    public void buildRounds() {
+        rounds.add(new RoundDetails(2));
+        rounds.add(new RoundDetails(2));
+        rounds.add(new RoundDetails(2));
+//        rounds.add(new RoundDetails(10));
+//        rounds.add(new RoundDetails(2));
+//        rounds.add(new RoundDetails(6));
+//        rounds.add(new RoundDetails(5));
+//        rounds.add(new RoundDetails(4));
+        
+//        int numDecks = doubleDeck ? 2 : 1;
+//        int maxHand = Math.min(10, (numDecks * 52 - 1) / players.size());
+//        for (int i = maxHand; i >= 2; i--) {
+//            rounds.add(new RoundDetails(i));
+//        }
+//        for (int i = 0; i < players.size(); i++) {
+//            rounds.add(new RoundDetails(1));
+//        }
+//        for (int i = 2; i <= maxHand; i++) {
+//            rounds.add(new RoundDetails(i));
+//        }
     }
     
     public void updateRounds() {
@@ -237,6 +252,10 @@ public class OhHellCore {
         return roundNumber;
     }
     
+    public int getPlayNumber() {
+        return playNumber;
+    }
+    
     public List<List<Card>> getNextHands() {
         int handSize = rounds.get(roundNumber).getHandSize();
         return deck.deal(players.size(), handSize);
@@ -247,7 +266,14 @@ public class OhHellCore {
         List<List<Card>> hands = getNextHands();
         
         for (int i = 0; i < hands.size() - 1; i++) {
-            players.get(i).setHand(hands.get(i));
+            if (!players.get(i).isKicked()) {
+                players.get(i).setHand(hands.get(i));
+            } else {
+                players.get(i).setHand(
+                        hands.get(i).stream()
+                        .map(c -> new Card())
+                        .collect(Collectors.toList()));
+            }
         }
         trump = hands.get(players.size()).get(0);
         trumps.add(trump);
@@ -295,6 +321,9 @@ public class OhHellCore {
     }
     
     public void incomingBid(Player player, int bid) {
+        if (verbose) {
+            System.out.println(player.getId() + " bid " + bid);
+        }
         if (bid < 0 || bid > player.getHand().size()) {
             System.out.println("ERROR: Player \"" + player.getName() + "\" bid " + bid + " with a hand size of " + player.getHand().size() + ".");
         }
@@ -389,6 +418,9 @@ public class OhHellCore {
     }
     
     public void incomingPlay(Player player, Card card) {
+        if (verbose) {
+            System.out.println(player.getId() + " played " + card);
+        }
         player.setTrick(card);
         player.removeCard(card);
         
@@ -431,6 +463,8 @@ public class OhHellCore {
                         turn,
                         players.stream().map(Player::getTrick).collect(Collectors.toList()));
             }
+            
+            playNumber++;
             
             if (!players.get(nextUnkicked(turn)).getHand().isEmpty()) {
                 communicateTurn();
@@ -475,6 +509,7 @@ public class OhHellCore {
         
         rounds.get(roundNumber).setRoundOver();
         roundNumber++;
+        playNumber = 0;
         if (roundNumber < rounds.size()) {
             deal();
         } else {
@@ -517,7 +552,7 @@ public class OhHellCore {
     
     public void restartRound() {
         if (aiKernel.hasAiPlayers()) {
-            aiKernel.reloadAiStrategyModules((int) players.stream().filter(p -> !p.isKicked()).count());
+            reloadAiStrategyModules((int) players.stream().filter(p -> !p.isKicked()).count());
         }
         for (Player player : players) {
             player.commandRedeal();
@@ -526,6 +561,10 @@ public class OhHellCore {
             player.commandRedeal();
         }
         deal();
+    }
+    
+    public void reloadAiStrategyModules(int N) {
+        aiKernel.reloadAiStrategyModules(N, null);
     }
     
     public int trickWinner() {
@@ -563,6 +602,12 @@ public class OhHellCore {
     public void processUndoBid(Player player) {
         Player nextPlayer = players.get(nextUnkicked(player.getIndex()));
         if (!nextPlayer.hasBid() || player.getIndex() == getDealer() && nextPlayer.getTrick().isEmpty()) {
+            if (state.equals("PLAYING")) {
+                state = "BIDDING";
+                if (record) {
+                    recorder.unrecordBids();
+                }
+            }
             turn = player.getIndex();
             player.removeBid();
             for (Player p : players) {
@@ -606,7 +651,7 @@ public class OhHellCore {
     }
     
     public void processClaim(Player player) {
-        if (!winningCold(player) && players.stream().anyMatch(Player::isHuman)) {
+        if (!winningCold(player) && players.stream().anyMatch(p -> !p.isHuman())) {
             player.commandClaimResult(false);
         } else {
             player.setHandRevealed(true);
@@ -629,22 +674,29 @@ public class OhHellCore {
             player.setAcceptedClaim(true);
             boolean fullAccept = players.stream().filter(p -> !p.hasAcceptedClaim() && !p.isKicked()).count() == 0;
             if (fullAccept) {
-                int remainingTricks = players.get(leader).getHand().size();
-                if (!players.get(leader).getTrick().isEmpty()) {
-                    remainingTricks++;
-                }
-                for (Player p : players) {
-                    if (p.isClaiming()) {
-                        for (int i = 0; i < remainingTricks; i++) {
-                            p.incTaken();
-                        }
-                    }
-                    p.clearTrick();
-                    p.commandClaimResult(true);
-                }
-                doNextRound();
+                makeAcceptedClaim(player);
             }
         }
+    }
+    
+    public void makeAcceptedClaim(Player player) {
+        int remainingTricks = players.get(leader).getHand().size();
+        if (!players.get(leader).getTrick().isEmpty()) {
+            remainingTricks++;
+        }
+        for (Player p : players) {
+            if (p.isClaiming()) {
+                for (int i = 0; i < remainingTricks; i++) {
+                    p.incTaken();
+                }
+            }
+            p.clearTrick();
+            p.commandClaimResult(true);
+        }
+        if (record) {
+            recorder.recordClaim(player.getIndex());
+        }
+        doNextRound();
     }
     
     public void sendChat(String text) {
@@ -658,5 +710,11 @@ public class OhHellCore {
     
     public void pokePlayer() {
         players.get(turn).commandPoke();
+    }
+    
+    public void recordKick(int index) {
+        if (record) {
+            recorder.recordKick(index);
+        }
     }
 }

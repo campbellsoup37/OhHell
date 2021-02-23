@@ -11,8 +11,9 @@
         </sealing>
     </manifest>
     <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
-        <javaElement handleIdentifier="=OhHell/src&lt;updater"/>
         <folder path="/OhHell/resources/icon"/>
-        <javaElement handleIdentifier="=OhHell/src&lt;graphics"/>
+        <file path="/OhHell/version"/>
+        <javaElement handleIdentifier="=OhHell/src&lt;common"/>
+        <javaElement handleIdentifier="=OhHell/src&lt;updater"/>
     </selectedElements>
 </jardesc>

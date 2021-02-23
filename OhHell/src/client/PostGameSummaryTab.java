@@ -8,7 +8,7 @@ import java.util.Hashtable;
 import java.util.List;
 
 import core.Card;
-import graphics.OhcGraphicsTools;
+import common.GraphicsTools;
 import strategyOI.AiStrategyModuleOI;
 
 public class PostGameSummaryTab extends CanvasInteractable {
@@ -53,7 +53,7 @@ public class PostGameSummaryTab extends CanvasInteractable {
 //            double skill = 0;
             double luck = 0;
             double totalDiff = 0;
-            for (int i = 0; i < rounds.size(); i++) {
+            for (int i = 0; i < rounds.size() && i != player.getKickedAtRound(); i++) {
                 double delta = player.getBids().get(i) - player.getTakens().get(i);
                 double diff = player.getDiffs().get(i);
                 int cannotBid = rounds.get(i)[1];
@@ -100,13 +100,13 @@ public class PostGameSummaryTab extends CanvasInteractable {
                 playerDeltas.set((int) regDelta, playerDeltas.get((int) regDelta) + 1);
                 totalDiff += diff;// / rounds.size();
                 
-                for (int k = 0; k < rounds.get(i)[1] - 1; k++) {
+                for (int k = 0; k < rounds.get(i)[2] - 1; k++) {
                     Hashtable<Card, Double> probs = player.getMakingProbs().get(i).get(k);
                     double myProb = 0;
                     double maxProb = 0;
                     for (Card card : probs.keySet()) {
                         maxProb = Math.max(probs.get(card), maxProb);
-                        if (card.equals(player.getPlays().get(i).get(k))) {
+                        if (card.equals(player.getPlays().get(i).get(k).getCard())) {
                             myProb = probs.get(card);
                         }
                     }
@@ -123,7 +123,7 @@ public class PostGameSummaryTab extends CanvasInteractable {
                 
                 @Override
                 public int y() {
-                    int h = (tab.height() - trumpRowHeight - 2 * margin - buttonSize) / players.size();
+                    int h = (tab.height() - trumpRowHeight - 3 * margin - 2 * buttonSize) / players.size();
                     return tab.y() + trumpRowHeight + jF * h;
                 }
                 
@@ -134,7 +134,7 @@ public class PostGameSummaryTab extends CanvasInteractable {
                 
                 @Override
                 public int height() {
-                    int h = (tab.height() - trumpRowHeight - 2 * margin - buttonSize) / players.size();
+                    int h = (tab.height() - trumpRowHeight - 3 * margin - 2 * buttonSize) / players.size();
                     return h;
                 }
             };
@@ -155,103 +155,103 @@ public class PostGameSummaryTab extends CanvasInteractable {
     @Override
     public void paint(Graphics graphics) {
         graphics.setColor(Color.WHITE);
-        OhcGraphicsTools.drawBox(graphics, x(), y(), width(), height(), 10);
+        GraphicsTools.drawBox(graphics, x(), y(), width(), height(), 10);
         
-        graphics.setFont(OhcGraphicsTools.fontSmall);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        graphics.setFont(GraphicsTools.fontSmall);
+        GraphicsTools.drawStringJustified(graphics, 
                 "Score", 
                 x() + scoreColumn * width(), 
                 y() + trumpRowHeight / 2, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Bids - tooks", 
                 x() + deltaColumn * width(), 
                 y() + trumpRowHeight / 2, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Bidding", 
                 x() + bSkillColumn * width(), 
                 y() + trumpRowHeight / 3, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Performance", 
                 x() + bSkillColumn * width(), 
                 y() + 2 * trumpRowHeight / 3, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Playing", 
                 x() + pSkillColumn * width(), 
                 y() + trumpRowHeight / 3, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Performance", 
                 x() + pSkillColumn * width(), 
                 y() + 2 * trumpRowHeight / 3, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Total", 
                 x() + luckColumn * width(), 
                 y() + trumpRowHeight / 3, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Luck", 
                 x() + luckColumn * width(), 
                 y() + 2 * trumpRowHeight / 3, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Total", 
                 x() + diffColumn * width(), 
                 y() + trumpRowHeight / 3, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Difficulty", 
                 x() + diffColumn * width(), 
                 y() + 2 * trumpRowHeight / 3, 
                 1, 1);
-        graphics.setFont(OhcGraphicsTools.font);
-        int h = (height() - trumpRowHeight - 2 * margin - buttonSize) / players.size();
+        graphics.setFont(GraphicsTools.font);
+        double h = ((double) height() - trumpRowHeight - 3 * margin - 2 * buttonSize) / players.size();
         for (int i = 0; i <= players.size(); i++) {
             graphics.setColor(new Color(192, 192, 192));
             graphics.drawLine(
                     x() + margin, 
-                    y() + trumpRowHeight + i * h, 
+                    (int) (y() + trumpRowHeight + i * h), 
                     x() + width() - margin, 
-                    y() + trumpRowHeight + i * h);
+                    (int) (y() + trumpRowHeight + i * h));
             if (i < players.size()) {
                 ClientPlayer player = players.get(i);
                 graphics.setColor(Color.BLACK);
-                OhcGraphicsTools.drawStringJustified(graphics, 
-                        OhcGraphicsTools.fitString(graphics, player.getName(), 
+                GraphicsTools.drawStringJustified(graphics, 
+                        GraphicsTools.fitString(graphics, player.getName(), 
                                 width() / 4 - 2 * margin + 25), 
                         x() + 2 * margin + 25, 
                         y() + trumpRowHeight + i * h + h / 2, 
                         0, 1);
                 
-                OhcGraphicsTools.drawStringJustified(graphics, 
+                GraphicsTools.drawStringJustified(graphics, 
                         player.getScore() + "", 
                         x() + scoreColumn * width(), 
                         y() + trumpRowHeight + i * h + h / 2, 
                         1, 1);
                 
-                OhcGraphicsTools.drawStringJustified(graphics, 
+                GraphicsTools.drawStringJustified(graphics, 
                         players.get(i).isHuman() ? String.format("%.1f", bidSkills.get(i)) : "-", 
                         x() + bSkillColumn * width(), 
                         y() + trumpRowHeight + i * h + h / 2, 
                         1, 1);
                 
-                OhcGraphicsTools.drawStringJustified(graphics, 
+                GraphicsTools.drawStringJustified(graphics, 
                         players.get(i).isHuman() ? String.format("%.1f", playSkills.get(i)) : "-", 
                         x() + pSkillColumn * width(), 
                         y() + trumpRowHeight + i * h + h / 2, 
                         1, 1);
                 
-                OhcGraphicsTools.drawStringJustified(graphics, 
+                GraphicsTools.drawStringJustified(graphics, 
                         String.format("%.1f", lucks.get(i)), 
                         x() + luckColumn * width(), 
                         y() + trumpRowHeight + i * h + h / 2, 
                         1, 1);
                 
-                OhcGraphicsTools.drawStringJustified(graphics, 
+                GraphicsTools.drawStringJustified(graphics, 
                         String.format("%.1f", totalDiffs.get(i)), 
                         x() + diffColumn * width(), 
                         y() + trumpRowHeight + i * h + h / 2, 

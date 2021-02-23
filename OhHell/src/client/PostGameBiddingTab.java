@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import core.Card;
-import graphics.OhcGraphicsTools;
+import common.GraphicsTools;
 
 public class PostGameBiddingTab extends CanvasInteractable {
     private final int trumpRowHeight = 35;
@@ -28,9 +28,6 @@ public class PostGameBiddingTab extends CanvasInteractable {
     private int roundSelected = 0;
     
     private List<List<CanvasScorePlot>> qPlots;
-    
-    private List<List<Integer>> aiBids;
-    private List<List<Double>> diffs;
     
     public PostGameBiddingTab(GameCanvas canvas, List<ClientPlayer> players, List<int[]> rounds) {
         this.canvas = canvas;
@@ -89,6 +86,11 @@ public class PostGameBiddingTab extends CanvasInteractable {
                 ticks.add(k + "");
             }
             for (int j = 0; j < players.size(); j++) {
+                if (players.get(j).getKickedAtRound() != -1 && i >= players.get(j).getKickedAtRound()) {
+                    qPlots.get(i).add(null);
+                    continue;
+                }
+                
                 final int jF = j;
                 qPlots.get(i).add(new CanvasScorePlot() {
                     @Override
@@ -98,7 +100,7 @@ public class PostGameBiddingTab extends CanvasInteractable {
                     
                     @Override
                     public int y() {
-                        int h = (tab.height() - trumpRowHeight - 2 * margin - buttonSize) / players.size();
+                        int h = (tab.height() - trumpRowHeight - 3 * margin - 2 * buttonSize) / players.size();
                         return tab.y() + trumpRowHeight + jF * h;
                     }
                     
@@ -109,7 +111,7 @@ public class PostGameBiddingTab extends CanvasInteractable {
                     
                     @Override
                     public int height() {
-                        int h = (tab.height() - trumpRowHeight - 2 * margin - buttonSize) / players.size();
+                        int h = (tab.height() - trumpRowHeight - 3 * margin - 2 * buttonSize) / players.size();
                         return h;
                     }
                     
@@ -144,7 +146,7 @@ public class PostGameBiddingTab extends CanvasInteractable {
     @Override
     public void paint(Graphics graphics) {
         graphics.setColor(Color.WHITE);
-        OhcGraphicsTools.drawBox(graphics, x(), y(), width(), height(), 10);
+        GraphicsTools.drawBox(graphics, x(), y(), width(), height(), 10);
         
         graphics.setColor(Color.BLACK);
         /*canvas.drawCard(graphics, canvas.getTrumps().get(roundSelected), 
@@ -152,61 +154,61 @@ public class PostGameBiddingTab extends CanvasInteractable {
                 y() + trumpRowHeight / 2 + 30, 
                 GameCanvas.smallCardScale, true, false,
                 y() + trumpRowHeight);*/
-        graphics.setFont(OhcGraphicsTools.fontSmall);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        graphics.setFont(GraphicsTools.fontSmall);
+        GraphicsTools.drawStringJustified(graphics, 
                 "Trump", 
                 x() + trumpColumn * width(), 
                 y() + trumpRowHeight / 2, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Hand", 
                 x() + handColumn * width(), 
                 y() + trumpRowHeight / 2, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Predicted distribution", 
                 x() + plotColumn * width(), 
                 y() + trumpRowHeight / 2, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Bid", 
                 x() + bidColumn * width(), 
                 y() + trumpRowHeight / 2, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Took", 
                 x() + tookColumn * width(), 
                 y() + trumpRowHeight / 2, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "AI", 
                 x() + aiBidColumn * width(), 
                 y() + 1 * trumpRowHeight / 3, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Bid", 
                 x() + aiBidColumn * width(), 
                 y() + 2 * trumpRowHeight / 3, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Difficulty", 
                 x() + diffColumn * width(), 
                 y() + 1 * trumpRowHeight / 3, 
                 1, 1);
-        OhcGraphicsTools.drawStringJustified(graphics, 
+        GraphicsTools.drawStringJustified(graphics, 
                 "Score", 
                 x() + diffColumn * width(), 
                 y() + 2 * trumpRowHeight / 3, 
                 1, 1);
-        graphics.setFont(OhcGraphicsTools.font);
-        int h = (height() - trumpRowHeight - 2 * margin - buttonSize) / players.size();
+        graphics.setFont(GraphicsTools.font);
+        double h = ((double) (height() - trumpRowHeight - 3 * margin - 2 * buttonSize) / players.size());
         for (int i = 0; i <= players.size(); i++) {
             graphics.setColor(new Color(192, 192, 192));
             graphics.drawLine(
                     x() + margin, 
-                    y() + trumpRowHeight + i * h, 
+                    (int) (y() + trumpRowHeight + i * h), 
                     x() + width() - margin, 
-                    y() + trumpRowHeight + i * h);
+                    (int) (y() + trumpRowHeight + i * h));
             if (i < players.size()) {
                 ClientPlayer player = players.get(i);
                 /*if (player.getIndex() == rounds.get(roundSelected)[0]) {
@@ -221,13 +223,24 @@ public class PostGameBiddingTab extends CanvasInteractable {
                             y() + trumpRowHeight + i * h + h / 2, 
                             1, 1);
                 }*/
-                graphics.setColor(Color.BLACK);
-                OhcGraphicsTools.drawStringJustified(graphics, 
-                        OhcGraphicsTools.fitString(graphics, player.getName(), 
+                if (player.getKickedAtRound() != -1 && roundSelected >= player.getKickedAtRound()) {
+                    graphics.setColor(Color.RED);
+                } else {
+                    graphics.setColor(Color.BLACK);
+                }
+                GraphicsTools.drawStringJustified(graphics, 
+                        GraphicsTools.fitString(graphics, player.getName(), 
                                 width() / 8 - 3 * margin), 
                         x() + 2 * margin, 
                         y() + trumpRowHeight + i * h + h / 2, 
                         0, 1);
+                graphics.setColor(Color.BLACK);
+                
+                if (player.getKickedAtRound() != -1 && roundSelected >= player.getKickedAtRound()) {
+                    continue;
+                }
+                
+                
                 if (player.getIndex() == rounds.get(roundSelected)[0]) {
                     canvas.drawCard(graphics, 
                             new Card(), 
@@ -260,8 +273,8 @@ public class PostGameBiddingTab extends CanvasInteractable {
                 }
                 
                 graphics.setColor(Color.BLACK);
-                OhcGraphicsTools.drawStringJustified(graphics, 
-                        OhcGraphicsTools.fitString(graphics, 
+                GraphicsTools.drawStringJustified(graphics, 
+                        GraphicsTools.fitString(graphics, 
                                 "" + players.get(i).getBids().get(roundSelected), 
                                 width() / 4 - 2 * margin), 
                         x() + bidColumn * width(),//x() + 3 * width() / 4 + margin, 
@@ -277,16 +290,16 @@ public class PostGameBiddingTab extends CanvasInteractable {
                 } else {
                     graphics.setColor(new Color(255 * (delta - 1) / 3 + 195 * (4 - delta) / 3, 0, 0));
                 }
-                OhcGraphicsTools.drawStringJustified(graphics, 
-                        OhcGraphicsTools.fitString(graphics, 
+                GraphicsTools.drawStringJustified(graphics, 
+                        GraphicsTools.fitString(graphics, 
                                 "" + players.get(i).getTakens().get(roundSelected), 
                                 width() / 4 - 2 * margin), 
                         x() + tookColumn * width(),//x() + 3 * width() / 4 + margin, 
                         y() + trumpRowHeight + i * h + h / 2,//y() + trumpRowHeight + iRelToLeader * h + 2 * h / 5, 
                         1, 1);
                 graphics.setColor(Color.BLACK);
-                OhcGraphicsTools.drawStringJustified(graphics, 
-                        OhcGraphicsTools.fitString(graphics, 
+                GraphicsTools.drawStringJustified(graphics, 
+                        GraphicsTools.fitString(graphics, 
                                 "" + players.get(i).getAiBids().get(roundSelected), 
                                 width() / 4 - 2 * margin), 
                         x() + aiBidColumn * width(),//x() + 3 * width() / 4 + margin, 
@@ -299,7 +312,7 @@ public class PostGameBiddingTab extends CanvasInteractable {
                         0, 1);*/
                 float dScale = (float) ((players.get(i).getDiffs().get(roundSelected) - 1) / 9);
                 graphics.setColor(new Color(dScale, 0.75F * (1 - dScale), 0F));
-                OhcGraphicsTools.drawStringJustified(graphics, 
+                GraphicsTools.drawStringJustified(graphics, 
                         String.format("%.1f", players.get(i).getDiffs().get(roundSelected)), 
                         x() + diffColumn * width(),//x() + 3 * width() / 4 + margin + graphics.getFontMetrics().stringWidth("Difficulty score: "), 
                         y() + trumpRowHeight + i * h + h / 2,//y() + trumpRowHeight + iRelToLeader * h + 4 * h / 5, 
@@ -308,8 +321,23 @@ public class PostGameBiddingTab extends CanvasInteractable {
         }
         
         for (int i = 0; i < players.size(); i++) {
-            qPlots.get(roundSelected).get(i).paint(graphics);
+            if (qPlots.get(roundSelected).get(i) != null) {
+                qPlots.get(roundSelected).get(i).paint(graphics);
+            }
         }
+        
+        graphics.setColor(Color.BLACK);
+        graphics.setFont(GraphicsTools.fontSmall);
+        GraphicsTools.drawStringJustified(graphics, 
+                "Round:", 
+                x() + width() / 2
+                    - (rounds.size() * buttonSize + (rounds.size() - 1) * margin) / 2
+                    - 2 * margin, 
+                y() + height()
+                    - margin
+                    - 0.5 * buttonSize, 
+                2, 1);
+        graphics.setFont(GraphicsTools.font);
         
         for (CanvasButton button : roundButtons) {
             button.paint(graphics);
@@ -321,7 +349,7 @@ public class PostGameBiddingTab extends CanvasInteractable {
         CanvasInteractable ans = super.updateMoused(x, y);
         if (isMoused()) {
             for (CanvasScorePlot plot : qPlots.get(roundSelected)) {
-                CanvasInteractable inter = plot.updateMoused(x, y);
+                CanvasInteractable inter = plot == null ? null : plot.updateMoused(x, y);
                 if (inter != null) {
                     ans = inter;
                 }

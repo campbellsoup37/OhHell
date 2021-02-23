@@ -45,7 +45,7 @@ public class PlayerThread extends Thread {
                                 socket.getOutputStream(), "UTF8"), 
                         true);
             
-            player.commandIdRequest();
+            server.requestId(player);
             
             /*if (!dcPlayersAtAddress.isEmpty()) {
                 String command = dcPlayersAtAddress.stream()

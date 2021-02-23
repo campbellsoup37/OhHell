@@ -24,7 +24,7 @@ import strategyOI.OverallValueLearner;
  * efficient to run this class as a Thread.
  */
 public class AiKernel {
-    AiThread aiThread;
+    private AiThread aiThread;
 
     private OhHellCore core;
     private List<String> firstNames;
@@ -84,8 +84,11 @@ public class AiKernel {
         return aiStrategyModules;
     }
     
-    public void reloadAiStrategyModules(int N) {
-        List<AiStrategyModule> aiStrategyModules = createDefaultAiStrategyModules(N, aiPlayers.size());
+    public void reloadAiStrategyModules(int N, List<AiStrategyModule> aiStrategyModules) {
+        aiPlayers.removeIf(Player::isKicked);
+        if (aiStrategyModules == null) {
+            aiStrategyModules = createDefaultAiStrategyModules(N, aiPlayers.size());
+        }
         for (int i = 0; i < aiPlayers.size(); i++) {
             aiPlayers.get(i).setAiStrategyModule(aiStrategyModules.get(i));
         }

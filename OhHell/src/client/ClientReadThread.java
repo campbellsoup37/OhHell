@@ -68,43 +68,14 @@ public class ClientReadThread extends Thread {
         LinkedList<String> parsedContent = parseCommandContent(content);
         
         if (command.equals("IDREQUEST")) {
-            client.sendIdToServer();
+            client.sendIdToServer(parsedContent.isEmpty() ? "pre-0.1.5.5a" : parsedContent.get(0));
         } else if (command.equals("ADDPLAYERS")) {
             client.addPlayers(contentToPlayers(parsedContent));
         } else if (command.equals("REMOVEPLAYER")) {
             client.removePlayer(parsedContent.get(0));
         } else if (command.equals("UPDATEPLAYERS")) {
             client.updatePlayers(contentToPlayers(parsedContent));
-        }/* else if (command.equals("UPDATEPLAYERS")) {
-            List<ClientPlayer> newPlayers = new ArrayList<>();
-            int myIndex = 0;
-            
-            int params = 7;
-            int numPlayers = parsedContent.size() / params;
-            for (int i = 0; i < numPlayers; i++) {
-                String iname = parsedContent.get(params * i);
-                boolean ihuman = parsedContent.get(params * i + 1).equals("true");
-                boolean ihost = parsedContent.get(params * i + 2).equals("true");
-                boolean idced = parsedContent.get(params * i + 3).equals("true");
-                boolean ikicked = parsedContent.get(params * i + 4).equals("true");
-                boolean ikibitzer = parsedContent.get(params * i + 5).equals("true");
-                boolean imy = parsedContent.get(params * i + 6).equals("true");
-                ClientPlayer player = new ClientPlayer();
-                newPlayers.add(player);
-                player.setIndex(i);
-                player.setName(iname);
-                player.setHuman(ihuman);
-                player.setHost(ihost);
-                player.setDisconnected(idced);
-                player.setKicked(ikicked);
-                player.setKibitzer(ikibitzer);
-                if (imy) {
-                    myIndex = i;
-                }
-            }
-            
-            client.updatePlayersList(newPlayers, myIndex);
-        }*/ else if (command.equals("UPDATEROUNDS")) {
+        } else if (command.equals("UPDATEROUNDS")) {
             List<int[]> rounds = new ArrayList<>();
             int roundNumber = Integer.parseInt(parsedContent.remove());
             
@@ -155,8 +126,6 @@ public class ClientReadThread extends Thread {
             client.reportScores(parsedContent.stream()
                     .map(s -> s.equals("-") ? null : Integer.parseInt(s))
                     .collect(Collectors.toList()));
-        } else if (command.equals("FINALSCORES")) {
-            client.postGame();
         } else if (command.equals("POSTGAMETRUMPS")) {
             client.setPostGameTrumps(parsedContent
                     .stream()

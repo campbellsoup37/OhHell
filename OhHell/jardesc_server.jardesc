@@ -13,11 +13,12 @@
     <selectedElements exportClassFiles="true" exportJavaFiles="false" exportOutputFolder="false">
         <javaElement handleIdentifier="=OhHell/src&lt;core"/>
         <folder path="/OhHell/resources/core"/>
+        <javaElement handleIdentifier="=OhHell/src&lt;common"/>
         <javaElement handleIdentifier="=OhHell/src&lt;ml"/>
         <javaElement handleIdentifier="=OhHell/src&lt;strategyOI"/>
         <javaElement handleIdentifier="=OhHell/src&lt;server"/>
         <folder path="/OhHell/resources/icon"/>
+        <file path="/OhHell/version"/>
         <folder path="/OhHell/resources/models"/>
-        <javaElement handleIdentifier="=OhHell/src&lt;graphics"/>
     </selectedElements>
 </jardesc>
