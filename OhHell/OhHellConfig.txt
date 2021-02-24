@@ -7,3 +7,4 @@ recentaddress = localhost
 recentport = 6066
 playsound = false
 aidelay = 100
+savefilelocation = 

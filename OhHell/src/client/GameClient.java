@@ -771,7 +771,7 @@ public class GameClient extends JFrame {
                             } else if (updateChecked && newVersion.equals(version)) {
                                 return "Version up to date";
                             } else {
-                                return "Download update";
+                                return "Download v" + newVersion;
                             }
                         }
                         

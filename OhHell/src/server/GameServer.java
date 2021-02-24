@@ -4,10 +4,19 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -30,6 +39,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
+import client.GameClient;
 import core.Card;
 import core.OhHellCore;
 import core.Player;
@@ -44,10 +54,13 @@ public class GameServer extends JFrame {
     private final int robotDelay = 0;
     
     private String version;
+    private boolean updateChecked = false;
+    private String newVersion;
     
     private JLabel portLabel = new JLabel("Port:");
     private JTextField portField = new OhcTextField("Port");
     private JButton goButton = new OhcButton("Go");
+    private OhcButton updateButton = new OhcButton("Check for update");
     private JTextArea logTextArea = new JTextArea();
     private JScrollPane logScrollPane = new OhcScrollPane(logTextArea,
             JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
@@ -64,7 +77,7 @@ public class GameServer extends JFrame {
     
     private OhHellCore core;
     
-    private int port;
+    private int port = -1;
     private ServerSocket serverSocket;
     private ConnectionFinder finder;
     
@@ -77,8 +90,10 @@ public class GameServer extends JFrame {
         
     }
     
-    public GameServer(int port) {
-        this.port = port;
+    public GameServer(boolean deleteUpdater) {
+        if (deleteUpdater) {
+            deleteUpdater();
+        }
     }
     
     public void execute() {
@@ -106,7 +121,7 @@ public class GameServer extends JFrame {
         portField.setPreferredSize(new Dimension(200, 40));
         portField.setText("6066");
         northPanel.add(portField);
-        goButton.setPreferredSize(new Dimension(200, 40));
+        goButton.setPreferredSize(new Dimension(153, 40));
         goButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -114,6 +129,14 @@ public class GameServer extends JFrame {
             }
         });
         northPanel.add(goButton);
+        updateButton.setPreferredSize(new Dimension(200, 40));
+        updateButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                updatePressed();
+            }
+        });
+        northPanel.add(updateButton);
         add(northPanel, BorderLayout.NORTH);
         
         logTextArea.setEditable(false);
@@ -161,6 +184,8 @@ public class GameServer extends JFrame {
                 revalidate();
             }
         });
+        
+        checkForUpdates();
     }
     
     public void goPressed() {
@@ -492,8 +517,113 @@ public class GameServer extends JFrame {
         core.requestEndGame(player);
     }
     
+    public void checkForUpdates() {
+        try {
+            BufferedReader versionReader = new BufferedReader(
+                    new InputStreamReader(
+                            new URL("https://raw.githubusercontent.com/campbellsoup37/OhHell/master/OhHell/version")
+                            .openStream()));
+            newVersion = versionReader.readLine();
+            versionReader.close();
+            updateChecked = true;
+            SwingUtilities.invokeLater(new Runnable() {
+                public void run() {
+                    updateButton.setAlert(true);
+                    updateButton.setText("Download v" + newVersion);
+                }
+            });
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public void updatePressed() {
+        System.out.println("UPDATE BUTTON PRESSED");
+        if (!updateChecked) {
+            checkForUpdates();
+        } else {
+            try {
+                downloadUpdater();
+                String path = getDirectory() + "/updater.jar";
+                
+                if (new File(path).exists()) {
+                    String command = "java -jar " 
+                                        + "\"" + path + "\""
+                                        + " \"" + newVersion + "\""
+                                        + " \"OhHellServer.jar\""
+                                        + " \"" + getFileName() + "\"";
+                    System.out.println("RUNNING TERMINAL COMMAND: " + command);
+                    Runtime.getRuntime().exec(command);
+                    dispose();
+                } else {
+                    System.out.println("Error: Failed to download updater.");
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (URISyntaxException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
+    public void downloadUpdater() {
+        try {
+            URL url = new URL("https://raw.githubusercontent.com/campbellsoup37/OhHell/master/OhHell/updater.jar");
+            
+            URLConnection connection = url.openConnection();
+            if (connection instanceof HttpURLConnection) {
+                ((HttpURLConnection) connection).setRequestMethod("GET");
+            }
+            InputStream in = connection.getInputStream();
+            in.close();
+            
+            BufferedInputStream newUpdaterJarInput = new BufferedInputStream(
+                    url.openStream());
+            FileOutputStream newUpdaterJarOutput = new FileOutputStream(getDirectory() + "/updater.jar");
+            
+            byte[] dataBuffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = newUpdaterJarInput.read(dataBuffer, 0, 1024)) != -1) {
+                newUpdaterJarOutput.write(dataBuffer, 0, bytesRead);
+            }
+            
+            newUpdaterJarInput.close();
+            newUpdaterJarOutput.close();
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public void deleteUpdater() {
+        try {
+            new File(getDirectory() + "/updater.jar").delete();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public String getDirectory() throws URISyntaxException {
+        return new File(GameServer.class.getProtectionDomain().getCodeSource()
+                .getLocation().toURI()).getParent();
+    }
+    
+    public String getFileName() throws URISyntaxException {
+        return new File(GameServer.class.getProtectionDomain().getCodeSource()
+                .getLocation().toURI()).getPath();
+    }
+    
     public static void main(String[] args) {
-        GameServer server = new GameServer(-1);
+        boolean deleteUpdater = false;
+        
+        for (String arg : args) {
+            if (arg.equals("-deleteupdater")) {
+                deleteUpdater = true;
+            }
+        }
+        
+        GameServer server = new GameServer(deleteUpdater);
         server.execute();
     }
 }
