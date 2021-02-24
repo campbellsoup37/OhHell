@@ -39,7 +39,6 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
-import client.GameClient;
 import core.Card;
 import core.OhHellCore;
 import core.Player;
@@ -86,17 +85,9 @@ public class GameServer extends JFrame {
     
     private Random random = new Random();
     
-    public GameServer() {
-        
-    }
+    public GameServer() {}
     
-    public GameServer(boolean deleteUpdater) {
-        if (deleteUpdater) {
-            deleteUpdater();
-        }
-    }
-    
-    public void execute() {
+    public void execute(boolean deleteUpdater) {
         try {
             UIManager.setLookAndFeel(
                     UIManager.getSystemLookAndFeelClassName());
@@ -185,6 +176,9 @@ public class GameServer extends JFrame {
             }
         });
         
+        if (deleteUpdater) {
+            deleteUpdater();
+        }
         checkForUpdates();
     }
     
@@ -623,7 +617,7 @@ public class GameServer extends JFrame {
             }
         }
         
-        GameServer server = new GameServer(deleteUpdater);
-        server.execute();
+        GameServer server = new GameServer();
+        server.execute(deleteUpdater);
     }
 }

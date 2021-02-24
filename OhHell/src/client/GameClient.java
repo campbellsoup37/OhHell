@@ -156,11 +156,7 @@ public class GameClient extends JFrame {
     private List<String> postGameFile;
     private StringBuilder postGameFileBuilder;
     
-    public GameClient(boolean deleteUpdater) {
-        if (deleteUpdater) {
-            deleteUpdater();
-        }
-    }
+    public GameClient() {}
     
     public ClientState getClientState() {
         return state;
@@ -542,7 +538,7 @@ public class GameClient extends JFrame {
         canvas.setStatePlayerScoresOnTimer(index, scores);
     }
     
-    public void execute() {
+    public void execute(boolean deleteUpdater) {
         try {
             GameClient thisClient = this;
             
@@ -1273,6 +1269,9 @@ public class GameClient extends JFrame {
             setDefaultCloseOperation(EXIT_ON_CLOSE);
             changeState(ClientState.MAIN_MENU);
             
+            if (deleteUpdater) {
+                deleteUpdater();
+            }
             BufferedReader versionReader = FileTools.getInternalFile("version", this);
             version = versionReader.readLine();
             checkForUpdates();
@@ -1857,7 +1856,7 @@ public class GameClient extends JFrame {
             }
         }
         
-        GameClient client = new GameClient(deleteUpdater);
-        client.execute();
+        GameClient client = new GameClient();
+        client.execute(deleteUpdater);
     }
 }
