@@ -10,6 +10,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
@@ -472,8 +473,19 @@ public class GameServer extends JFrame {
         core.processClaimResponse(player, accept);
     }
     
-    public void sendChat(String text) {
-        core.sendChat(text);
+    public void sendChat(Player sender, String recipient, String text) {
+        List<Player> recips = new LinkedList<>();
+        for (Player player : players) {
+            if (player.getName().equals(recipient)) {
+                recips.add(player);
+            }
+        }
+        for (Player player : kibitzers) {
+            if (player.getName().equals(recipient)) {
+                recips.add(player);
+            }
+        }
+        core.sendChat(sender, recips, text);
     }
     
     public void requestEndGame(Player player) {

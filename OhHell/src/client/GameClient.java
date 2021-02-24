@@ -18,20 +18,26 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
 import java.awt.image.BufferedImage;
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.UnknownHostException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -87,6 +93,7 @@ public class GameClient extends JFrame {
     private Point windowLocationInGame = new Point(0, 0);
     private Dimension windowSizeInGame = new Dimension(1200, 800);
     private boolean windowMaximizedInGame = false;
+    private String saveFileLocation = "";
 
     private boolean connected = false;
     private Socket socket;
@@ -119,6 +126,9 @@ public class GameClient extends JFrame {
     // MAIN_MENU
     private OhcCanvas mainMenuCanvas;
     
+    // UPDATING
+    private OhcCanvas updatingCanvas;
+    
     // SINGLE_PLAYER_MENU
     private OhcCanvas singlePlayerCanvas;
     
@@ -146,7 +156,11 @@ public class GameClient extends JFrame {
     private List<String> postGameFile;
     private StringBuilder postGameFileBuilder;
     
-    public GameClient() {}
+    public GameClient(boolean deleteUpdater) {
+        if (deleteUpdater) {
+            deleteUpdater();
+        }
+    }
     
     public ClientState getClientState() {
         return state;
@@ -164,6 +178,10 @@ public class GameClient extends JFrame {
             setSize(windowSizeMenu);
             setResizable(false);
             stateCanvas = mainMenuCanvas;
+            break;
+        case UPDATING:
+            setSize(new Dimension(200, 50));
+            stateCanvas = updatingCanvas;
             break;
         case SINGLE_PLAYER_MENU:
             setMinimumSize(new Dimension(685, 500));
@@ -534,7 +552,7 @@ public class GameClient extends JFrame {
             
             setIconImage(FileTools.loadImage("resources/icon/cw.png", this));
             
-            BufferedImage tableImg = FileTools.loadImage("resources/client/table.jpg", this);
+            BufferedImage tableImg = FileTools.loadImage("resources/client/tableimage.png", this);
             
             aiSpeedOption.add(aiSpeedOptionSlider);
 
@@ -694,7 +712,11 @@ public class GameClient extends JFrame {
                         public void click() {
                             JFileChooser chooser = new JFileChooser();
                             try {
-                                chooser.setCurrentDirectory(new File(getDirectory()));
+                                if (saveFileLocation.isEmpty() || !(new File(saveFileLocation)).exists()) {
+                                    chooser.setCurrentDirectory(new File(getDirectory()));
+                                } else {
+                                    chooser.setCurrentDirectory(new File(saveFileLocation));
+                                }
                             } catch (URISyntaxException e1) {
                                 e1.printStackTrace();
                             }
@@ -706,6 +728,7 @@ public class GameClient extends JFrame {
                                         lines.add(line);
                                     }
                                     reader.close();
+                                    saveFileLocation = chooser.getCurrentDirectory().getPath();
                                     
                                     postGameFile = lines;
                                     changeState(ClientState.FILE_VIEWER);
@@ -783,6 +806,26 @@ public class GameClient extends JFrame {
                     GraphicsTools.drawStringJustified(graphics, "v" + version, 610, 460, 0, 1);
                     
                     graphics.setFont(GraphicsTools.font);
+                }
+            };
+            
+            updatingCanvas = new OhcCanvas(this) {
+                private static final long serialVersionUID = 1L;
+
+                @Override
+                public void initialize() {
+                    setBackground(tableImg);
+                }
+                
+                @Override
+                public boolean isShown() {
+                    return state == ClientState.UPDATING;
+                }
+                
+                @Override
+                public void customPaint(Graphics graphics) {
+                    GraphicsTools.drawStringJustified(graphics, 
+                            "Updating", getWidth() / 2, getHeight() / 2, 1, 1);
                 }
             };
             
@@ -1234,13 +1277,23 @@ public class GameClient extends JFrame {
             version = versionReader.readLine();
             checkForUpdates();
             
-            /*ClientPlayer myPlayer = new ClientPlayer();
-            myPlayer.setName("test");
-            updatePlayersList(Arrays.asList(myPlayer), 0);*/
-            //canvas.reset();
+            initiatePaintLoop();
         } catch(Exception e) {
             e.printStackTrace();
         }
+    }
+    
+    public void initiatePaintLoop() {
+        new Timer(5, new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent arg0) {
+                SwingUtilities.invokeLater(new Runnable() {
+                    public void run() {
+                        stateCanvas.repaint();
+                    }
+                });
+            }
+        }).start();
     }
     
     public void leaveGame() {
@@ -1443,15 +1496,18 @@ public class GameClient extends JFrame {
         canvas.bePokedOnTimer();
     }
     
-    public void sendChat(String text) {
+    public void sendChat(String recipient, String text) {
         switch (state) {
         case IN_SINGLE_PLAYER_GAME:
         case SINGLE_PLAYER_POST_GAME:
-            core.sendChat(text);
+            core.sendChat(spPlayer, null, text);
             break;
         case IN_MULTIPLAYER_GAME:
         case MULTIPLAYER_POST_GAME:
-            String command = "CHAT:STRING " 
+            String command = "CHAT:"
+                    + (recipient.isEmpty() ? "" : 
+                        "STRING " + recipient.length() + ":" + recipient) + ":"
+                    + "STRING " 
                     + text.toCharArray().length + ":" 
                     + text;
             sendCommandToServer(command);
@@ -1576,10 +1632,19 @@ public class GameClient extends JFrame {
     public void savePostGame() {
         JFileChooser chooser = new JFileChooser();
         try {
-            chooser.setCurrentDirectory(new File(getDirectory()));
+            if (saveFileLocation.isEmpty() || !(new File(saveFileLocation)).exists()) {
+                chooser.setCurrentDirectory(new File(getDirectory()));
+            } else {
+                chooser.setCurrentDirectory(new File(saveFileLocation));
+            }
         } catch (URISyntaxException e1) {
             e1.printStackTrace();
         }
+        int suffix = 1;
+        while (new File(chooser.getCurrentDirectory().getPath() + "/" + defaultFileName(suffix)).exists()) {
+            suffix++;
+        }
+        chooser.setSelectedFile(new File(chooser.getCurrentDirectory().getPath() + "/" + defaultFileName(suffix)));
         if (chooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             try {
                 BufferedWriter writer = new BufferedWriter(new FileWriter(chooser.getSelectedFile()));
@@ -1587,12 +1652,17 @@ public class GameClient extends JFrame {
                     writer.write(line + "\n");
                 }
                 writer.close();
+                saveFileLocation = chooser.getCurrentDirectory().getPath();
             } catch (FileNotFoundException e1) {
                 e1.printStackTrace();
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
         }
+    }
+    
+    public String defaultFileName(int suffix) {
+        return "game_" + LocalDate.now() + "_" + suffix + ".txt";
     }
     
     public boolean soundSelected() {
@@ -1652,6 +1722,8 @@ public class GameClient extends JFrame {
                                 aiSpeedOptionSlider.setValue(1000 - Integer.parseInt(value));
                             }
                         });
+                    } else if (variable.equals("savefilelocation")) {
+                        saveFileLocation = value;
                     }
                 }
             }
@@ -1677,6 +1749,7 @@ public class GameClient extends JFrame {
             configWriter.write("recentport = " + port + "\n");
             configWriter.write("playsound = " + soundOption.isSelected() + "\n");
             configWriter.write("aidelay = " + getRobotDelay() + "\n");
+            configWriter.write("savefilelocation = " + saveFileLocation);
             configWriter.close();
         } catch (IOException | URISyntaxException e) {
             e.printStackTrace();
@@ -1698,13 +1771,27 @@ public class GameClient extends JFrame {
     }
     
     public void updatePressed() {
+        changeState(ClientState.UPDATING);
+        System.out.println("UPDATE BUTTON PRESSED");
         if (!updateChecked) {
             checkForUpdates();
         } else {
             try {
-                dispose();
-                String path = getDirectory();
-                Runtime.getRuntime().exec("java -jar " + path + "/updater.jar " + newVersion);
+                downloadUpdater();
+                String path = getDirectory() + "/updater.jar";
+                
+                if (new File(path).exists()) {
+                    String command = "java -jar " 
+                                        + "\"" + path + "\""
+                                        + " \"" + newVersion + "\""
+                                        + " \"OhHellClient.jar\""
+                                        + " \"" + getFileName() + "\"";
+                    System.out.println("RUNNING TERMINAL COMMAND: " + command);
+                    Runtime.getRuntime().exec(command);
+                    dispose();
+                } else {
+                    notify("Failed to download updater.");
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (URISyntaxException e) {
@@ -1713,13 +1800,64 @@ public class GameClient extends JFrame {
         }
     }
     
+    public void downloadUpdater() {
+        try {
+            URL url = new URL("https://raw.githubusercontent.com/campbellsoup37/OhHell/master/OhHell/updater.jar");
+            
+            URLConnection connection = url.openConnection();
+            if (connection instanceof HttpURLConnection) {
+                ((HttpURLConnection) connection).setRequestMethod("GET");
+            }
+            InputStream in = connection.getInputStream();
+            in.close();
+            
+            BufferedInputStream newUpdaterJarInput = new BufferedInputStream(
+                    url.openStream());
+            FileOutputStream newUpdaterJarOutput = new FileOutputStream(getDirectory() + "/updater.jar");
+            
+            byte[] dataBuffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = newUpdaterJarInput.read(dataBuffer, 0, 1024)) != -1) {
+                newUpdaterJarOutput.write(dataBuffer, 0, bytesRead);
+            }
+            
+            newUpdaterJarInput.close();
+            newUpdaterJarOutput.close();
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public void deleteUpdater() {
+        try {
+            new File(getDirectory() + "/updater.jar").delete();
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+        }
+    }
+    
     public String getDirectory() throws URISyntaxException {
         return new File(GameClient.class.getProtectionDomain().getCodeSource()
                 .getLocation().toURI()).getParent();
     }
     
+    public String getFileName() throws URISyntaxException {
+        return new File(GameClient.class.getProtectionDomain().getCodeSource()
+                .getLocation().toURI()).getPath();
+    }
+    
     public static void main(String[] args) {
-        GameClient client = new GameClient();
+        boolean deleteUpdater = false;
+        
+        for (String arg : args) {
+            if (arg.equals("-deleteupdater")) {
+                deleteUpdater = true;
+            }
+        }
+        
+        GameClient client = new GameClient(deleteUpdater);
         client.execute();
     }
 }

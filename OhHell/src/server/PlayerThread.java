@@ -107,7 +107,7 @@ public class PlayerThread extends Thread {
                 } else if (command.equals("VOTEKICK")) {
                     server.addKickVote(Integer.parseInt(parsedContent.get(0)), player);
                 } else if (command.equals("CHAT")) {
-                    server.sendChat(parsedContent.get(0));
+                    server.sendChat(player, parsedContent.get(0), parsedContent.get(1));
                 } else if (command.equals("POKE")) {
                     server.pokePlayer();
                 } else if (command.equals("PING")) {

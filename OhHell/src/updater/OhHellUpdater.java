@@ -26,6 +26,7 @@ public class OhHellUpdater extends JFrame {
     private static final long serialVersionUID = 1L;
     
     private String newVersion;
+    private String fileOnGithub;
     private String path;
     
     private JPanel loadingBar = new JPanel() {
@@ -42,13 +43,22 @@ public class OhHellUpdater extends JFrame {
 
     private double progress = 0;
     
-    public OhHellUpdater(String newVersion) {
+    public OhHellUpdater(String newVersion, String fileOnGithub, String jarPath) {
         this.newVersion = newVersion;
-        try {
-            path = new File(OhHellUpdater.class.getProtectionDomain().getCodeSource()
-                            .getLocation().toURI()).getParent();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
+        if (!fileOnGithub.isEmpty()) {
+            this.fileOnGithub = fileOnGithub;
+        } else {
+            this.fileOnGithub = "OhHellClient.jar";
+        }
+        if (!jarPath.isEmpty()) {
+            path = jarPath;
+        } else {
+            try {
+                path = new File(OhHellUpdater.class.getProtectionDomain().getCodeSource()
+                                .getLocation().toURI()).getParent() + "/OhHellClient.jar";
+            } catch (URISyntaxException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -80,7 +90,7 @@ public class OhHellUpdater extends JFrame {
     
     public void download() {
         try {
-            URL url = new URL("https://raw.githubusercontent.com/campbellsoup37/OhHell/master/OhHell/OhHellClient.jar");
+            URL url = new URL("https://raw.githubusercontent.com/campbellsoup37/OhHell/master/OhHell/" + fileOnGithub);
             
             URLConnection connection = url.openConnection();
             if (connection instanceof HttpURLConnection) {
@@ -92,7 +102,7 @@ public class OhHellUpdater extends JFrame {
             
             BufferedInputStream newClientJarInput = new BufferedInputStream(
                     url.openStream());
-            FileOutputStream newClientJarOutput = new FileOutputStream(path + "/OhHellClient.jar");
+            FileOutputStream newClientJarOutput = new FileOutputStream(path);
             
             byte[] dataBuffer = new byte[1024];
             int bytesRead;
@@ -115,15 +125,19 @@ public class OhHellUpdater extends JFrame {
     
     public void closeAndRunClient() throws IOException {
         dispose();
-        Runtime.getRuntime().exec("java -jar " + path + "/OhHellClient.jar");
+        Runtime.getRuntime().exec("java -jar \"" + path + "\"" + " -deleteupdater");
     }
     
     public static void main(String[] args) {
         String version = "";
+        String fileOnGithub = "";
+        String jarPath = "";
         if (args.length > 0) {
             version = args[0];
+            fileOnGithub = args[1];
+            jarPath = args[2];
         }
-        OhHellUpdater updater = new OhHellUpdater(version);
+        OhHellUpdater updater = new OhHellUpdater(version, fileOnGithub, jarPath);
         updater.execute();
     }
 }

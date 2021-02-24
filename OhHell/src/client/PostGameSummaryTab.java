@@ -80,9 +80,15 @@ public class PostGameSummaryTab extends CanvasInteractable {
 //                System.out.println("   mean = " + E[player.getBids().get(i)]);
 //                System.out.println("   stdd = " + Math.sqrt(V));
 
-                luck += (player.getScores().get(i) 
-                        - (i > 0 ? player.getScores().get(i - 1) : 0) 
-                        - E[player.getBids().get(i)]) / Math.sqrt(V);
+                // The luck for a hand is the z-score of the number of points received. I cap this
+                // at +-5 because sometimes the AI way underestimates probabilities in the one 
+                // card round that are already low (e.g., the chance of winning with an off-suit
+                // deuce when in first seat, resulting in a z-score of like -30).
+                luck += Math.max(-5, Math.min(5, 
+                        (player.getScores().get(i) 
+                                - (i > 0 ? player.getScores().get(i - 1) : 0) 
+                                - E[player.getBids().get(i)]) / Math.sqrt(V)
+                        ));
                 
 //                double acc = player.getBids().get(i) - player.getAiBids().get(i);
 //                boolean prevented = rounds.get(i)[0] == player.getIndex() 

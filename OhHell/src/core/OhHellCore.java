@@ -699,12 +699,19 @@ public class OhHellCore {
         doNextRound();
     }
     
-    public void sendChat(String text) {
-        for (Player player : players) {
-            player.commandChat(text);
-        }
-        for (Player player : kibitzers) {
-            player.commandChat(text);
+    public void sendChat(Player sender, List<Player> recips, String text) {
+        if (recips == null || recips.isEmpty()) {
+            for (Player player : players) {
+                player.commandChat(sender.getName() + ": " + text);
+            }
+            for (Player player : kibitzers) {
+                player.commandChat(sender.getName() + ": " + text);
+            }
+        } else {
+            sender.commandChat("*" + sender.getName() + " (to " + recips.get(0).getName() + "): " + text);
+            for (Player player : recips) {
+                player.commandChat("*" + sender.getName() + " (to you): " + text);
+            }
         }
     }
     

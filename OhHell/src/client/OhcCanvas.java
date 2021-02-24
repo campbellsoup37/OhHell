@@ -32,6 +32,14 @@ public abstract class OhcCanvas extends JPanel {
         this.background = background;
     }
     
+    public int backgroundCenterX() {
+        return getWidth() / 2;
+    }
+    
+    public int backgroundCenterY() {
+        return getHeight() / 2;
+    }
+    
     public void setInteractables(List<List<? extends CanvasInteractable>> interactables) {
         this.interactables = interactables;
     }
@@ -53,24 +61,33 @@ public abstract class OhcCanvas extends JPanel {
                 false);
         graphics2.setFont(GraphicsTools.font);
         
-        graphics.drawImage(background, 
-                0, 0, 
-                Math.max(getWidth(), background.getWidth()), 
-                Math.max(getHeight(), background.getHeight()), 
-                0, 0, 
-                background.getWidth(), background.getHeight(), null);
+        if (background != null) {
+            double[] ratios = {
+                    (double) backgroundCenterX() * 2 / background.getWidth(),
+                    (double) (getWidth() - backgroundCenterX()) * 2 / background.getWidth(),
+                    (double) backgroundCenterY() * 2 / background.getHeight(),
+                    (double) (getHeight() - backgroundCenterY()) * 2 / background.getHeight()
+            };
+            double scale = 1;
+            for (double ratio : ratios) {
+                scale = Math.max(scale, ratio);
+            }
+            
+            graphics.drawImage(background, 
+                    (int) (backgroundCenterX() - scale * background.getWidth() / 2), 
+                    (int) (backgroundCenterY() - scale * background.getHeight() / 2), 
+                    (int) (backgroundCenterX() + scale * background.getWidth() / 2), 
+                    (int) (backgroundCenterY() + scale * background.getHeight() / 2),
+                    0, 
+                    0, 
+                    background.getWidth(), 
+                    background.getHeight(), 
+                    null);
+        }
         
         customPaint(graphics2);
         
         paintInteractables(graphics2);
-        
-        SwingUtilities.invokeLater(new Runnable() {
-            public void run() {
-                if (isShown()) {
-                    repaint();
-                }
-            }
-        });
     }
     
     public void paintInteractables(Graphics graphics) {

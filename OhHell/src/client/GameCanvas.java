@@ -1,21 +1,29 @@
 package client;
 import java.awt.Color;
+import java.awt.Desktop;
 import java.awt.Graphics;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.sound.sampled.Clip;
+import javax.swing.JEditorPane;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
 import javax.swing.text.DefaultCaret;
 
 import core.AiStrategyModule;
@@ -73,7 +81,19 @@ public class GameCanvas extends OhcCanvas {
     };
     
     public static final int pokeWaitTime = 25000;
+    
+    public static final int maxChatLines = 200;
     ///////////////////////////////////
+    
+    public static final String urlRegex = 
+            "((http:\\/\\/|https:\\/\\/)?(www.)?(([a-zA-Z0-9-]){2,}\\.){1,4}([a-zA-Z]){2,6}(\\/([a-zA-Z-_\\/\\.0-9#:?=&;,]*)?)?)";
+    public static final String[][] htmlReservedChars = {
+            {"&", "&amp;"},
+            {"<", "&lt;"},
+            {">", "&gt;"},
+            {"\"", "&quot;"},
+            {"'", "&apos;"}
+    };
     
     private volatile GameClient client;
     
@@ -101,7 +121,11 @@ public class GameCanvas extends OhcCanvas {
     private List<CanvasButton> kickButtons = new LinkedList<>();
     private List<CanvasButton> buttons = new LinkedList<>();
 
-    private JTextArea chatArea = new JTextArea();
+    private JTextPane chatArea = new JTextPane();
+    private String[] chatLines = new String[maxChatLines];
+    private int chatLinePointer = 0;
+    private List<String> myChatMemo = new ArrayList<>();
+    private int myChatMemoPointer = 0;
     
     private LinkedList<Timer> actionQueue = new LinkedList<>();
     private boolean performingAction = false;
@@ -113,6 +137,7 @@ public class GameCanvas extends OhcCanvas {
     
     private boolean canUndoBid = false;
 
+    private boolean claimBlocked = false;
     private int claimer = -1;
     
     private int dealer = -1;
@@ -182,6 +207,16 @@ public class GameCanvas extends OhcCanvas {
     
     public double getCardHeight(boolean small) {
         return small ? cardWidthSmall * cardHeight / cardWidth : cardHeight;
+    }
+
+    @Override
+    public int backgroundCenterX() {
+        return (getWidth() - 450) / 2;
+    }
+
+    @Override
+    public int backgroundCenterY() {
+        return getHeight() / 2;
     }
     
     @Override
@@ -661,11 +696,58 @@ public class GameCanvas extends OhcCanvas {
     }
     
     public void chat(String text) {
+        addChatLine(formatForHtml(text));
+        refreshChat();
+    }
+    
+    public void addChatLine(String text) {
+        chatLines[chatLinePointer] = text;
+        chatLinePointer = (chatLinePointer + 1) % maxChatLines;
+    }
+    
+    public void refreshChat() {
+        StringBuilder htmlBuilder = new StringBuilder("<html><p style=\"font-family:'Arial'\">");
+        for (int i = 0; i < maxChatLines; i++) {
+            String line = chatLines[(chatLinePointer + i) % maxChatLines];
+            if (line != null && !line.isEmpty()) {
+                htmlBuilder.append(line + "<br />");
+            }
+        }
+        htmlBuilder.append("</p></html>");
+        String html = htmlBuilder.toString();
+        
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-                chatArea.setText(chatArea.getText() + text + "\n");
+                //chatArea.setText(chatArea.getText() + text + "\n");
+                chatArea.setText(html);
             }
         });
+    }
+    
+    public static String formatForHtml(String text) {
+        String[] words = text.split(" ");
+        
+        StringBuilder ans = new StringBuilder();
+        for (String word : words) {
+            if (Pattern.matches(urlRegex, word)) {
+                ans.append(" <a href='" + word + "'>" + escapeHtml(word) + "</a>");
+            } else {
+                ans.append(" " + escapeHtml(word));
+            }
+        }
+        String str = ans.toString();
+        if (!text.isEmpty() && text.charAt(0) == '*') {
+            str = "<i style=\"color:blue\">" + str + "</i>";
+        }
+        return str;
+    }
+    
+    public static String escapeHtml(String text) {
+        String ans = text;
+        for (String[] rep : htmlReservedChars) {
+            ans = ans.replace(rep[0], rep[1]);
+        }
+        return ans;
     }
     
     public void drawCard(Graphics graphics, Card card, double x, double y, double scale, boolean small, 
@@ -1477,12 +1559,15 @@ public class GameCanvas extends OhcCanvas {
             
             @Override
             public boolean isShown() {
-                return state != GameState.PREGAME && state != GameState.POSTGAME;
+                return state != GameState.PREGAME 
+                        && state != GameState.POSTGAME;
             }
             
             @Override
             public boolean isEnabled() {
-                return state == GameState.PLAYING && messageState.equals("UNBLOCKED");
+                return state == GameState.PLAYING 
+                        && messageState.equals("UNBLOCKED")
+                        && !claimBlocked;
             }
             
             @Override
@@ -1749,8 +1834,21 @@ public class GameCanvas extends OhcCanvas {
         };
         
         // Chat areas
-        chatArea.setLineWrap(true);
-        chatArea.setWrapStyleWord(true);
+//        chatArea.setLineWrap(true);
+//        chatArea.setWrapStyleWord(true);
+        chatArea.setContentType("text/html");
+        chatArea.addHyperlinkListener(new HyperlinkListener() {
+            @Override
+            public void hyperlinkUpdate(HyperlinkEvent e) {
+                if (e.getEventType().equals(HyperlinkEvent.EventType.ACTIVATED)) {
+                    try {
+                        Desktop.getDesktop().browse(e.getURL().toURI());
+                    } catch (IOException | URISyntaxException e1) {
+                        e1.printStackTrace();
+                    }
+                }
+            }
+        });
         chatArea.setEditable(false);
         DefaultCaret caret = (DefaultCaret) chatArea.getCaret();
         caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
@@ -1804,12 +1902,61 @@ public class GameCanvas extends OhcCanvas {
         JTextField chatJField = new OhcTextField("Enter text");
         chatJField.addKeyListener(new KeyAdapter() {
             @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_UP) {
+                    myChatMemoPointer = Math.max(0, myChatMemoPointer - 1);
+                    SwingUtilities.invokeLater(new Runnable() {
+                        public void run() {
+                            chatJField.setText(myChatMemo.get(myChatMemoPointer));
+                        }
+                    });
+                } else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
+                    myChatMemoPointer = Math.min(myChatMemo.size(), myChatMemoPointer + 1);
+                    SwingUtilities.invokeLater(new Runnable() {
+                        public void run() {
+                            chatJField.setText(myChatMemoPointer == myChatMemo.size() ? "" : myChatMemo.get(myChatMemoPointer));
+                        }
+                    });
+                }
+            }
+            
+            @Override
             public void keyReleased(KeyEvent e) {
                 try {
+                    String fieldText = chatJField.getText().trim();
                     if (e.getKeyCode() == KeyEvent.VK_ENTER 
-                            && !chatJField.getText().trim().isEmpty()) {
-                        String text = myPlayer.getName() + ": " + chatJField.getText().trim();
-                        client.sendChat(text);
+                            && !fieldText.isEmpty()) {
+                        if (fieldText.charAt(0) == '/') {
+                            String[] commandContent = fieldText.substring(1).split(" ", 2);
+                            String command = commandContent[0];
+                            if (command.equals("bitcoin")) {
+                                addChatLine("<b style=\"color:green\">BITCOIN MODE ENABLED $$</b>");
+                                refreshChat();
+                            } else if (command.equals("w") && commandContent.length == 2) {
+                                String content = commandContent[1].trim();
+                                String name;
+                                String message;
+                                if (content.charAt(0) == '\"') {
+                                    String[] nameMessage = content.split("\"", 3);
+                                    name = nameMessage[1];
+                                    message = nameMessage.length == 3 ? nameMessage[2].trim() : "";
+                                } else {
+                                    String[] nameMessage = content.split(" ", 2);
+                                    name = nameMessage[0];
+                                    message = nameMessage.length == 2 ? nameMessage[1].trim() : "";
+                                }
+                                if (!message.isEmpty()) {
+                                    client.sendChat(name, message);
+                                }
+                            } else if (!command.isEmpty()) {
+                                addChatLine("<b style=\"color:red\">Invalid command</b>");
+                                refreshChat();
+                            }
+                        } else {
+                            client.sendChat("", fieldText);
+                        }
+                        myChatMemo.add(fieldText);
+                        myChatMemoPointer = myChatMemo.size();
                         SwingUtilities.invokeLater(new Runnable() {
                             public void run() {
                                 chatJField.setText("");
@@ -2072,6 +2219,9 @@ public class GameCanvas extends OhcCanvas {
         animatingTaken = false;
         takenTimer = 1;
         canUndoBid = false;
+        messageState = "UNBLOCKED";
+        claimBlocked = false;
+        claimer = -1;
     }
     
     public void initializingOnTimer(boolean immediate) {
@@ -2165,6 +2315,7 @@ public class GameCanvas extends OhcCanvas {
                 trickTaken = true;
                 takenTimer = 0;
                 animatingTaken = true;
+                claimBlocked = false;
             }
             
             @Override
@@ -2184,6 +2335,7 @@ public class GameCanvas extends OhcCanvas {
         new CanvasTimerEntry(0, this, actionQueue, false) {
             @Override
             public void onFirstAction() {
+                claimer = myPlayer.getIndex();
                 client.makeClaim();
             }
         };
@@ -2224,6 +2376,8 @@ public class GameCanvas extends OhcCanvas {
                         player.setHand(new LinkedList<>());
                     }
                     cardInteractables.clear();
+                } else if (claimer == myPlayer.getIndex()) {
+                    claimBlocked = true;
                 }
                 messageState = "UNBLOCKED";
                 claimer = -1;
