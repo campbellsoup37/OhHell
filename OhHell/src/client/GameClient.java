@@ -1788,6 +1788,7 @@ public class GameClient extends JFrame {
                     System.out.println("RUNNING TERMINAL COMMAND: " + command);
                     Runtime.getRuntime().exec(command);
                     dispose();
+                    System.exit(0);
                 } else {
                     notify("Failed to download updater.");
                 }

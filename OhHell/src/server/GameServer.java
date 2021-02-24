@@ -549,6 +549,7 @@ public class GameServer extends JFrame {
                     System.out.println("RUNNING TERMINAL COMMAND: " + command);
                     Runtime.getRuntime().exec(command);
                     dispose();
+                    System.exit(0);
                 } else {
                     System.out.println("Error: Failed to download updater.");
                 }
