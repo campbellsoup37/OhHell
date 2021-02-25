@@ -6,7 +6,6 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Random;
 
 import core.Card;
@@ -19,7 +18,6 @@ public class PlayerThread extends Thread {
     private BufferedReader reader;
     private HumanPlayer player;
     
-    private List<Player> dcPlayersAtAddress;
     private boolean running = true;
     
     private volatile LinkedList<Command> commandQueue = new LinkedList<Command>();
@@ -27,10 +25,9 @@ public class PlayerThread extends Thread {
     
     private Random random = new Random();
     
-    public PlayerThread(Socket socket, GameServer server, List<Player> dcPlayersAtAddress) {
+    public PlayerThread(Socket socket, GameServer server) {
         this.socket = socket;
         this.server = server;
-        this.dcPlayersAtAddress = dcPlayersAtAddress;
     }
     
     @Override
@@ -46,16 +43,6 @@ public class PlayerThread extends Thread {
                         true);
             
             server.requestId(player);
-            
-            /*if (!dcPlayersAtAddress.isEmpty()) {
-                String command = dcPlayersAtAddress.stream()
-                        .map(p -> "STRING " + p.getName().length() + ":" + p.getName() + ":")
-                        .reduce("RECONNECT:", (sofar, pString) -> sofar + pString);
-                sendCommand(command);
-            } else {
-                //server.joinPlayer(player);
-                player.commandIdRequest();
-            }*/
             
             while (running) {
                 String line = reader.readLine();
@@ -101,9 +88,6 @@ public class PlayerThread extends Thread {
                     server.processClaim(player);
                 } else if (command.equals("CLAIMRESPONSE")) {
                     server.processClaimResponse(player, parsedContent.get(0).equals("ACCEPT"));
-                } else if (command.equals("RECONNECT")) {
-                    /*server.reconnectPlayer(player, 
-                            (HumanPlayer) dcPlayersAtAddress.get(Integer.parseInt(parsedContent.get(0))));*/
                 } else if (command.equals("VOTEKICK")) {
                     server.addKickVote(Integer.parseInt(parsedContent.get(0)), player);
                 } else if (command.equals("CHAT")) {
@@ -115,7 +99,7 @@ public class PlayerThread extends Thread {
                 }
             }
         } catch(IOException e) {
-            e.printStackTrace();
+//            e.printStackTrace();
             handleDisconnect();
         }
     }
@@ -167,15 +151,6 @@ public class PlayerThread extends Thread {
             return;
         }
         write(c.toString());
-        
-        /*if (awaitingConfirmation) {
-            commandQueue.add(c);
-        } else {
-            write(c.toString());
-            awaitingConfirmation = true;
-            confThread = new ConfirmationThread(c, this);
-            confThread.start();
-        }*/
     }
     
     public void sendCommand(String text) {
@@ -183,13 +158,11 @@ public class PlayerThread extends Thread {
     }
     
     public void write(String text) {
-        //System.out.println(player.getIndex()+" :: "+s);
         writer.println(text);
     }
     
     public void handleDisconnect() {
         if (server.gameStarted() && player.isJoined() && !player.isKibitzer()) {
-            player.setDisconnected(true);
             server.removePlayer(player, false);
         } else {
             server.removePlayer(player, true);

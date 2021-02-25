@@ -67,7 +67,12 @@ public class OhHellCore {
             players.add(player);
             player.setIndex(players.size() - i);
         }
-        updatePlayersList();
+        for (Player player : players) {
+            player.commandUpdatePlayers(players);
+        }
+        for (Player player : kibitzers) {
+            player.commandUpdatePlayers(players);
+        }
     }
     
     public int nextUnkicked(int index) {
@@ -78,19 +83,6 @@ public class OhHellCore {
             }
         }
         return index;
-    }
-    
-    public void updatePlayersList() {
-        if (gameStarted && (players.stream().allMatch(p -> p.isKicked() || p.isDisconnected()))) {
-            stopGame();
-        }
-        
-        for (Player player : players) {
-            player.commandUpdatePlayers(players);
-        }
-        for (Player player : kibitzers) {
-            player.commandUpdatePlayers(players);
-        }
     }
     
     public void sendFullGameState(Player player) {
@@ -719,9 +711,16 @@ public class OhHellCore {
         players.get(turn).commandPoke();
     }
     
-    public void recordKick(int index) {
-        if (record) {
-            recorder.recordKick(index);
+    public void reportKick(int index) {
+        if (gameStarted && (players.stream().allMatch(p -> 
+                p.isKicked() || p.isDisconnected() || !p.isHuman()))) {
+            stopGame();
+        } else {
+            if (record) {
+                recorder.recordKick(index);
+            }
+            updateRounds();
+            restartRound();
         }
     }
 }

@@ -40,6 +40,7 @@ import java.net.UnknownHostException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -67,7 +68,6 @@ public class GameClient extends JFrame {
     private static final long serialVersionUID = 1L;
     
     //////Dev Options //////////////////
-    private final boolean aiHelpOptionEnabled = false;
     private final boolean stopperOptionEnabled = false;
     private final boolean botsOnlyOptionEnabled = true;
     private final boolean devSpeedOptionEnabled = true;
@@ -111,7 +111,6 @@ public class GameClient extends JFrame {
     private JCheckBox pingOption = new JCheckBox("Show ping");
     private JCheckBox fpsOption = new JCheckBox("Show FPS");
     private JMenu devOptionsItem = new JMenu("Dev options");
-    private JCheckBox aiHelpOption = new JCheckBox("AI help");
     private JCheckBox stopperOption = new JCheckBox("Stoppers");
     private JCheckBox botsOnlyOption = new JCheckBox("Bots only");
     private JCheckBox devSpeedOption = new JCheckBox("Fast animation");
@@ -577,16 +576,6 @@ public class GameClient extends JFrame {
                 }
             });
             optionsItem.add(backOption);
-            
-            aiHelpOption.setEnabled(aiHelpOptionEnabled);
-            aiHelpOption.setPreferredSize(new Dimension(150, 25));
-            aiHelpOption.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    canvas.setAiHelp(aiHelpOption.isSelected());
-                }
-            });
-            devOptionsItem.add(aiHelpOption);
             
             stopperOption.setEnabled(stopperOptionEnabled);
             stopperOption.addActionListener(new ActionListener() {
@@ -1854,6 +1843,24 @@ public class GameClient extends JFrame {
         for (String arg : args) {
             if (arg.equals("-deleteupdater")) {
                 deleteUpdater = true;
+            } else if (arg.equals("-savesystemproperties")) {
+                System.out.println("PRINTING SYSTEM PROPERTIES");
+                try {
+                    List<String> lines = new ArrayList<>();
+                    java.util.Properties props = System.getProperties();
+                    for (Object prop : props.entrySet()) {
+                        lines.add(prop.toString());
+                    }
+                    Collections.sort(lines);
+                    
+                    BufferedWriter writer = new BufferedWriter(new FileWriter("systemproperties.txt"));
+                    for (String line : lines) {
+                        writer.append(line + "\n");
+                    }
+                    writer.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
         

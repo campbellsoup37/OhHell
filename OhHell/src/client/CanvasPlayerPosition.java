@@ -14,8 +14,4 @@ public interface CanvasPlayerPosition {
     public int takenX();
     
     public int takenY();
-    
-    public int bidX();
-    
-    public int bidY();
 }

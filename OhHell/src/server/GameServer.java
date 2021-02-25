@@ -65,6 +65,7 @@ public class GameServer extends JFrame {
             JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
             JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
     private DefaultListModel<String> playersListModel = new DefaultListModel<>();
+    private List<Player> playersInList = new ArrayList<>();
     private JList<String> playersJList = new JList<>(playersListModel);
     private JScrollPane playersScrollPane = new OhcScrollPane(playersJList,
             JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
@@ -142,10 +143,9 @@ public class GameServer extends JFrame {
         dcButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                int index = playersJList.getSelectedIndex();
-                if (index > -1) {
-                    disconnectPlayer((HumanPlayer) players.get(index));
-                }
+                forceRemovePlayer(
+                        (HumanPlayer) playersInList.get(playersJList.getSelectedIndex()), 
+                        false);
             }
         });
         eastPanel.add(dcButton);
@@ -153,10 +153,9 @@ public class GameServer extends JFrame {
         kickButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                int index = playersJList.getSelectedIndex();
-                if (index > -1) {
-                    kickPlayer((HumanPlayer) players.get(index));
-                }
+                forceRemovePlayer(
+                        (HumanPlayer) playersInList.get(playersJList.getSelectedIndex()), 
+                        true);
             }
         });
         eastPanel.add(kickButton);
@@ -184,7 +183,13 @@ public class GameServer extends JFrame {
     
     public void goPressed() {
         try {
-            core = new OhHellCore(true);
+            core = new OhHellCore(true) {
+                @Override
+                public void stopGame() {
+                    super.stopGame();
+                    updatePlayersList();
+                }
+            };
             core.setPlayers(players);
             core.setKibitzers(kibitzers);
             
@@ -213,14 +218,16 @@ public class GameServer extends JFrame {
     
     public void updatePlayersList() {
         playersListModel.clear();
+        playersInList.clear();
         for (Player player : players) {
             if (player.isHuman()) {
                 playersListModel.addElement(
-                        player.getName()
+                        player.getId()
                         + (player.isHost() ? " (host)" : "")
                         + (player.isDisconnected() && !player.isKicked() ? " (DCed)" : "")
                         + (player.isKicked() ? " (kicked)" : "")
                         + (player.isKibitzer() ? " (kibitzer)" : ""));
+                playersInList.add(player);
             }
         }
         SwingUtilities.invokeLater(new Runnable() {
@@ -228,20 +235,10 @@ public class GameServer extends JFrame {
                 playersJList.updateUI();
             }
         });
-        
-        //core.updatePlayersList();
     }
 
     public void connectPlayer(Socket socket) {
-        // TODO Make a better fix for the issue of someone disconnecting
-        // and then having a different address.
-        List<Player> dcPlayersAtAddress = players.stream()
-                .filter(p -> /*p.getThread().getSocket().getInetAddress().toString()
-                        .equals(socket.getInetAddress().toString())
-                        && */p.isDisconnected() && !p.isKicked())
-                .collect(Collectors.toList());
-        
-        PlayerThread thread = new PlayerThread(socket, this, dcPlayersAtAddress);
+        PlayerThread thread = new PlayerThread(socket, this);
         HumanPlayer player = new HumanPlayer(thread);
         thread.setPlayer(player);
         thread.start();
@@ -330,6 +327,8 @@ public class GameServer extends JFrame {
             }
             player.commandAddPlayers(players, kibitzers);
         }
+        
+        updatePlayersList();
     }
     
     public void renamePlayer(Player player, String name) {
@@ -347,21 +346,9 @@ public class GameServer extends JFrame {
                     >= players.stream()
                     .filter(p -> !p.isDisconnected() && !p.isKicked() && p.isHuman())
                     .count()) { 
-                kickPlayer(player);
+                forceRemovePlayer(player, true);
             }
         }
-    }
-    
-    public void disconnectPlayer(HumanPlayer player) {
-        player.commandKick();
-        player.getThread().endThread();
-        removePlayer(player, false);
-    }
-    
-    public void kickPlayer(HumanPlayer player) {
-        player.commandKick();
-        player.getThread().endThread();
-        removePlayer(player, true);
     }
     
     public void setKibitzer(Player player, boolean kibitzer) {
@@ -406,9 +393,22 @@ public class GameServer extends JFrame {
         logTextArea.append(s + "\n");
     }
     
+    public void forceRemovePlayer(HumanPlayer player, boolean kick) {
+        player.commandKick();
+        removePlayer(player, kick);
+        player.getThread().endThread();
+    }
+    
     public void removePlayer(HumanPlayer player, boolean kick) {
-        logMessage("Player disconnected: " 
+        if (!players.contains(player) 
+                || player.isKicked() 
+                || player.isDisconnected() && !kick) {
+            return;
+        }
+        
+        logMessage("Player " + (kick ? "kicked" : "disconnected") + ": " 
                 + player.getName() + " at " + player.getThread().getSocket().getInetAddress());
+        player.setDisconnected(!kick);
         player.setKicked(kick);
         
         // Change host if necessary
@@ -462,14 +462,13 @@ public class GameServer extends JFrame {
                 }
             }
         }
-        updatePlayersList();
         
         // Restart round if kicked
         if (kick && gameStarted() && !player.isKibitzer()) {
-            core.recordKick(player.getIndex());
-            core.updateRounds();
-            core.restartRound();
+            core.reportKick(player.getIndex());
         }
+        
+        updatePlayersList();
     }
     
     public void makeBid(Player player, int bid) {
@@ -520,12 +519,20 @@ public class GameServer extends JFrame {
             newVersion = versionReader.readLine();
             versionReader.close();
             updateChecked = true;
-            SwingUtilities.invokeLater(new Runnable() {
-                public void run() {
-                    updateButton.setAlert(true);
-                    updateButton.setText("Download v" + newVersion);
-                }
-            });
+            if (newVersion.equals(version)) {
+                SwingUtilities.invokeLater(new Runnable() {
+                    public void run() {
+                        updateButton.setText("Version up to date");
+                    }
+                });
+            } else {
+                SwingUtilities.invokeLater(new Runnable() {
+                    public void run() {
+                        updateButton.setAlert(true);
+                        updateButton.setText("Download v" + newVersion);
+                    }
+                });
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }

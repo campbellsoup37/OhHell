@@ -17,13 +17,11 @@ public class GradientBooster {
     private boolean empty = true;
     private int dIn;
     private int dOut;
-    private int size;
     private List<List<Tree>> trees;
 
     public GradientBooster(int dIn, int dOut, int size) {
         this.dIn = dIn;
         this.dOut = dOut;
-        this.size = size;
         trees = new ArrayList<>(dOut);
         for (int i = 0; i < dOut; i++) {
             trees.add(new ArrayList<>(size));
@@ -56,7 +54,6 @@ public class GradientBooster {
             trees = new ArrayList<>(trees);
             dIn = trees.get(0).get(0).getDIn();
             dOut = trees.size();
-            size = trees.get(0).size();
         } catch (IOException e) {
             e.printStackTrace();
         }

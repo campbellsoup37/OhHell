@@ -201,14 +201,6 @@ public class ClientPlayer {
         return pos.takenY();
     }
     
-    public int getBidX() {
-        return pos.bidX();
-    }
-    
-    public int getBidY() {
-        return pos.bidY();
-    }
-    
     public int getBid() {
         return bid;
     }

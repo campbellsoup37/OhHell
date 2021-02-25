@@ -15,9 +15,7 @@ import java.util.Random;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.sound.sampled.Clip;
-import javax.swing.JEditorPane;
 import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
@@ -26,18 +24,12 @@ import javax.swing.event.HyperlinkEvent;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.text.DefaultCaret;
 
-import core.AiStrategyModule;
 import core.Card;
-import core.OhHellCore;
-import core.Player;
 import core.Recorder;
 import common.FileTools;
 import common.GraphicsTools;
 import common.OhcScrollPane;
 import common.OhcTextField;
-import strategyOI.AiStrategyModuleOI;
-import strategyOI.ImmediateValueLearner;
-import strategyOI.OverallValueLearner;
 
 public class GameCanvas extends OhcCanvas {
     private static final long serialVersionUID = 1L;
@@ -159,9 +151,7 @@ public class GameCanvas extends OhcCanvas {
     private double cardWidth;
     private double cardWidthSmall;
     
-    private boolean aiHelpSelected = false;
     private boolean stopped = false;
-    private LinkedList<Timer> audioQueue = new LinkedList<>();
     private Clip cardPlayClip;
     private Clip pokeClip;
     
@@ -221,8 +211,6 @@ public class GameCanvas extends OhcCanvas {
     
     @Override
     public void customPaint(Graphics graphics) {
-        //maxHand = Math.max(maxHand, myPlayer.getHand().size());
-        
         graphics.setColor(Color.BLACK);
 
         paintPregame(graphics);
@@ -427,9 +415,6 @@ public class GameCanvas extends OhcCanvas {
                 if (state != GameState.PREGAME) {
                     // Bid chip
                     if (player.hasBid()) {
-//                        double startX = player.getBidX();
-//                        double startY = player.getBidY();
-                        
                         int iRelToMe = player.getIndex() - myPlayer.getIndex();
                         double startX = (getWidth() - 450) / 2
                                 - 100 * Math.sin(2 * Math.PI * iRelToMe / players.size());
@@ -478,69 +463,6 @@ public class GameCanvas extends OhcCanvas {
                 }
             }
         }
-    }
-    
-    public void paintAiHelp(Graphics graphics) {
-        /*int handSize = myPlayer.getHand().size();
-        int x = (getWidth() - 450) / 2;
-        int y = getHeight() - 20;
-        int pos = 1;
-        int separation = cardSeparation;
-        double maxWid = (maxHand - 1) * 10 + cardWidthSmall;
-        
-        String aiBid = client.getAiBid();
-        String aiPlay = client.getAiPlay();
-        
-        for (int i = 0; i < handSize; i++) {
-            int yOffset = handYOffset;
-            if (myPlayer.isPlaying() && i == cardMoused && canPlayThis(i)) {
-                yOffset = handYOffset + 10;
-            }
-            
-            String prob = client.getOvlProb(i);
-            graphics.setColor(new Color(0, 0, (int) (Double.parseDouble(prob) * 255)));
-            drawStringJustifiedBold(graphics, prob, 
-                    (int)(x + i * separation 
-                    - (handSize - 1) * separation / 2 
-                    - (pos - 1) * maxWid / 2 - (int) cardWidth / 2 + 25), 
-                    y - yOffset + (int) cardHeight / 2 - 10,
-                    1, 1);
-            
-            if (actionQueue.isEmpty() && !aiPlay.isEmpty() && myPlayer.getHand().get(i).equals(new Card(aiPlay))) {
-                graphics.setColor(new Color(0, 0, 255));
-                graphics.drawRect(
-                        (int) (x + i * separation 
-                                - (handSize - 1) * separation / 2 
-                                - (pos - 1) * maxWid / 2 - cardWidth / 2), 
-                        (int) (y - yOffset - cardHeight / 2), 
-                        (int) (i < handSize - 1 ? separation : cardWidth), 
-                        (int) cardHeight);
-                graphics.drawRect(
-                        (int) (x + i * separation 
-                                - (handSize - 1) * separation / 2 
-                                - (pos - 1) * maxWid / 2 - cardWidth / 2 - 1), 
-                        (int) (y - yOffset - cardHeight / 2 - 1), 
-                        (int) (i < handSize - 1 ? separation : cardWidth + 2), 
-                        (int) (cardHeight + 2));
-            }
-        }
-        
-        if (actionQueue.isEmpty() && !aiBid.isEmpty() && myPlayer.getBidding() != 0) {
-            int i = Integer.parseInt(aiBid);
-            graphics.setColor(new Color(0, 0, 255));
-            graphics.drawRect(
-                    (getWidth() - 450) / 2 + i * 40 
-                        - myPlayer.getHand().size() * 40 / 2 - 16, 
-                    getHeight() - 210 - 16, 
-                    30, 
-                    30);
-            graphics.drawRect(
-                    (getWidth() - 450) / 2 + i * 40 
-                        - myPlayer.getHand().size() * 40 / 2 - 17, 
-                    getHeight() - 210 - 17, 
-                    32, 
-                    32);
-        }*/
     }
     
     public void paintTaken(Graphics graphics) {
@@ -718,7 +640,6 @@ public class GameCanvas extends OhcCanvas {
         
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-                //chatArea.setText(chatArea.getText() + text + "\n");
                 chatArea.setText(html);
             }
         });
@@ -854,16 +775,6 @@ public class GameCanvas extends OhcCanvas {
                     public int takenY() {
                         return y() + 50;
                     }
-                    
-                    @Override
-                    public int bidX() {
-                        return x() + 220;
-                    }
-                    
-                    @Override
-                    public int bidY() {
-                        return y();
-                    }
                 });
             } else if (index < cut2) {
                 player.setPos(new CanvasPlayerPosition() {
@@ -900,16 +811,6 @@ public class GameCanvas extends OhcCanvas {
                     @Override
                     public int takenY() {
                         return y() - 35;
-                    }
-                    
-                    @Override
-                    public int bidX() {
-                        return x();
-                    }
-                    
-                    @Override
-                    public int bidY() {
-                        return y() + 65;
                     }
                 });
             } else if (index < players.size() - 1) {
@@ -948,16 +849,6 @@ public class GameCanvas extends OhcCanvas {
                     public int takenY() {
                         return y() + 50;
                     }
-                    
-                    @Override
-                    public int bidX() {
-                        return x() - 220;
-                    }
-                    
-                    @Override
-                    public int bidY() {
-                        return y();
-                    }
                 });
             } else {
                 player.setPos(new CanvasPlayerPosition() {
@@ -994,16 +885,6 @@ public class GameCanvas extends OhcCanvas {
                     @Override
                     public int takenY() {
                         return y() - 50;
-                    }
-                    
-                    @Override
-                    public int bidX() {
-                        return x();
-                    }
-                    
-                    @Override
-                    public int bidY() {
-                        return y() - 250;
                     }
                 });
             }
@@ -1485,15 +1366,13 @@ public class GameCanvas extends OhcCanvas {
                 return currentTime - pokeTime >= (long) pokeWaitTime * 1000000
                         && (state == GameState.BIDDING || state == GameState.PLAYING)
                         && myPlayer.getBidding() == 0
-                        && !myPlayer.isPlaying();//canPoke;
+                        && !myPlayer.isPlaying();
             }
             
             @Override
             public void click() {
                 resetPokeTime();
-                //addPokeTimer();
                 client.pokePlayer();
-                //repaint();
             }
         });
         
@@ -1531,7 +1410,6 @@ public class GameCanvas extends OhcCanvas {
             @Override
             public void click() {
                 doShowOneCard();
-                //repaint();
             }
         });
         
@@ -1644,11 +1522,6 @@ public class GameCanvas extends OhcCanvas {
             public boolean isShown() {
                 return state == GameState.POSTGAME;
             }
-            
-            /*@Override
-            public boolean isEnabled() {
-                return myPlayer.isHost() || client.getClientState() == ClientState.SINGLE_PLAYER_POST_GAME;
-            }*/
             
             @Override
             public void click() {
@@ -1766,7 +1639,6 @@ public class GameCanvas extends OhcCanvas {
             public void click() {
                 client.sendClaimResponse("ACCEPT");
                 messageState = "CLAIMWAITING";
-                //repaint();
             }
         });
         
@@ -1801,7 +1673,6 @@ public class GameCanvas extends OhcCanvas {
             public void click() {
                 client.sendClaimResponse("REFUSE");
                 messageState = "CLAIMWAITING";
-                //repaint();
             }
         });
         
@@ -1834,8 +1705,6 @@ public class GameCanvas extends OhcCanvas {
         };
         
         // Chat areas
-//        chatArea.setLineWrap(true);
-//        chatArea.setWrapStyleWord(true);
         chatArea.setContentType("text/html");
         chatArea.addHyperlinkListener(new HyperlinkListener() {
             @Override
@@ -2147,25 +2016,41 @@ public class GameCanvas extends OhcCanvas {
         return trumps;
     }
     
-    public void setAiHelp(boolean aiHelpSelected) {
-        this.aiHelpSelected = aiHelpSelected;
-        //repaint();
-    }
-    
     public void playSound(Clip clip) {
-        double length = (double) clip.getFrameLength() / 44.1;
-        new CanvasTimerEntry((long) length, this, audioQueue, false) {
-            @Override
-            public void onFirstAction() {
-                clip.start();
-            }
-            
-            @Override
-            public void onLastAction() {
-                clip.stop();
-                clip.setFramePosition(0);
-            }
-        };
+        clip.stop();
+        clip.setFramePosition(0);
+        clip.start();
+        
+//        double length = (double) clip.getFrameLength() / 44.1;
+//        
+//        Timer timer = new Timer((int) length, null);
+//        timer.addActionListener(new ActionListener() {
+//            boolean first = true;
+//            
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                if (first) {
+//                    clip.stop();
+//                    clip.setFramePosition(0);
+//                    clip.start();
+//                    first = false;
+//                }
+//            }
+//        });
+//        timer.start();
+//        
+//        new CanvasTimerEntry((long) length, this, audioQueue, false) {
+//            @Override
+//            public void onFirstAction() {
+//                clip.start();
+//            }
+//            
+//            @Override
+//            public void onLastAction() {
+//                clip.stop();
+//                clip.setFramePosition(0);
+//            }
+//        };
     }
     
     public LinkedList<Timer> getActionQueue() {
@@ -2292,7 +2177,6 @@ public class GameCanvas extends OhcCanvas {
             public void onAction() {
                 players.get(index).setTrickTimer(
                         Math.min((double) this.getElapsedTime() / (client.devSpeedSelected() ? 1 : animationTime), 1));
-                //repaint();
             }
         };
     }
@@ -2321,7 +2205,6 @@ public class GameCanvas extends OhcCanvas {
             @Override
             public void onAction() {
                 takenTimer = Math.min((double) this.getElapsedTime() / (client.devSpeedSelected() ? 1 : animationTime), 1);
-                //repaint();
             }
             
             @Override
@@ -2394,11 +2277,6 @@ public class GameCanvas extends OhcCanvas {
             }
             
             @Override
-            public void onAction() {
-                //repaint();
-            }
-            
-            @Override
             public void onLastAction() {
                 message = "";
                 paintMessageMarker = false;
@@ -2418,11 +2296,6 @@ public class GameCanvas extends OhcCanvas {
                 }
                 paintMessageMarker = true;
                 state = GameState.ENDOFROUND;
-            }
-            
-            @Override
-            public void onAction() {
-                //repaint();
             }
             
             @Override
@@ -2506,9 +2379,6 @@ public class GameCanvas extends OhcCanvas {
                 state = GameState.BIDDING;
                 if (myPlayer.getBidding() != 0) {
                     makeBidInteractables();
-                    //deletePokeTimer();
-                } else {
-                    //addPokeTimer();
                 }
                 resetPokeTime();
             }
@@ -2527,11 +2397,6 @@ public class GameCanvas extends OhcCanvas {
                 }
                 state = GameState.PLAYING;
                 resetPokeTime();
-                /*if (myPlayer.isPlaying()) {
-                    deletePokeTimer();
-                } else {
-                    addPokeTimer();
-                }*/
             }
         };
     }
