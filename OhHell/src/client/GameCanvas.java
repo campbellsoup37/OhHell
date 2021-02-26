@@ -84,7 +84,7 @@ public class GameCanvas extends OhcCanvas {
             {"<", "&lt;"},
             {">", "&gt;"},
             {"\"", "&quot;"},
-            {"'", "&apos;"}
+            {"'", "&#39;"}
     };
     
     private volatile GameClient client;
@@ -109,6 +109,7 @@ public class GameCanvas extends OhcCanvas {
     private List<CanvasEmbeddedSwing> embeddedSwings = new LinkedList<>();
     private List<CanvasButton> bidButtons = new LinkedList<>();
     private List<CanvasCard> cardInteractables = new LinkedList<>();
+    private List<PlayerNamePlate> namePlates = new LinkedList<>();
     private CanvasCard lastTrick;
     private List<CanvasButton> kickButtons = new LinkedList<>();
     private List<CanvasButton> buttons = new LinkedList<>();
@@ -128,6 +129,7 @@ public class GameCanvas extends OhcCanvas {
     private double takenTimer = 1;
     
     private boolean canUndoBid = false;
+    private long undoBidTimer = -1;
 
     private boolean claimBlocked = false;
     private int claimer = -1;
@@ -210,18 +212,13 @@ public class GameCanvas extends OhcCanvas {
     }
     
     @Override
-    public void customPaint(Graphics graphics) {
+    public void customPaintFirst(Graphics graphics) {
         graphics.setColor(Color.BLACK);
 
         paintPregame(graphics);
         paintTrump(graphics);
         paintPlayers(graphics);
-        paintScores(graphics);
         paintTaken(graphics);
-        paintTrick(graphics);
-        if (paintMessageMarker) {
-            paintMessage(graphics);
-        }
         
         if (currentTime == 0) {
             currentTime = System.nanoTime();
@@ -243,6 +240,14 @@ public class GameCanvas extends OhcCanvas {
         if (!performingAction && !actionQueue.isEmpty()) {
             performingAction = true;
             actionQueue.remove().start();
+        }
+    }
+    
+    @Override
+    public void customPaintLast(Graphics graphics) {
+        paintTrick(graphics);
+        if (paintMessageMarker) {
+            paintMessage(graphics);
         }
     }
     
@@ -387,80 +392,6 @@ public class GameCanvas extends OhcCanvas {
                                 false);
                     }
                 }
-                
-                // Name plate
-                if (state != GameState.PREGAME && (player.getBidding() == 1 || player.isPlaying()) 
-                        || state == GameState.PREGAME && player.isHost()) {
-                    graphics.setColor(new Color(255, 255, 0));
-                } else if (player.isHuman()) {
-                    graphics.setColor(Color.WHITE);
-                } else {
-                    graphics.setColor(new Color(210, 255, 255));
-                }
-                GraphicsTools.drawBox(graphics, x - pos * maxWid / 2, y - 10, maxWid, 20, 20);
-                
-                // Name
-                if (player.isDisconnected()) {
-                    graphics.setColor(Color.GRAY);
-                }
-                if (player.isKicked()) {
-                    graphics.setColor(Color.RED);
-                }
-                GraphicsTools.drawStringJustified(graphics, 
-                        GraphicsTools.fitString(graphics, player.getName(), maxWid), 
-                        (int) (x - (pos - 1) * maxWid / 2), 
-                        y, 
-                        1, 1);
-                
-                if (state != GameState.PREGAME) {
-                    // Bid chip
-                    if (player.hasBid()) {
-                        int iRelToMe = player.getIndex() - myPlayer.getIndex();
-                        double startX = (getWidth() - 450) / 2
-                                - 100 * Math.sin(2 * Math.PI * iRelToMe / players.size());
-                        double startY = getHeight()/2 - 50
-                                + 100 * Math.cos(2 * Math.PI * iRelToMe / players.size());
-                        
-                        double endX = x - pos * maxWid / 2 + 10;
-                        double endY = y;
-                        
-                        double bidX = startX * (1 - player.getBidTimer()) + endX * player.getBidTimer();
-                        double bidY = startY * (1 - player.getBidTimer()) + endY * player.getBidTimer();
-                        double radius = 50 * (1 - player.getBidTimer()) + 16 * player.getBidTimer();
-                        
-                        if (player.getBidTimer() < 1) {
-                            graphics.setColor(new Color(255, 255, 255, 180));
-                        } else if (state == GameState.BIDDING || state == GameState.PLAYING && player.getBid() > player.getTaken()) {
-                            graphics.setColor(new Color(175, 175, 175, 180));
-                        } else if (player.getBid() == player.getTaken()) {
-                            graphics.setColor(new Color(175, 255, 175));
-                        } else {
-                            graphics.setColor(new Color(255, 175, 175));
-                        }
-                        graphics.fillOval((int) (bidX - radius / 2), (int) (bidY - radius / 2), (int) radius, (int) radius);
-                        graphics.setColor(Color.BLACK);
-                        if (player.getBidTimer() == 0) {
-                            graphics.drawOval((int) (bidX - radius / 2), (int) (bidY - radius / 2), (int) radius, (int) radius);
-                            graphics.setFont(GraphicsTools.fontLargeBold);
-                        }
-                        GraphicsTools.drawStringJustified(graphics, player.getBid() + "", 
-                                bidX, 
-                                bidY, 
-                                1, 1);
-                        graphics.setFont(GraphicsTools.font);
-                    }
-                    
-                    // Dealer chip
-                    if (player.getIndex() == dealer) {
-                        graphics.setColor(Color.CYAN);
-                        graphics.fillOval((int) (x - (pos - 2) * maxWid / 2) - 19, y - 8, 16, 16);
-                        graphics.setColor(Color.BLACK);
-                        GraphicsTools.drawStringJustified(graphics, "D", 
-                                (int) (x - (pos - 2) * maxWid / 2) - 11, 
-                                y, 
-                                1, 1);
-                    }
-                }
             }
         }
     }
@@ -490,129 +421,6 @@ public class GameCanvas extends OhcCanvas {
                         drawCard(graphics, new Card(), x, y, smallCardScale, true, false);
                     }
                 }
-            }
-        }
-    }
-    
-    public void paintScores(Graphics graphics) {
-        if (state != GameState.PREGAME) {
-            List<ClientPlayer> playersToShow;
-            List<int[]> rounds;
-            
-            if (state == GameState.POSTGAME) {
-                playersToShow = postGamePlayers;
-                rounds = postGameRounds;
-            } else {
-                playersToShow = players;
-                rounds = client.getRounds();
-            }
-            int numRounds = rounds.size();
-            
-            if (playersToShow.isEmpty()) {
-                throw new IllegalClientStateException("Attempted to paint scores before players were loaded into the canvas.");
-            }
-            if (playersToShow.isEmpty()) {
-                throw new IllegalClientStateException("Attempted to paint scores before rounds could be loaded into the canvas.");
-            }
-            
-            // box
-            graphics.setColor(Color.WHITE);
-            GraphicsTools.drawBox(graphics, 
-                    getWidth() - (450 - scoreMargin), 
-                    scoreMargin, 
-                    450 - 2 * scoreMargin, 
-                    scoreVSpacing * (numRounds + 1) + 5,
-                    10);
-            
-            double wid = (double) (450 - 2 * scoreMargin - 50) / playersToShow.size();
-
-            // horizontal line
-            graphics.setColor(Color.BLACK);
-            graphics.drawLine(
-                    getWidth() - (450 - scoreMargin - 45), 
-                    scoreMargin + scoreVSpacing, 
-                    getWidth() - scoreMargin - 5, 
-                    scoreMargin + scoreVSpacing);
-            for (ClientPlayer player : playersToShow) {
-                int index = player.getIndex();
-                graphics.setColor(Color.BLACK);
-                // vertical line
-                if (index > 0) {
-                    graphics.drawLine(
-                            (int) (getWidth() - (450 - scoreMargin - 45) + index * wid), 
-                            scoreMargin + 5, 
-                            (int) (getWidth() - (450 - scoreMargin - 45) + index * wid), 
-                            scoreMargin + scoreVSpacing * (numRounds + 1));
-                }
-                
-                // name
-                graphics.setColor(Color.BLACK);
-                if (player.isDisconnected()) {
-                    graphics.setColor(Color.GRAY);
-                }
-                if (player.isKicked()) {
-                    graphics.setColor(Color.RED);
-                }
-                
-                if (player.equals(myPlayer)) {
-                    graphics.setFont(GraphicsTools.fontBold);
-                } else {
-                    graphics.setFont(GraphicsTools.font);
-                }
-                GraphicsTools.drawStringJustified(graphics, 
-                        GraphicsTools.fitString(graphics, player.getName(), wid - 2), 
-                        (int) (getWidth() - (450 - scoreMargin - 45) + index * wid + wid / 2), 
-                        scoreMargin + 15, 
-                        1, 0);
-                graphics.setFont(GraphicsTools.font);
-            }
-            
-            // dealers and hand sizes
-            graphics.setColor(Color.BLACK);
-            for (int i = 0; i < numRounds; i++) {
-                int[] round = rounds.get(i);
-                GraphicsTools.drawStringJustified(graphics, 
-                        playersToShow.get(round[0]).getName().substring(0, 1), 
-                        getWidth() - (450 - scoreMargin - 5), 
-                        scoreMargin + scoreVSpacing * (i + 2), 
-                        0, 0);
-                GraphicsTools.drawStringJustified(graphics, 
-                        "" + round[1], 
-                        getWidth() - (450 - scoreMargin - 25), 
-                        scoreMargin + scoreVSpacing * (i + 2), 
-                        0, 0);
-            }
-        
-            for (ClientPlayer player : playersToShow) {
-                int index = player.getIndex();
-                // bid chips
-                for (int j = 0; j < player.getBids().size()
-                        && (player.getKickedAtRound() == -1 || j < player.getKickedAtRound()); j++) {
-                    graphics.setColor(new Color(200, 200, 200, 180));
-                    graphics.fillOval(
-                            (int) (getWidth() - (450 - scoreMargin - 45) + (index + 1) * wid - 18), 
-                            scoreMargin + 5 + scoreVSpacing * (1 + j) + 2, 
-                            16, 16);
-                    graphics.setColor(Color.BLACK);
-                    GraphicsTools.drawStringJustified(graphics, 
-                            Integer.toString(player.getBids().get(j)), 
-                            (int) (getWidth() - (450 - scoreMargin - 45) + (index + 1) * wid - 10), 
-                            scoreMargin + scoreVSpacing * (2 + j), 
-                            1, 0);
-                }
-                // scores
-                if (players.size() >= 8) {
-                    graphics.setFont(GraphicsTools.fontSmall);
-                }
-                for (int j = 0; j < player.getScores().size()
-                        && (player.getKickedAtRound() == -1 || j < player.getKickedAtRound()); j++) {
-                    GraphicsTools.drawStringJustified(graphics, 
-                            Integer.toString(player.getScores().get(j)), 
-                            (int) (getWidth() - (450 - scoreMargin - 45) + index * wid + 10), 
-                            scoreMargin + scoreVSpacing * (2 + j), 
-                            0, 0);
-                }
-                graphics.setFont(GraphicsTools.font);
             }
         }
     }
@@ -721,6 +529,10 @@ public class GameCanvas extends OhcCanvas {
     
     public void setState(GameState newState) {
         state = newState;
+    }
+    
+    public GameState getState() {
+        return state;
     }
     
     public void setPlayerPositions() {
@@ -889,6 +701,37 @@ public class GameCanvas extends OhcCanvas {
                 });
             }
         }
+    }
+    
+    public void resetNamePlates() {
+        namePlates.clear();
+        for (ClientPlayer player : players) {
+            final ClientPlayer playerF = player;
+            namePlates.add(new PlayerNamePlate(this, playerF) {
+                @Override
+                public boolean isEnabled() {
+                    return state != GameState.PREGAME
+                                && state != GameState.POSTGAME
+                                && currentTime - pokeTime >= (long) pokeWaitTime * 1000000
+                                && (playerF.isPlaying() && state == GameState.PLAYING
+                                    || state == GameState.BIDDING && playerF.getBidding() != 0)
+                                && !myPlayer.isKibitzer()
+                                && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
+                }
+                
+                @Override
+                public void click() {
+                    if (isEnabled()) {
+                        resetPokeTime();
+                        client.pokePlayer();
+                    }
+                }
+            });
+        }
+    }
+    
+    public double getMaxWid() {
+        return maxWid;
     }
     
     public void resetKickButtons() {
@@ -1323,7 +1166,7 @@ public class GameCanvas extends OhcCanvas {
             public boolean isShown() {
                 return state != GameState.PREGAME
                         && canUndoBid
-                        && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME
+//                        && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME
                         && !myPlayer.isKibitzer();
             }
             
@@ -1332,49 +1175,62 @@ public class GameCanvas extends OhcCanvas {
                 client.undoBid();
                 canUndoBid = false;
             }
+            
+            @Override
+            public void paint(Graphics graphics) {
+                super.paint(graphics);
+                if (isShown() && undoBidTimer != -1) {
+                    double progress = Math.min((double) (System.currentTimeMillis() - undoBidTimer) / 2000, 1);
+                    graphics.setColor(new Color(175, 175, 175));
+                    graphics.fillRect(x(), y() - 20, width(), 3);
+                    graphics.setColor(new Color(255, 255, 255));
+                    graphics.fillRect(x(), y() - 20, (int) (width() * progress), 3);
+                }
+            }
         });
         
-        // Poke button
-        buttons.add(new CanvasButton("Poke") {
-            @Override
-            public int x() {
-                return 20;
-            }
-            
-            @Override
-            public int y() {
-                return getHeight() - 130;
-            }
-            
-            @Override
-            public int width() {
-                return 80;
-            }
-            
-            @Override
-            public int height() {
-                return 30;
-            }
-            
-            @Override
-            public boolean isShown() {
-                return state != GameState.PREGAME && state != GameState.POSTGAME;
-            }
-            
-            @Override
-            public boolean isEnabled() {
-                return currentTime - pokeTime >= (long) pokeWaitTime * 1000000
-                        && (state == GameState.BIDDING || state == GameState.PLAYING)
-                        && myPlayer.getBidding() == 0
-                        && !myPlayer.isPlaying();
-            }
-            
-            @Override
-            public void click() {
-                resetPokeTime();
-                client.pokePlayer();
-            }
-        });
+//        // Poke button
+//        buttons.add(new CanvasButton("Poke") {
+//            @Override
+//            public int x() {
+//                return 20;
+//            }
+//            
+//            @Override
+//            public int y() {
+//                return getHeight() - 130;
+//            }
+//            
+//            @Override
+//            public int width() {
+//                return 80;
+//            }
+//            
+//            @Override
+//            public int height() {
+//                return 30;
+//            }
+//            
+//            @Override
+//            public boolean isShown() {
+//                return state != GameState.PREGAME && state != GameState.POSTGAME;
+//            }
+//            
+//            @Override
+//            public boolean isEnabled() {
+//                return currentTime - pokeTime >= (long) pokeWaitTime * 1000000
+//                        && (state == GameState.BIDDING || state == GameState.PLAYING)
+//                        && myPlayer.getBidding() == 0
+//                        && !myPlayer.isPlaying()
+//                        && !myPlayer.isKibitzer() ;
+//            }
+//            
+//            @Override
+//            public void click() {
+//                resetPokeTime();
+//                client.pokePlayer();
+//            }
+//        });
         
         // One-round show card button
         buttons.add(new CanvasButton("Show card") {
@@ -1445,7 +1301,8 @@ public class GameCanvas extends OhcCanvas {
             public boolean isEnabled() {
                 return state == GameState.PLAYING 
                         && messageState.equals("UNBLOCKED")
-                        && !claimBlocked;
+                        && !claimBlocked
+                        && !myPlayer.isKibitzer();
             }
             
             @Override
@@ -1704,20 +1561,53 @@ public class GameCanvas extends OhcCanvas {
             }
         };
         
+        // Score sheet
+        CanvasScoreSheet scoreSheet = new CanvasScoreSheet(this) {
+            @Override
+            public int x() {
+                return getWidth() - (450 - scoreMargin);
+            }
+            
+            @Override
+            public int y() {
+                return scoreMargin;
+            }
+            
+            @Override
+            public int width() {
+                return 450 - 2 * scoreMargin;
+            }
+
+            @Override
+            public int height() {
+                int numRounds = getRoundsForScoreSheet().size();
+                return scoreVSpacing * (numRounds + 1)
+                        + CanvasScoreSheet.lineV
+                        + 2 * CanvasScoreSheet.margin;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return state != GameState.PREGAME;
+            }
+        };
+        
         // Chat areas
         chatArea.setContentType("text/html");
-        chatArea.addHyperlinkListener(new HyperlinkListener() {
-            @Override
-            public void hyperlinkUpdate(HyperlinkEvent e) {
-                if (e.getEventType().equals(HyperlinkEvent.EventType.ACTIVATED)) {
-                    try {
-                        Desktop.getDesktop().browse(e.getURL().toURI());
-                    } catch (IOException | URISyntaxException e1) {
-                        e1.printStackTrace();
+        if (chatArea.getHyperlinkListeners().length == 0) {
+            chatArea.addHyperlinkListener(new HyperlinkListener() {
+                @Override
+                public void hyperlinkUpdate(HyperlinkEvent e) {
+                    if (e.getEventType().equals(HyperlinkEvent.EventType.ACTIVATED)) {
+                        try {
+                            Desktop.getDesktop().browse(e.getURL().toURI());
+                        } catch (IOException | URISyntaxException e1) {
+                            e1.printStackTrace();
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
         chatArea.setEditable(false);
         DefaultCaret caret = (DefaultCaret) chatArea.getCaret();
         caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
@@ -1735,9 +1625,12 @@ public class GameCanvas extends OhcCanvas {
             
             @Override
             public int y() {
-                int numRounds = client.getRounds().size();
+                int numRounds = getRoundsForScoreSheet().size();
                 return Math.max(
-                        2 * scoreMargin + scoreVSpacing * (numRounds + 1) + 5, 
+                        2 * scoreMargin 
+                            + scoreVSpacing * (numRounds + 1)
+                            + CanvasScoreSheet.lineV
+                            + 2 * CanvasScoreSheet.margin, 
                         getHeight() - 300);
             }
             
@@ -1871,9 +1764,11 @@ public class GameCanvas extends OhcCanvas {
     
         setInteractables(Arrays.asList(
                 embeddedSwings,
-                Arrays.asList(lastTrick),
+                Arrays.asList(scoreSheet),
                 bidButtons,
                 cardInteractables,
+                namePlates,
+                Arrays.asList(lastTrick),
                 kickButtons,
                 buttons,
                 Arrays.asList(postGamePage)
@@ -1976,8 +1871,36 @@ public class GameCanvas extends OhcCanvas {
         }
     }
     
+    public List<ClientPlayer> getPlayersForScoreSheet() {
+        if (state == GameState.POSTGAME) {
+            return postGamePlayers;
+        } else {
+            return players;
+        }
+    }
+    
+    public List<int[]> getRoundsForScoreSheet() {
+        if (state == GameState.POSTGAME) {
+            return postGameRounds;
+        } else {
+            return client.getRounds();
+        }
+    }
+    
+    public List<ClientPlayer> getPlayers() {
+        return players;
+    }
+    
+    public ClientPlayer getMyPlayer() {
+        return myPlayer;
+    }
+    
     public void setLeader(int leader) {
         this.leader = leader;
+    }
+    
+    public int getDealer() {
+        return dealer;
     }
     
     public void mouseWheeled(int clicks) {
@@ -2082,6 +2005,7 @@ public class GameCanvas extends OhcCanvas {
         maxHand = Math.min(10, 51 / Math.max(players.size(), 1));
         maxWid = (maxHand - 1) * 10 + cardWidthSmall;
         setPlayerPositions();
+        resetNamePlates();
         resetKickButtons();
     }
     
@@ -2104,6 +2028,7 @@ public class GameCanvas extends OhcCanvas {
         animatingTaken = false;
         takenTimer = 1;
         canUndoBid = false;
+        undoBidTimer = -1;
         messageState = "UNBLOCKED";
         claimBlocked = false;
         claimer = -1;
@@ -2409,6 +2334,18 @@ public class GameCanvas extends OhcCanvas {
                 players.get(index).setBidTimer(0);
                 if (index == myPlayer.getIndex()) {
                     canUndoBid = true;
+                    
+                    for (int i = 1; i < players.size(); i++) {
+                        ClientPlayer nextPlayer = players.get(i);
+                        if (!nextPlayer.isKicked()) {
+                            if (!nextPlayer.isHuman()) {
+                                undoBidTimer = System.currentTimeMillis();
+                            } else {
+                                undoBidTimer = -1;
+                            }
+                            break;
+                        }
+                    }
                 } else {
                     canUndoBid = false;
                 }
@@ -2634,6 +2571,9 @@ public class GameCanvas extends OhcCanvas {
                 player.setHasBid(hasBid);
                 player.setBid(bid);
                 player.setTaken(taken);
+                if (taken > 0) {
+                    trickTaken = true;
+                }
                 player.setLastTrick(lastTrick);
                 player.setTrick(trick);
                 if (!hasBid) {

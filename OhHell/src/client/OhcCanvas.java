@@ -83,10 +83,12 @@ public abstract class OhcCanvas extends JPanel {
                     background.getHeight(), 
                     null);
         }
-        
-        customPaint(graphics2);
+
+        customPaintFirst(graphics2);
         
         paintInteractables(graphics2);
+
+        customPaintLast(graphics2);
     }
     
     public void paintInteractables(Graphics graphics) {
@@ -96,8 +98,10 @@ public abstract class OhcCanvas extends JPanel {
             }
         }
     }
+
+    public void customPaintFirst(Graphics graphics) {}
     
-    public void customPaint(Graphics graphics) {}
+    public void customPaintLast(Graphics graphics) {}
     
     public void mousePressed(int x, int y) {
         mouseMoved(x, y);

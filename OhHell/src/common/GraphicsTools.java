@@ -36,7 +36,7 @@ public class GraphicsTools {
         FontMetrics m = graphics.getFontMetrics();
         for (int i = 0; i < text.length(); i++) {
             String s0 = text.substring(0, text.length() - i).trim();
-            if (m.stringWidth(s0) < wid) {
+            if (m.stringWidth(s0) < wid + 1) {
                 return s0;
             }
         }

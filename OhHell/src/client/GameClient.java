@@ -780,7 +780,7 @@ public class GameClient extends JFrame {
                 }
                 
                 @Override
-                public void customPaint(Graphics graphics) {
+                public void customPaintFirst(Graphics graphics) {
                     graphics.setColor(new Color(255, 255, 255, 180));
                     GraphicsTools.drawBox(graphics, 200, 80, 285, 320, 20);
                     
@@ -808,7 +808,7 @@ public class GameClient extends JFrame {
                 }
                 
                 @Override
-                public void customPaint(Graphics graphics) {
+                public void customPaintFirst(Graphics graphics) {
                     GraphicsTools.drawStringJustified(graphics, 
                             "Updating", getWidth() / 2, getHeight() / 2, 1, 1);
                 }
@@ -938,7 +938,7 @@ public class GameClient extends JFrame {
                 }
                 
                 @Override
-                public void customPaint(Graphics graphics) {
+                public void customPaintFirst(Graphics graphics) {
                     graphics.setColor(new Color(255, 255, 255, 180));
                     GraphicsTools.drawBox(graphics, 200, 80, 285, 320, 20);
                     graphics.setColor(new Color(255, 255, 255, 210));
@@ -1112,7 +1112,7 @@ public class GameClient extends JFrame {
                 }
                 
                 @Override
-                public void customPaint(Graphics graphics) {
+                public void customPaintFirst(Graphics graphics) {
                     graphics.setColor(new Color(255, 255, 255, 180));
                     GraphicsTools.drawBox(graphics, 200, 80, 285, 320, 20);
 
@@ -1422,8 +1422,15 @@ public class GameClient extends JFrame {
     }
     
     public void undoBid() {
-        if (state == ClientState.IN_MULTIPLAYER_GAME) {
+        switch (state) {
+        case IN_SINGLE_PLAYER_GAME:
+            core.processUndoBid(spPlayer);
+            break;
+        case IN_MULTIPLAYER_GAME:
             sendCommandToServer("UNDOBID");
+            break;
+        default:
+            break;
         }
     }
     

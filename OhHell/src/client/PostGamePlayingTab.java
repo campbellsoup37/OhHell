@@ -282,8 +282,8 @@ public class PostGamePlayingTab extends CanvasInteractable {
                 }
                 GraphicsTools.drawStringJustified(graphics, 
                         GraphicsTools.fitString(graphics, player.getName(), 
-                                width() / 4 - 2 * margin + 25), 
-                        x() + 2 * margin + 25, 
+                                width() / 8 - 3 * margin), 
+                        x() + 2 * margin, 
                         y() + trumpRowHeight + i * h + h / 2, 
                         0, 1);
                 graphics.setColor(Color.BLACK);

@@ -35,6 +35,8 @@ public class OhHellCore {
     private Recorder recorder;
     private boolean record;
     
+    private PendingAction pendingAction;
+    
     public OhHellCore(boolean record) {
         aiKernel = new AiKernel(this);
         
@@ -342,7 +344,19 @@ public class OhHellCore {
             }
             state = "PLAYING";
         }
-        communicateTurn();
+        
+        if (player.isHuman() && !players.get(turn).isHuman()) {
+            pendingAction = new PendingAction(2000) {
+                private static final long serialVersionUID = 1L;
+
+                @Override
+                public void action() {
+                    communicateTurn();
+                }
+            };
+        } else {
+            communicateTurn();
+        }
     }
     
     // AI ------------------------------------------------------------------------------------------
@@ -594,6 +608,10 @@ public class OhHellCore {
     public void processUndoBid(Player player) {
         Player nextPlayer = players.get(nextUnkicked(player.getIndex()));
         if (!nextPlayer.hasBid() || player.getIndex() == getDealer() && nextPlayer.getTrick().isEmpty()) {
+            if (pendingAction != null) {
+                pendingAction.turnOff();
+            }
+            
             if (state.equals("PLAYING")) {
                 state = "BIDDING";
                 if (record) {
@@ -713,7 +731,7 @@ public class OhHellCore {
     
     public void reportKick(int index) {
         if (gameStarted && (players.stream().allMatch(p -> 
-                p.isKicked() || p.isDisconnected() || !p.isHuman()))) {
+                p.isKicked() || !p.isHuman()))) {
             stopGame();
         } else {
             if (record) {

@@ -237,6 +237,11 @@ public class SinglePlayerPlayer extends Player {
     }
     
     @Override
+    public void commandUndoBidReport(int index) {
+        client.undoBidReport(index);
+    }
+    
+    @Override
     public void commandClaimRequest(int index) {
         client.claimReport(index);
     }

@@ -1,10 +1,10 @@
-windowlocationmenu = 798,224
-windowlocationingame = 143,41
-windowsizeingame = 1669,935
+windowlocationmenu = 444,218
+windowlocationingame = 85,38
+windowsizeingame = 1758,944
 windowmaximizedingame = false
-recentusername = soup2
+recentusername = soup1
 recentaddress = localhost
 recentport = 6066
-playsound = true
+playsound = false
 aidelay = 100
-savefilelocation = 
+savefilelocation = C:\Users\Campbell\Desktop\Oh Hell\saves

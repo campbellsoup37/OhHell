@@ -25,7 +25,7 @@ public class PostGameSummaryTab extends CanvasInteractable {
     
     private List<ClientPlayer> players;
     
-    private List<CanvasScorePlot> deltas;
+    private List<CanvasPlot> deltas;
     private List<Double> bidSkills;
     private List<Double> playSkills;
     private List<Double> lucks;
@@ -84,11 +84,15 @@ public class PostGameSummaryTab extends CanvasInteractable {
                 // at +-5 because sometimes the AI way underestimates probabilities in the one 
                 // card round that are already low (e.g., the chance of winning with an off-suit
                 // deuce when in first seat, resulting in a z-score of like -30).
-                luck += Math.max(-5, Math.min(5, 
-                        (player.getScores().get(i) 
-                                - (i > 0 ? player.getScores().get(i - 1) : 0) 
-                                - E[player.getBids().get(i)]) / Math.sqrt(V)
-                        ));
+                double handLuck = Math.max(-5, Math.min(5, 
+                                    (player.getScores().get(i) 
+                                            - (i > 0 ? player.getScores().get(i - 1) : 0) 
+                                            - E[player.getBids().get(i)]) / Math.sqrt(V)
+                                    ));
+                if (handLuck != handLuck) {
+                    handLuck = 0;
+                }
+                luck += handLuck;
                 
 //                double acc = player.getBids().get(i) - player.getAiBids().get(i);
 //                boolean prevented = rounds.get(i)[0] == player.getIndex() 
@@ -121,7 +125,7 @@ public class PostGameSummaryTab extends CanvasInteractable {
             }
             
             final int jF = j;
-            CanvasScorePlot dPlot = new CanvasScorePlot() {
+            CanvasPlot dPlot = new CanvasPlot() {
                 @Override
                 public int x() {
                     return (int) (tab.x() + deltaColumn * tab.width() - width() / 2);
@@ -228,7 +232,7 @@ public class PostGameSummaryTab extends CanvasInteractable {
                 graphics.setColor(Color.BLACK);
                 GraphicsTools.drawStringJustified(graphics, 
                         GraphicsTools.fitString(graphics, player.getName(), 
-                                width() / 4 - 2 * margin + 25), 
+                                width() * 3.0 / 16 - 2 * margin + 25), 
                         x() + 2 * margin + 25, 
                         y() + trumpRowHeight + i * h + h / 2, 
                         0, 1);
@@ -272,7 +276,7 @@ public class PostGameSummaryTab extends CanvasInteractable {
     public CanvasInteractable updateMoused(int x, int y) {
         CanvasInteractable ans = super.updateMoused(x, y);
         if (isMoused()) {
-            for (CanvasScorePlot plot : deltas) {
+            for (CanvasPlot plot : deltas) {
                 CanvasInteractable inter = plot.updateMoused(x, y);
                 if (inter != null) {
                     ans = inter;

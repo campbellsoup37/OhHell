@@ -180,7 +180,7 @@ public class PostGamePage extends CanvasInteractable {
             } else {
                 probs.get(k).set(players.get(0).getScores().size(), 0D);
             }
-            winProbPlot.getPlot().addData(k, CanvasScorePlot.circlePoint, players.get(k).getName(), probs.get(k));
+            winProbPlot.getPlot().addData(k, CanvasPlot.circlePoint, players.get(k).getName(), probs.get(k));
         }
         ///////////////
 //        probs = new ArrayList<>(players.size());

@@ -8,12 +8,15 @@ import common.GraphicsTools;
 
 public class PostGamePlotTab extends CanvasInteractable {
     private List<ClientPlayer> sortedPlayers;
-    private CanvasScorePlot plot;
+    private CanvasPlot plot;
+    
+    private double maxValueWidth = Integer.MIN_VALUE;
+    private boolean widthMemo = false;
     
     public PostGamePlotTab(List<ClientPlayer> sortedPlayers) {
         this.sortedPlayers = sortedPlayers;
         PostGamePlotTab tab = this;
-        plot = new CanvasScorePlot() {
+        plot = new CanvasPlot() {
             @Override
             public int x() {
                 return tab.x()
@@ -40,12 +43,21 @@ public class PostGamePlotTab extends CanvasInteractable {
         };
     }
     
-    public CanvasScorePlot getPlot() {
+    public CanvasPlot getPlot() {
         return plot;
     }
     
     @Override
     public void paint(Graphics graphics) {
+        if (!widthMemo) {
+            for (ClientPlayer player : sortedPlayers) {
+                maxValueWidth = Math.max(
+                        graphics.getFontMetrics().stringWidth(player.getScore() + ""), 
+                        maxValueWidth);
+            }
+            widthMemo = true;
+        }
+        
         graphics.setColor(Color.WHITE);
         GraphicsTools.drawBox(graphics, 
                 x(),
@@ -74,13 +86,13 @@ public class PostGamePlotTab extends CanvasInteractable {
                             graphics, 
                             player.getPlace() + ". " 
                             + player.getName(), 
-                            0.8 * GameCanvas.finalScoreListWidth - 2 * GameCanvas.finalScoreInnerMargin),
-                    x() + GameCanvas.finalScoreInnerMargin + GameCanvas.finalScoreInnerMargin / 2, 
+                            GameCanvas.finalScoreListWidth - 4 * GameCanvas.finalScoreInnerMargin - maxValueWidth),
+                    x() + 2 * GameCanvas.finalScoreInnerMargin, 
                     y() + 30 + 15 * (i + 1), 
                     0, 1);
             GraphicsTools.drawStringJustified(graphics, 
                     player.getScore() + "",
-                    x() + (int) (0.8 * GameCanvas.finalScoreListWidth), 
+                    x() + (int) (GameCanvas.finalScoreListWidth - GameCanvas.finalScoreInnerMargin - maxValueWidth / 2), 
                     y() + 30 + 15 * (i + 1), 
                     1, 1);
         }

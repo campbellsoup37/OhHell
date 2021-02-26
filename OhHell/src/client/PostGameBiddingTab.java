@@ -27,7 +27,7 @@ public class PostGameBiddingTab extends CanvasInteractable {
     private List<CanvasButton> roundButtons;
     private int roundSelected = 0;
     
-    private List<List<CanvasScorePlot>> qPlots;
+    private List<List<CanvasPlot>> qPlots;
     
     public PostGameBiddingTab(GameCanvas canvas, List<ClientPlayer> players, List<int[]> rounds) {
         this.canvas = canvas;
@@ -92,7 +92,7 @@ public class PostGameBiddingTab extends CanvasInteractable {
                 }
                 
                 final int jF = j;
-                qPlots.get(i).add(new CanvasScorePlot() {
+                qPlots.get(i).add(new CanvasPlot() {
                     @Override
                     public int x() {
                         return tab.x() + tab.width() / 2;
@@ -348,7 +348,7 @@ public class PostGameBiddingTab extends CanvasInteractable {
     public CanvasInteractable updateMoused(int x, int y) {
         CanvasInteractable ans = super.updateMoused(x, y);
         if (isMoused()) {
-            for (CanvasScorePlot plot : qPlots.get(roundSelected)) {
+            for (CanvasPlot plot : qPlots.get(roundSelected)) {
                 CanvasInteractable inter = plot == null ? null : plot.updateMoused(x, y);
                 if (inter != null) {
                     ans = inter;
