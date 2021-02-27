@@ -31,7 +31,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
     
     public AiStrategyModuleOI(OhHellCore core, int N,
             OverallValueLearner ovl, ImmediateValueLearner ivl) {
-        this(core, N, core.getDeck().isDoubleDeck() ? 2 : 1, ovl, ivl);
+        this(core, N, core.getDeck().getD(), ovl, ivl);
     }
     
     public AiStrategyModuleOI(OhHellCore core, int N, int D,

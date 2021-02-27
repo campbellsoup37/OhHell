@@ -107,10 +107,19 @@ public class OhHellCore {
         return gameStarted;
     }
     
-    public void startGame(int robotCount, boolean doubleDeck, 
-            List<AiStrategyModule> aiStrategyModules, int robotDelay) {
-        deck.setDoubleDeck(doubleDeck);
-        this.robotDelay = robotDelay;
+    public void startGame(int robotCount, GameOptions options, List<AiStrategyModule> aiStrategyModules) {
+        deck.setD(options.getD());
+        robotDelay = options.getRobotDelay();
+        int defaultStartingH = GameOptions.defaultStartingH(players.size() + robotCount, deck.getD());
+        if (options.getStartingH() <= 0 || options.getStartingH() > defaultStartingH) {
+            options.setStartingH(defaultStartingH);
+        }
+
+        if (verbose) {
+            System.out.println("Game started with options:");
+            System.out.println(options.toVerboseString());
+        }
+        
         if (robotCount > 0) {
             List<AiPlayer> aiPlayers = aiKernel.createAiPlayers(
                     players.size() + robotCount, robotCount, aiStrategyModules, 0);
@@ -133,7 +142,7 @@ public class OhHellCore {
 
         if (record) {
             recorder.start();
-            recorder.recordInfo(doubleDeck ? 2 : 1, players);
+            recorder.recordInfo(options, players);
 //            recorder.recordPlayers(
 //                    players.stream()
 //                    .map(Player::realName)
@@ -144,17 +153,17 @@ public class OhHellCore {
         roundNumber = 0;
         playNumber = 0;
         
-        buildRounds(doubleDeck);
+        buildRounds(options);
         updateRounds();
         
         for (int i = 0; i < players.size(); i++) {
             Player player = players.get(i);
             player.setIndex(i);
             player.reset();
-            player.commandStart();
+            player.commandStart(options);
         }
         for (Player player : kibitzers) {
-            player.commandStart();
+            player.commandStart(options);
         }
         
         trumps = new ArrayList<>(rounds.size());
@@ -166,12 +175,11 @@ public class OhHellCore {
         return rounds;
     }
     
-    public void buildRounds(boolean doubleDeck) {
+    public void buildRounds(GameOptions options) {
 //        rounds.add(new RoundDetails(2));
 //        rounds.add(new RoundDetails(2));
         
-        int numDecks = doubleDeck ? 2 : 1;
-        int maxHand = Math.min(10, (numDecks * 52 - 1) / players.size());
+        int maxHand = options.getStartingH();
         for (int i = maxHand; i >= 2; i--) {
             rounds.add(new RoundDetails(i));
         }

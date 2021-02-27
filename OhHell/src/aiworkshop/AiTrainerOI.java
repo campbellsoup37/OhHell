@@ -7,6 +7,7 @@ import java.util.List;
 
 import core.AiStrategyModule;
 import core.AiTrainer;
+import core.GameOptions;
 import core.OhHellCore;
 import core.Player;
 import ml.Learner;
@@ -28,7 +29,7 @@ public class AiTrainerOI extends AiTrainer {
     }
     
     public void run() {
-        int N = 6;
+        int N = 8;
         boolean doubleDeck = true;
         int reps = 1000000;
         boolean verbose = true;
@@ -38,8 +39,8 @@ public class AiTrainerOI extends AiTrainer {
         
         double ovlEta = 1;
         double ivlEta = 1;
-        double scale = 0.5;
-        int groupingSize = 10;
+        double scale = 0.1;
+        int groupingSize = 2;
 
         int D = doubleDeck ? 2 : 1;
         int maxH = Math.min(10, (52 * D - 1) / N);
@@ -131,10 +132,14 @@ public class AiTrainerOI extends AiTrainer {
             dash.setGraphColor(2, 0, ivlColor);
         }
         
+        GameOptions options = new GameOptions();
+        options.setD(D);
+        options.setRobotDelay(0);
+        
         int R = 20;
         long[] times = new long[R];
         for (int g = 1; g <= reps; g++) {
-            core.startGame(N, doubleDeck, aiStrategyModules, 0);
+            core.startGame(N, options, aiStrategyModules);
             
             try {
                 while (true) {

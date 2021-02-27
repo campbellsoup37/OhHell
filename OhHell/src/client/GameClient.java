@@ -57,6 +57,7 @@ import javax.swing.Timer;
 import javax.swing.UIManager;
 
 import core.Card;
+import core.GameOptions;
 import core.OhHellCore;
 import core.Player;
 import core.Recorder;
@@ -77,6 +78,7 @@ public class GameClient extends JFrame {
     private final boolean antialiasingOptionEnabled = true;
     
     public static final int maxPlayers = 10;
+    public static final int robotDelay = 2000;
     ///////////////////////////////////
     
     private String version;
@@ -122,8 +124,6 @@ public class GameClient extends JFrame {
     private long pingTime = 0;
     private long currentPing = 0;
     
-    private int robotDelay = 2000;
-    
     // MAIN_MENU
     private OhcCanvas mainMenuCanvas;
     
@@ -147,6 +147,7 @@ public class GameClient extends JFrame {
     private volatile List<ClientPlayer> players = new ArrayList<>();
     private volatile List<ClientPlayer> kibitzers = new ArrayList<>();
     private volatile ClientPlayer myPlayer;
+    private volatile GameOptions options;
     private volatile List<int[]> rounds = new ArrayList<>();
     private int roundNumber = 0;
     
@@ -410,10 +411,16 @@ public class GameClient extends JFrame {
         
         spPlayer.setCore(core);
         changeState(ClientState.IN_SINGLE_PLAYER_GAME);
-        core.startGame(numRobots, doubleDeck, null, devSpeedSelected() ? 0 : robotDelay);
+        
+        GameOptions options = new GameOptions();
+        options.setD(doubleDeck ? 2 : 1);
+        options.setRobotDelay(devSpeedSelected() ? 0 : robotDelay);
+        
+        core.startGame(numRobots, options, null);
     }
     
-    public void startGame() {
+    public void startGame(GameOptions options) {
+        this.options = options;
         roundNumber = 0;
         postGameFileBuilder = new StringBuilder();
 
@@ -434,6 +441,10 @@ public class GameClient extends JFrame {
         default:
             throw new IllegalClientStateException("startGame() was called in state " + state);
         }
+    }
+    
+    public GameOptions getGameOptions() {
+        return options;
     }
     
     public List<ClientPlayer> getPlayers() {
@@ -824,57 +835,25 @@ public class GameClient extends JFrame {
                 public void initialize() {
                     setBackground(tableImg);
                     
-                    CanvasButton minusButton = new CanvasButton("-") {
+                    CanvasSpinner robotsSpinner = new CanvasSpinner(4) {
                         @Override
                         public int x() {
-                            return getWidth() / 2 + 25;
+                            return getWidth() / 2 + 20;
                         }
                         
                         @Override
                         public int y() {
-                            return 160;
+                            return 155;
                         }
                         
                         @Override
-                        public int width() {
-                            return 20;
+                        public int min() {
+                            return 1;
                         }
                         
                         @Override
-                        public int height() {
-                            return 20;
-                        }
-                        
-                        @Override
-                        public void click() {
-                            numRobots = Math.max(1, numRobots - 1);
-                        }
-                    };
-                    
-                    CanvasButton plusButton = new CanvasButton("+") {
-                        @Override
-                        public int x() {
-                            return getWidth() / 2 + 75;
-                        }
-                        
-                        @Override
-                        public int y() {
-                            return 160;
-                        }
-                        
-                        @Override
-                        public int width() {
-                            return 20;
-                        }
-                        
-                        @Override
-                        public int height() {
-                            return 20;
-                        }
-                        
-                        @Override
-                        public void click() {
-                            numRobots = Math.min(maxPlayers - (botsOnlyOption.isSelected() ? 0 : 1), numRobots + 1);
+                        public int max() {
+                            return maxPlayers - (botsOnlyOption.isSelected() ? 0 : 1);
                         }
                     };
                     
@@ -933,6 +912,7 @@ public class GameClient extends JFrame {
                         
                         @Override
                         public void click() {
+                            numRobots = robotsSpinner.getValue();
                             startSinglePlayerGame();
                         }
                     };
@@ -964,7 +944,7 @@ public class GameClient extends JFrame {
                         }
                     };
                     
-                    setInteractables(Arrays.asList(Arrays.asList(minusButton, plusButton, doubleDeckButton, startButton, backButton)));
+                    setInteractables(Arrays.asList(Arrays.asList(robotsSpinner, doubleDeckButton, startButton, backButton)));
                 }
                 
                 @Override
@@ -976,8 +956,6 @@ public class GameClient extends JFrame {
                 public void customPaintFirst(Graphics graphics) {
                     graphics.setColor(new Color(255, 255, 255, 180));
                     GraphicsTools.drawBox(graphics, 200, 80, 285, 320, 20);
-                    graphics.setColor(new Color(255, 255, 255, 210));
-                    GraphicsTools.drawBox(graphics, getWidth() / 2 + 20, 155, 80, 30, 20);
                     
                     graphics.setFont(GraphicsTools.fontBold);
                     graphics.setColor(Color.BLACK);
@@ -987,15 +965,11 @@ public class GameClient extends JFrame {
                             170, 
                             2, 1);
                     GraphicsTools.drawStringJustified(graphics, 
-                            numRobots + "", 
-                            getWidth() / 2 + 60,
-                            170, 
-                            1, 1);
-                    GraphicsTools.drawStringJustified(graphics, 
                             "Double deck:", 
                             getWidth() / 2 - 20, 
                             210, 
                             2, 1);
+                    graphics.setFont(GraphicsTools.font);
                 }
             };
             
@@ -1426,7 +1400,10 @@ public class GameClient extends JFrame {
             } else if (numPlayers <= 1) {
                 notify("Not enough players.");
             } else {
-                sendCommandToServer("START:" + numRobots + ":" + doubleDeck);
+                GameOptions options = new GameOptions();
+                options.setD(doubleDeck ? 2 : 1);
+                options.setRobotDelay(devSpeedSelected() ? 0 : robotDelay);
+                sendCommandToServer("START:" + numRobots + ":" + options);
             }
         } else {
             notify("You are not the host.");

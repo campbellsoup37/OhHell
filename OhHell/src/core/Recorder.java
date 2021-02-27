@@ -37,8 +37,11 @@ public class Recorder {
                 .replace("\\" + commandDelimiter2, commandDelimiter2);
     }
     
-    public void recordInfo(int numDecks, List<Player> players) {
-        file.add("decks" + commandDelimiter1 + numDecks);
+    public void recordInfo(GameOptions options, List<Player> players) {
+        file.add("decks" + commandDelimiter1 + options.getD());
+        if (options.isOregon()) {
+            file.add("oregon" + commandDelimiter1 + "true");
+        }
         String line = "players";
         for (Player player : players) {
             line += commandDelimiter1

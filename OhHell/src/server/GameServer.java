@@ -40,6 +40,7 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
 import core.Card;
+import core.GameOptions;
 import core.OhHellCore;
 import core.Player;
 import common.OhcButton;
@@ -49,8 +50,6 @@ import common.OhcTextField;
 
 public class GameServer extends JFrame {
     private static final long serialVersionUID = 1L;
-    
-    private final int robotDelay = 2000;
     
     private String version;
     private boolean updateChecked = false;
@@ -83,6 +82,7 @@ public class GameServer extends JFrame {
     
     private List<Player> players = new ArrayList<>();
     private List<Player> kibitzers = new ArrayList<>();
+    private GameOptions options;
     
     private Random random = new Random();
     
@@ -212,8 +212,9 @@ public class GameServer extends JFrame {
         return core.getGameStarted();
     }
     
-    public void startGame(int robotCount, boolean doubleDeck) {
-        core.startGame(robotCount, doubleDeck, null, robotDelay);
+    public void startGame(int robotCount, GameOptions options) {
+        this.options = options;
+        core.startGame(robotCount, options, null);
     }
     
     public void updatePlayersList() {
@@ -305,7 +306,7 @@ public class GameServer extends JFrame {
                 }
             }
             player.commandAddPlayers(players, kibitzers);
-            player.commandStart();
+            player.commandStart(options);
             core.sendFullGameState(player);
         } else {
             if (!reconnect) {

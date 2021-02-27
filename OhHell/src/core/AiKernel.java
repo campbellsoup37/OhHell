@@ -75,7 +75,7 @@ public class AiKernel {
     }
     
     public List<AiStrategyModule> createDefaultAiStrategyModules(int N, int robotCount) {
-        int D = core.getDeck().isDoubleDeck() ? 2 : 1;
+        int D = core.getDeck().getD();
         OverallValueLearner ovl = new OverallValueLearner("resources/models/" + "ovlN" + N + "D" + D + ".txt");
         ImmediateValueLearner ivl = new ImmediateValueLearner("resources/models/" + "ivlN" + N + "D" + D + ".txt");
         List<AiStrategyModule> aiStrategyModules = new ArrayList<>(robotCount);

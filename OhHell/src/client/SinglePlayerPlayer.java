@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import core.Card;
+import core.GameOptions;
 import core.OhHellCore;
 import core.Player;
 import core.RoundDetails;
@@ -37,8 +38,8 @@ public class SinglePlayerPlayer extends Player {
     }
     
     @Override
-    public void commandStart() {
-        client.startGame();
+    public void commandStart(GameOptions options) {
+        client.startGame(options);
     }
 
     @Override

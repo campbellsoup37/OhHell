@@ -10,6 +10,7 @@ import java.util.List;
 
 import core.AiStrategyModule;
 import core.AiTrainer;
+import core.GameOptions;
 import core.OhHellCore;
 import core.Player;
 import ml.Learner;
@@ -128,7 +129,7 @@ public class AiTrainerMI extends AiTrainer {
         int R = 20;
         long[] times = new long[R];
         for (int g = 1; g <= reps; g++) {
-            core.startGame(N, false, aiStrategyModules, 0);
+            core.startGame(N, new GameOptions(), aiStrategyModules);
             
             try {
                 while (true) {

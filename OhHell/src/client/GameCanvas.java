@@ -26,6 +26,7 @@ import javax.swing.event.HyperlinkListener;
 import javax.swing.text.DefaultCaret;
 
 import core.Card;
+import core.GameOptions;
 import core.Recorder;
 import common.FileTools;
 import common.GraphicsTools;
@@ -69,15 +70,18 @@ public class GameCanvas extends OhcCanvas {
     ///////////////////////////////////
 
     public static final String urlRegex = "((http:\\/\\/|https:\\/\\/)?(www.)?(([a-zA-Z0-9-]){2,}\\.){1,4}([a-zA-Z]){2,6}(\\/([a-zA-Z-_\\/\\.0-9#:?=&;,]*)?)?)";
-    public static final String[][] htmlReservedChars = { { "&", "&amp;" }, { "<", "&lt;" }, { ">", "&gt;" },
-            { "\"", "&quot;" }, { "'", "&#39;" } };
+    public static final String[][] htmlReservedChars = 
+               {{"&", "&amp;"}, 
+                {"<", "&lt;"}, 
+                {">", "&gt;"},
+                {"\"", "&quot;"}, 
+                {"'", "&#39;"}};
 
     private volatile GameClient client;
 
     private List<ClientPlayer> players;
     private ClientPlayer myPlayer;
 
-    private int maxHand;
     private double maxWid;
 
     private int numRobots = 0;
@@ -97,7 +101,7 @@ public class GameCanvas extends OhcCanvas {
     private List<PlayerNamePlate> namePlates = new LinkedList<>();
     private CanvasCard lastTrick;
     private List<CanvasButton> kickButtons = new LinkedList<>();
-    private List<CanvasButton> buttons = new LinkedList<>();
+    private List<CanvasInteractable> miscInteractables = new LinkedList<>();
 
     private JTextPane chatArea = new JTextPane();
     private String[] chatLines = new String[maxChatLines];
@@ -125,9 +129,9 @@ public class GameCanvas extends OhcCanvas {
     private boolean showOneCard = false;
 
     private PostGamePage postGamePage;
-    private boolean postGameDoubleDeck;
     private List<ClientPlayer> postGamePlayers;
     private List<int[]> postGameRounds;
+    private GameOptions postGameOptions;
 
     private GameState state = GameState.PREGAME;
 
@@ -244,8 +248,6 @@ public class GameCanvas extends OhcCanvas {
         if (state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME) {
             graphics.setColor(new Color(255, 255, 255, 180));
             GraphicsTools.drawBox(graphics, (getWidth() - 450) / 2 - 200, getHeight() / 2 - 150, 400, 300, 20);
-            graphics.setColor(new Color(255, 255, 255, 210));
-            GraphicsTools.drawBox(graphics, (getWidth() - 450) / 2 + 20, getHeight() / 2 - 15, 80, 30, 20);
             graphics.setColor(Color.BLACK);
             graphics.setFont(GraphicsTools.fontBold);
             GraphicsTools.drawStringJustified(graphics, "Name:", (getWidth() - 450) / 2 - 140, getHeight() / 2 - 105, 2,
@@ -253,8 +255,6 @@ public class GameCanvas extends OhcCanvas {
             GraphicsTools.drawStringJustified(graphics, "Join as kibitzer:", (getWidth() - 450) / 2 - 20,
                     getHeight() / 2 - 60, 2, 1);
             GraphicsTools.drawStringJustified(graphics, "Robots:", (getWidth() - 450) / 2 - 20, getHeight() / 2, 2, 1);
-            GraphicsTools.drawStringJustified(graphics, numRobots + "", (getWidth() - 450) / 2 + 60, getHeight() / 2, 1,
-                    1);
             GraphicsTools.drawStringJustified(graphics, "Double deck:", (getWidth() - 450) / 2 - 20,
                     getHeight() / 2 + 40, 2, 1);
             graphics.setFont(GraphicsTools.font);
@@ -775,7 +775,7 @@ public class GameCanvas extends OhcCanvas {
         };
 
         // Buttons
-        buttons = new LinkedList<>();
+        miscInteractables = new LinkedList<>();
 
         // Pre-game interactables
         OhcTextField nameField = new OhcTextField("Name");
@@ -823,7 +823,7 @@ public class GameCanvas extends OhcCanvas {
             }
         });
 
-        buttons.add(new CanvasButton("Change name") {
+        miscInteractables.add(new CanvasButton("Change name") {
             @Override
             public int x() {
                 return (getWidth() - 450) / 2 + 80;
@@ -855,7 +855,7 @@ public class GameCanvas extends OhcCanvas {
             }
         });
 
-        buttons.add(new CanvasButton("") {
+        miscInteractables.add(new CanvasButton("") {
             @Override
             public int x() {
                 return (getWidth() - 450) / 2 + 20;
@@ -891,26 +891,26 @@ public class GameCanvas extends OhcCanvas {
                 client.toggleKibitzer();
             }
         });
-
-        buttons.add(new CanvasButton("-") {
+        
+        CanvasSpinner robotsSpinner = new CanvasSpinner(0) {
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 + 25;
+                return (getWidth() - 450) / 2 + 20;
             }
-
+            
             @Override
             public int y() {
-                return getHeight() / 2 - 10;
+                return getHeight() / 2 - 15;
             }
-
+            
             @Override
-            public int width() {
-                return 20;
+            public int min() {
+                return 0;
             }
-
+            
             @Override
-            public int height() {
-                return 20;
+            public int max() {
+                return GameClient.maxPlayers - players.size();
             }
 
             @Override
@@ -922,51 +922,10 @@ public class GameCanvas extends OhcCanvas {
             public boolean isEnabled() {
                 return myPlayer != null && myPlayer.isHost();
             }
+        };
+        miscInteractables.add(robotsSpinner);
 
-            @Override
-            public void click() {
-                numRobots = Math.max(0, numRobots - 1);
-            }
-        });
-
-        buttons.add(new CanvasButton("+") {
-            @Override
-            public int x() {
-                return (getWidth() - 450) / 2 + 75;
-            }
-
-            @Override
-            public int y() {
-                return getHeight() / 2 - 10;
-            }
-
-            @Override
-            public int width() {
-                return 20;
-            }
-
-            @Override
-            public int height() {
-                return 20;
-            }
-
-            @Override
-            public boolean isShown() {
-                return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
-            }
-
-            @Override
-            public boolean isEnabled() {
-                return myPlayer != null && myPlayer.isHost();
-            }
-
-            @Override
-            public void click() {
-                numRobots = Math.min(GameClient.maxPlayers, numRobots + 1);
-            }
-        });
-
-        buttons.add(new CanvasButton("") {
+        miscInteractables.add(new CanvasButton("") {
             @Override
             public int x() {
                 return (getWidth() - 450) / 2 + 20;
@@ -1008,7 +967,7 @@ public class GameCanvas extends OhcCanvas {
             }
         });
 
-        buttons.add(new CanvasButton("Start") {
+        miscInteractables.add(new CanvasButton("Start") {
             @Override
             public int x() {
                 return (getWidth() - 450) / 2 - 160;
@@ -1041,11 +1000,12 @@ public class GameCanvas extends OhcCanvas {
 
             @Override
             public void click() {
+                numRobots = robotsSpinner.getValue();
                 client.readyPressed(numRobots, doubleDeck);
             }
         });
 
-        buttons.add(new CanvasButton("Leave table") {
+        miscInteractables.add(new CanvasButton("Leave table") {
             @Override
             public int x() {
                 return (getWidth() - 450) / 2 + 10;
@@ -1083,7 +1043,7 @@ public class GameCanvas extends OhcCanvas {
         });
 
         // Undo bid button
-        buttons.add(new CanvasButton("Undo bid") {
+        miscInteractables.add(new CanvasButton("Undo bid") {
             @Override
             public int x() {
                 return (getWidth() - 450) / 2 - 40;
@@ -1130,51 +1090,8 @@ public class GameCanvas extends OhcCanvas {
             }
         });
 
-        // // Poke button
-        // buttons.add(new CanvasButton("Poke") {
-        // @Override
-        // public int x() {
-        // return 20;
-        // }
-        //
-        // @Override
-        // public int y() {
-        // return getHeight() - 130;
-        // }
-        //
-        // @Override
-        // public int width() {
-        // return 80;
-        // }
-        //
-        // @Override
-        // public int height() {
-        // return 30;
-        // }
-        //
-        // @Override
-        // public boolean isShown() {
-        // return state != GameState.PREGAME && state != GameState.POSTGAME;
-        // }
-        //
-        // @Override
-        // public boolean isEnabled() {
-        // return currentTime - pokeTime >= (long) pokeWaitTime * 1000000
-        // && (state == GameState.BIDDING || state == GameState.PLAYING)
-        // && myPlayer.getBidding() == 0
-        // && !myPlayer.isPlaying()
-        // && !myPlayer.isKibitzer() ;
-        // }
-        //
-        // @Override
-        // public void click() {
-        // resetPokeTime();
-        // client.pokePlayer();
-        // }
-        // });
-
         // One-round show card button
-        buttons.add(new CanvasButton("Show card") {
+        miscInteractables.add(new CanvasButton("Show card") {
             @Override
             public int x() {
                 return (getWidth() - 450) / 2 - 40;
@@ -1208,7 +1125,7 @@ public class GameCanvas extends OhcCanvas {
         });
 
         // Claim button
-        buttons.add(new CanvasButton("Claim") {
+        miscInteractables.add(new CanvasButton("Claim") {
             @Override
             public int x() {
                 return 20;
@@ -1247,7 +1164,7 @@ public class GameCanvas extends OhcCanvas {
         });
 
         // End game button
-        buttons.add(new CanvasButton("End game") {
+        miscInteractables.add(new CanvasButton("End game") {
             @Override
             public int x() {
                 return 20;
@@ -1287,7 +1204,7 @@ public class GameCanvas extends OhcCanvas {
         // Post-game buttons
         int numPgButtons = 3;
         // Back to options (pregame)
-        buttons.add(new CanvasButton("Back to lobby") {
+        miscInteractables.add(new CanvasButton("Back to lobby") {
             @Override
             public int x() {
                 return (getWidth() - 450) / 2 - (numPgButtons * width() + (numPgButtons - 1) * 20) / 2
@@ -1329,7 +1246,7 @@ public class GameCanvas extends OhcCanvas {
         });
 
         // Leave
-        buttons.add(new CanvasButton("Leave table") {
+        miscInteractables.add(new CanvasButton("Leave table") {
             @Override
             public int x() {
                 return (getWidth() - 450) / 2 - (numPgButtons * width() + (numPgButtons - 1) * 20) / 2
@@ -1363,7 +1280,7 @@ public class GameCanvas extends OhcCanvas {
         });
 
         // Save game
-        buttons.add(new CanvasButton("Save game") {
+        miscInteractables.add(new CanvasButton("Save game") {
             @Override
             public int x() {
                 return (getWidth() - 450) / 2 - (numPgButtons * width() + (numPgButtons - 1) * 20) / 2
@@ -1398,7 +1315,7 @@ public class GameCanvas extends OhcCanvas {
 
         // Bottom left buttons
         // Claim accept button
-        buttons.add(new CanvasButton("Accept") {
+        miscInteractables.add(new CanvasButton("Accept") {
             @Override
             public int x() {
                 return (getWidth() - 450) / 2 - 125;
@@ -1432,7 +1349,7 @@ public class GameCanvas extends OhcCanvas {
         });
 
         // Claim refuse button
-        buttons.add(new CanvasButton("Refuse") {
+        miscInteractables.add(new CanvasButton("Refuse") {
             @Override
             public int x() {
                 return (getWidth() - 450) / 2 + 25;
@@ -1694,7 +1611,7 @@ public class GameCanvas extends OhcCanvas {
         embeddedSwings.add(chatField);
 
         setInteractables(Arrays.asList(embeddedSwings, Arrays.asList(scoreSheet), bidButtons, cardInteractables,
-                namePlates, Arrays.asList(lastTrick), kickButtons, buttons, Arrays.asList(postGamePage)));
+                namePlates, Arrays.asList(lastTrick), kickButtons, miscInteractables, Arrays.asList(postGamePage)));
     }
 
     public void makeBidInteractables() {
@@ -1915,8 +1832,7 @@ public class GameCanvas extends OhcCanvas {
             players.get(i).setIndex(i);
         }
         myPlayer = client.getMyPlayer();
-        maxHand = Math.min(10, 51 / Math.max(players.size(), 1));
-        maxWid = (maxHand - 1) * 10 + cardWidthSmall;
+        maxWid = 9 * 10 + cardWidthSmall;
         setPlayerPositions();
         resetNamePlates();
         resetKickButtons();
@@ -1958,6 +1874,12 @@ public class GameCanvas extends OhcCanvas {
                 for (ClientPlayer player : players) {
                     player.reset();
                 }
+                
+                GameOptions options = client.getGameOptions();
+                int maxH = options.getStartingH();
+                maxWid = (maxH - 1) * 10 + cardWidthSmall;
+                addChatLine("<b>" + players.size() + "-player game started" + (options.getD() == 2 ? " (double deck)" : "") + "</b>");
+                refreshChat();
             }
         };
     }
@@ -2346,9 +2268,9 @@ public class GameCanvas extends OhcCanvas {
                 trumps = new ArrayList<>();
                 postGamePlayers = new ArrayList<>();
                 postGameRounds = new ArrayList<>();
-                postGameDoubleDeck = false;
+                postGameOptions = new GameOptions();
                 try {
-                    loadPostGameFromFile(lines, trumps, postGamePlayers, postGameRounds);
+                    loadPostGameFromFile(lines, trumps, postGamePlayers, postGameRounds, postGameOptions);
                     simulateGame();
                 } catch (Exception e) {
                     client.notify("Unable to load post-game page.");
@@ -2359,14 +2281,8 @@ public class GameCanvas extends OhcCanvas {
         };
     }
 
-    /**
-     * The reason this function is not static right now is because it modifies
-     * postGameDoubleDeck. In the future I could use a game options class to
-     * keep track of this and pass it to the function for modification, allowing
-     * this to be static.
-     */
-    public void loadPostGameFromFile(List<String> lines, List<Card> trumps, List<ClientPlayer> players,
-            List<int[]> rounds) {
+    public static void loadPostGameFromFile(List<String> lines, List<Card> trumps, List<ClientPlayer> players,
+            List<int[]> rounds, GameOptions options) {
         trumps.clear();
         players.clear();
         rounds.clear();
@@ -2380,9 +2296,7 @@ public class GameCanvas extends OhcCanvas {
             String[] content = typeContent[1].split(Recorder.splitPreceder + Recorder.commandDelimiter1);
 
             if (type.equals("decks")) {
-                if (Integer.parseInt(content[0]) > 1) {
-                    postGameDoubleDeck = true;
-                }
+                options.setD(Integer.parseInt(content[0]));
             } else if (type.equals("players")) {
                 int index = 0;
                 for (String playerInfo : content) {
@@ -2450,7 +2364,7 @@ public class GameCanvas extends OhcCanvas {
             public void whenFinished() {
                 buildPostGameTabsOnTimer();
             }
-        }.simulate(postGameDoubleDeck);
+        }.simulate(postGameOptions);
     }
 
     public void buildPostGameTabsOnTimer() {

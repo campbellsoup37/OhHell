@@ -306,7 +306,7 @@ public class Player {
         this.acceptedClaim = acceptedClaim;
     }
     
-    public void commandStart() {}
+    public void commandStart(GameOptions options) {}
     
     public void commandEndGame(Player player) {}
     

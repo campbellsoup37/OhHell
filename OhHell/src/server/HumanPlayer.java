@@ -2,6 +2,7 @@ package server;
 import java.util.List;
 
 import core.Card;
+import core.GameOptions;
 import core.Player;
 import core.RoundDetails;
 
@@ -39,8 +40,8 @@ public class HumanPlayer extends Player {
     }
 
     @Override
-    public void commandStart() {
-        thread.sendCommand("START");
+    public void commandStart(GameOptions options) {
+        thread.sendCommand("START:" + options);
     }
     
     @Override

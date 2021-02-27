@@ -19,12 +19,12 @@ public class Deck {
         random.setSeed(seed);
     }
     
-    public void setDoubleDeck(boolean doubleDeck) {
-        D = doubleDeck ? 2 : 1;
+    public void setD(int D) {
+        this.D = D;
     }
     
-    public boolean isDoubleDeck() {
-        return D == 2;
+    public int getD() {
+        return D;
     }
     
     public void initialize() {

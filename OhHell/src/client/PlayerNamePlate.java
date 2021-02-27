@@ -40,6 +40,13 @@ public class PlayerNamePlate extends CanvasInteractable {
             return;
         }
         
+        if (isEnabled()) {
+            graphics.setColor(new Color(175, 175, 0, 20));
+            for (int i = -10; i < 0; i++) {
+                graphics.fillRoundRect(x() + i, y() + i, width() - 2 * i, height() - 2 * i, 50, 50);
+            }
+        }
+        
         if (canvas.getState() != GameState.PREGAME 
                 && (player.getBidding() == 1 || player.isPlaying()) 
                 || canvas.getState() == GameState.PREGAME && player.isHost()) {

@@ -9,6 +9,7 @@ import java.util.LinkedList;
 import java.util.Random;
 
 import core.Card;
+import core.GameOptions;
 import core.Player;
 
 public class PlayerThread extends Thread {
@@ -74,9 +75,9 @@ public class PlayerThread extends Thread {
                     server.renamePlayer(player, parsedContent.get(0));
                 } else if (command.equals("START")) {
                     if (player.isHost()) {
-                        server.startGame(
-                                Integer.parseInt(parsedContent.get(0)), 
-                                Boolean.parseBoolean(parsedContent.get(1)));
+                        int numRobots = Integer.parseInt(parsedContent.get(0));
+                        GameOptions options = new GameOptions(parsedContent.get(1));
+                        server.startGame(numRobots, options);
                     }
                 } else if (command.equals("BID")) {
                     server.makeBid(player, Integer.parseInt(parsedContent.get(0)));

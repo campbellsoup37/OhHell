@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import core.Card;
+import core.GameOptions;
 
 public class ClientReadThread extends Thread {
     private BufferedReader reader;
@@ -91,7 +92,7 @@ public class ClientReadThread extends Thread {
         } else if (command.equals("KICK")) {
             client.getKicked();
         } else if (command.equals("START")) {
-            client.startGame();
+            client.startGame(new GameOptions(parsedContent.get(0)));
         } else if (command.equals("STOP")) {
             client.endGame(parsedContent.get(0));
         } else if (command.equals("REDEAL")) {
