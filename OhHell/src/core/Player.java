@@ -159,6 +159,14 @@ public class Player {
     }
     
     public void removeCard(Card card) {
+        // First check for equality as pointers
+        for (Card c : hand) {
+            if (c == card) {
+                hand.remove(c);
+                return;
+            }
+        }
+        // Then check for equality as cards
         for (Card c : hand) {
             if (c.equals(card)) {
                 hand.remove(c);

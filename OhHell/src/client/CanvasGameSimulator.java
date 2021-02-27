@@ -27,7 +27,8 @@ public class CanvasGameSimulator {
         this.trumps = trumps;
     }
     
-    public void simulate() {
+    public void simulate(boolean doubleDeck) {
+        int D = doubleDeck ? 2 : 1;
         core = new OhHellCore(false) {
             @Override
             public void buildRounds(boolean doubleDeck) {
@@ -57,21 +58,21 @@ public class CanvasGameSimulator {
             
             @Override
             public void reloadAiStrategyModules(int N) {
-                getAiKernel().reloadAiStrategyModules(N, createAiStrategyModules(N));
+                getAiKernel().reloadAiStrategyModules(N, createAiStrategyModules(N, D));
             }
         };
         players = new ArrayList<>(cPlayers.size());
         core.setPlayers(players);
         
-        core.startGame(cPlayers.size(), false, createAiStrategyModules(cPlayers.size()), 0);
+        core.startGame(cPlayers.size(), doubleDeck, createAiStrategyModules(cPlayers.size(), D), 0);
     }
     
-    public List<AiStrategyModule> createAiStrategyModules(int N) {
-        OverallValueLearner ovl = new OverallValueLearner("resources/models/" + "ovlN" + N + ".txt");
-        ImmediateValueLearner ivl = new ImmediateValueLearner("resources/models/" + "ivlN" + N + ".txt");
+    public List<AiStrategyModule> createAiStrategyModules(int N, int D) {
+        OverallValueLearner ovl = new OverallValueLearner("resources/models/" + "ovlN" + N + "D" + D + ".txt");
+        ImmediateValueLearner ivl = new ImmediateValueLearner("resources/models/" + "ivlN" + N + "D" + D + ".txt");
         List<AiStrategyModule> aiStrategyModules = new ArrayList<>(cPlayers.size());
         for (int i = 0; i < cPlayers.size(); i++) {
-            aiStrategyModules.add(new AiStrategyModuleOI(core, N, ovl, ivl) {
+            aiStrategyModules.add(new AiStrategyModuleOI(core, N, D, ovl, ivl) {
                 public ClientPlayer clientPlayer() {
                     return cPlayers.get(player.getIndex());
                 }

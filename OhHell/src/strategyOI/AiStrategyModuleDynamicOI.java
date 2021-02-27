@@ -243,7 +243,7 @@ public class AiStrategyModuleDynamicOI extends AiStrategyModule {
             SparseVector in = null;
             double probOfWinning = 0;
             
-            if (core.cardWinning(card)) {
+            if (core.cardCanWin(card)) {
                 in = new SparseVector();
                 addIvlInput(in, card);
                 

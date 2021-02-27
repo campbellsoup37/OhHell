@@ -21,6 +21,10 @@ public class CanvasScoreSheet extends CanvasInteractable {
     
     @Override
     public void paint(Graphics graphics) {
+        if (canvas.getState() == GameState.PREGAME) {
+            return;
+        }
+        
         List<ClientPlayer> players = canvas.getPlayersForScoreSheet();
         List<int[]> rounds = canvas.getRoundsForScoreSheet();
         ClientPlayer myPlayer = canvas.getMyPlayer();

@@ -45,10 +45,12 @@ public class SparseVector implements Vector {
     }
     
     public void addOneHot(int j, int d) {
-        if (j <= 0 || j > d) {
+        if (j < 0 || j > d) {
             throw new MLException("Invalid index " + j + " for one-hot of size " + d + ".");
         }
-        entries.add(new SparseVectorEntry(totalSize + j - 1, 1));
+        if (j != 0) {
+            entries.add(new SparseVectorEntry(totalSize + j - 1, 1));
+        }
         sizes.add(d);
         totalSize += d;
     }

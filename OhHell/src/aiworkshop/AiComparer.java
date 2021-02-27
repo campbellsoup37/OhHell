@@ -14,7 +14,6 @@ public class AiComparer extends AiTrainer {
         int N = 5;
         int reps = 1000000;
         
-        String outputFolder = "C:/Users/Campbell/Desktop/OhHellAiStats/";
         int toPrint = 1;
         
         OhHellCore core = new OhHellCore(false);
@@ -23,10 +22,6 @@ public class AiComparer extends AiTrainer {
         core.setAiTrainer(this);
         
         List<AiStrategyModule> aiStrategyModules = Arrays.asList(
-                new strategyRBP.AiStrategyModuleRBP(core, N,
-                        new strategyRBP.BiddingLearner("resources/ai workshop/OhHellAiModels/RBP/b100o10i40/5/bl.txt"),
-                        new strategyRBP.OverallValueLearner("resources/ai workshop/OhHellAiModels/RBP/b100o10i40/5/ovl.txt"),
-                        new strategyRBP.ImmediateValueLearner("resources/ai workshop/OhHellAiModels/RBP/b100o10i40/5/ivl.txt")),
 //                new strategyRBP.AiStrategyModuleRBP(core, N,
 //                        new strategyRBP.BiddingLearner("resources/ai workshop/OhHellAiModels/RBP/b100o10i40/5/bl.txt"),
 //                        new strategyRBP.OverallValueLearner("resources/ai workshop/OhHellAiModels/RBP/b100o10i40/5/ovl.txt"),
@@ -43,6 +38,14 @@ public class AiComparer extends AiTrainer {
 //                        new strategyRBP.BiddingLearner("resources/ai workshop/OhHellAiModels/RBP/b100o10i40/5/bl.txt"),
 //                        new strategyRBP.OverallValueLearner("resources/ai workshop/OhHellAiModels/RBP/b100o10i40/5/ovl.txt"),
 //                        new strategyRBP.ImmediateValueLearner("resources/ai workshop/OhHellAiModels/RBP/b100o10i40/5/ivl.txt")),
+//                new strategyRBP.AiStrategyModuleRBP(core, N,
+//                        new strategyRBP.BiddingLearner("resources/ai workshop/OhHellAiModels/RBP/b100o10i40/5/bl.txt"),
+//                        new strategyRBP.OverallValueLearner("resources/ai workshop/OhHellAiModels/RBP/b100o10i40/5/ovl.txt"),
+//                        new strategyRBP.ImmediateValueLearner("resources/ai workshop/OhHellAiModels/RBP/b100o10i40/5/ivl.txt")),
+                
+                new strategyOI.AiStrategyModuleOI(core, N, 
+                        new strategyOI.OverallValueLearner("resources/ai workshop/OhHellAIModels/OI/ovlN5o40i30.txt"), 
+                        new strategyOI.ImmediateValueLearner("resources/ai workshop/OhHellAIModels/OI/ivlN5o40i30.txt")),
                 new strategyOI.AiStrategyModuleOI(core, N, 
                         new strategyOI.OverallValueLearner("resources/ai workshop/OhHellAIModels/OI/ovlN5o40i30.txt"), 
                         new strategyOI.ImmediateValueLearner("resources/ai workshop/OhHellAIModels/OI/ivlN5o40i30.txt")),
@@ -74,20 +77,33 @@ public class AiComparer extends AiTrainer {
             }
             
             players = getPlayers();
+            
+            double winningScore = Integer.MIN_VALUE;
             Hashtable<AiStrategyModule, Integer> scoreMap = new Hashtable<>();
             for (Player player : players) {
                 scoreMap.put(player.getAiStrategyModule(), player.getScore());
+                winningScore = Math.max(winningScore, player.getScore());
             }
             
-            int i = 0;
-            for (AiStrategyModule aiStrategyModule : aiStrategyModules) {
-                double x = scoreMap.get(aiStrategyModule);
+//            int i = 0;
+//            for (AiStrategyModule aiStrategyModule : aiStrategyModules) {
+//                double x = scoreMap.get(aiStrategyModule);
+//                double prevMean = means[i];
+//                means[i] = (means[i] * (g - 1) + x) / g;
+//                if (g >= 2) {
+//                    vars[i] = (vars[i] * (g - 2) + Math.pow(x - means[i], 2)) / (g - 1) + Math.pow(prevMean - means[i], 2);
+//                }
+//                i++;
+//            }
+            
+            int i;
+            for (i = 0; i < players.size(); i++) {
+                double x = (players.get(i).getScore() == winningScore ? 1.0 : 0.0);
                 double prevMean = means[i];
                 means[i] = (means[i] * (g - 1) + x) / g;
                 if (g >= 2) {
                     vars[i] = (vars[i] * (g - 2) + Math.pow(x - means[i], 2)) / (g - 1) + Math.pow(prevMean - means[i], 2);
                 }
-                i++;
             }
             
             long newTime = System.currentTimeMillis();
@@ -109,34 +125,6 @@ public class AiComparer extends AiTrainer {
                     System.out.println("     Time left: " + hours + ":" + minutes + ":" + seconds);
                 }
             }
-            
-            /*if (g % toPrint == 0) {
-                for (int j = 1; j <= maxH; j++) {
-                    try {
-                        BufferedWriter bw = new BufferedWriter(new FileWriter(outputFolder + j + " round.txt"));
-                        bw.write("{");
-                        for (int bid = 0; bid <= j; bid++) {
-                            bw.write("{");
-                            for (int taken = 0; taken <= j; taken++) {
-                                bw.write("" + bidsTakens[j][bid][taken]);
-                                if (taken < j) {
-                                    bw.write(",");
-                                } else {
-                                    bw.write("}");
-                                }
-                            }
-                            if (bid < j) {
-                                bw.write(",\n");
-                            } else {
-                                bw.write("}\n");
-                            }
-                        }
-                        bw.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }*/
         }
     }
     

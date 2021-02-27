@@ -122,6 +122,8 @@ public class GameClient extends JFrame {
     private long pingTime = 0;
     private long currentPing = 0;
     
+    private int robotDelay = 2000;
+    
     // MAIN_MENU
     private OhcCanvas mainMenuCanvas;
     
@@ -132,6 +134,7 @@ public class GameClient extends JFrame {
     private OhcCanvas singlePlayerCanvas;
     
     private int numRobots = 4;
+    private boolean doubleDeck = false;
     private OhHellCore core = new OhHellCore(true);
     private SinglePlayerPlayer spPlayer;
     
@@ -407,7 +410,7 @@ public class GameClient extends JFrame {
         
         spPlayer.setCore(core);
         changeState(ClientState.IN_SINGLE_PLAYER_GAME);
-        core.startGame(numRobots, false, null, 0);
+        core.startGame(numRobots, doubleDeck, null, devSpeedSelected() ? 0 : robotDelay);
     }
     
     public void startGame() {
@@ -875,6 +878,38 @@ public class GameClient extends JFrame {
                         }
                     };
                     
+                    CanvasButton doubleDeckButton = new CanvasButton("") {
+                        @Override
+                        public int x() {
+                            return getWidth() / 2 + 20;
+                        }
+                        
+                        @Override
+                        public int y() {
+                            return 200;
+                        }
+                        
+                        @Override
+                        public int width() {
+                            return 20;
+                        }
+                        
+                        @Override
+                        public int height() {
+                            return 20;
+                        }
+                        
+                        @Override
+                        public String text() {
+                            return doubleDeck ? "x" : "";
+                        }
+                        
+                        @Override
+                        public void click() {
+                            doubleDeck = !doubleDeck;
+                        }
+                    };
+                    
                     CanvasButton startButton = new CanvasButton("Start") {
                         @Override
                         public int x() {
@@ -929,7 +964,7 @@ public class GameClient extends JFrame {
                         }
                     };
                     
-                    setInteractables(Arrays.asList(Arrays.asList(minusButton, plusButton, startButton, backButton)));
+                    setInteractables(Arrays.asList(Arrays.asList(minusButton, plusButton, doubleDeckButton, startButton, backButton)));
                 }
                 
                 @Override
@@ -946,8 +981,21 @@ public class GameClient extends JFrame {
                     
                     graphics.setFont(GraphicsTools.fontBold);
                     graphics.setColor(Color.BLACK);
-                    GraphicsTools.drawStringJustified(graphics, "Robots:", getWidth() / 2 - 20, 170, 2, 1);
-                    GraphicsTools.drawStringJustified(graphics, numRobots + "", getWidth() / 2 + 60, 170, 1, 1);
+                    GraphicsTools.drawStringJustified(graphics, 
+                            "Robots:", 
+                            getWidth() / 2 - 20, 
+                            170, 
+                            2, 1);
+                    GraphicsTools.drawStringJustified(graphics, 
+                            numRobots + "", 
+                            getWidth() / 2 + 60,
+                            170, 
+                            1, 1);
+                    GraphicsTools.drawStringJustified(graphics, 
+                            "Double deck:", 
+                            getWidth() / 2 - 20, 
+                            210, 
+                            2, 1);
                 }
             };
             
@@ -1373,9 +1421,7 @@ public class GameClient extends JFrame {
     public void readyPressed(int numRobots, boolean doubleDeck) {
         int numPlayers = (int) players.stream().filter(ClientPlayer::isHuman).count() + numRobots;
         if (myPlayer != null && myPlayer.isHost()) {
-            if (numRobots > 0 && doubleDeck) {
-                notify("Double deck with robots is not yet supported.");
-            } else if (numRobots > 0 && numPlayers >= 11) {
+            if (numRobots > 0 && numPlayers >= 11) {
                 notify("Playing with robots and more than 10 players is not yet supported.");
             } else if (numPlayers <= 1) {
                 notify("Not enough players.");

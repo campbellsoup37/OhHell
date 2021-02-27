@@ -28,42 +28,44 @@ public class AiTrainerOI extends AiTrainer {
     }
     
     public void run() {
-        int N = 5;
+        int N = 6;
+        boolean doubleDeck = true;
         int reps = 1000000;
         boolean verbose = true;
         boolean forMathematica = false;
         boolean printError = true;
         boolean showDash = true;
         
-        double ovlWEta = 10;
-        double ovlBEta = 10;
-        double ivlWEta = 1;
-        double ivlBEta = 1;
-        double scale = 0.01;
-        int groupingSize = 1;
+        double ovlEta = 1;
+        double ivlEta = 1;
+        double scale = 0.5;
+        int groupingSize = 10;
 
-        int maxH = Math.min(10, 51 / N);
+        int D = doubleDeck ? 2 : 1;
+        int maxH = Math.min(10, (52 * D - 1) / N);
         int[] ovlLayers = {
                 maxH              // Cards left in hand
                 + (maxH + 1) * N  // Bids - takens
                 + 4               // Number of voids
-                + 13              // Trump left
+                + 13 * D          // Trump left
                 
                 + 2               // Card is trump
-                + 13              // That suit left
-                + 13,             // Card's adjusted number
-                80,               // Hidden layer
+                + 13 * D          // That suit left
+                + 13 * D          // Card's adjusted number
+                + (D - 1),        // Matching cards left
+                40,               // Hidden layer
                 1                 // Card's predicted value
         };
         int[] ivlLayers = {
                 (maxH + 1) * (N - 1) // Bids - takens
-                + 13                 // Trump left
+                + 13 * D             // Trump left
                 
                 + 2                  // Trump was led
-                + 13                 // Led suit left
+                + 13 * D             // Led suit left
                 
                 + 2                  // Card is trump
-                + 13,                // Card's adjusted number
+                + 13 * D             // Card's adjusted number
+                + (D - 1),           // Matching cards left
                 30,                  // Hidden layer
                 1                    // Card's predicted value
         };
@@ -74,10 +76,8 @@ public class AiTrainerOI extends AiTrainer {
         
         String folder = "resources/ai workshop/OhHellAIModels/OI/";
 
-        ovlWEta *= scale;
-        ovlBEta *= scale;
-        ivlWEta *= scale;
-        ivlBEta *= scale;
+        ovlEta *= scale;
+        ivlEta *= scale;
         
         String ovlFileSuffix = "o" + ovlLayers[1] + "";
         for (int i = 2; i < ovlLayers.length - 1; i++) {
@@ -95,8 +95,8 @@ public class AiTrainerOI extends AiTrainer {
         ivl.setTrainer(this);
         
         if (openFromFile) {
-            ovl.openFromFile(folder + "ovlN" + N + fileSuffix + ".txt");
-            ivl.openFromFile(folder + "ivlN" + N + fileSuffix + ".txt");
+            ovl.openFromFile(folder + "ovlN" + N + "D" + D + fileSuffix + ".txt");
+            ivl.openFromFile(folder + "ivlN" + N + "D" + D + fileSuffix + ".txt");
         }
         
         OhHellCore core = new OhHellCore(false);
@@ -106,7 +106,7 @@ public class AiTrainerOI extends AiTrainer {
         
         List<AiStrategyModule> aiStrategyModules = new ArrayList<>(N);
         for (int i = 0; i < N; i++) {
-            aiStrategyModules.add(new AiStrategyModuleOI(core, N, ovl, ivl));
+            aiStrategyModules.add(new AiStrategyModuleOI(core, N, D, ovl, ivl));
         }
         
         int M = 10000;
@@ -134,7 +134,7 @@ public class AiTrainerOI extends AiTrainer {
         int R = 20;
         long[] times = new long[R];
         for (int g = 1; g <= reps; g++) {
-            core.startGame(N, false, aiStrategyModules, 0);
+            core.startGame(N, doubleDeck, aiStrategyModules, 0);
             
             try {
                 while (true) {
@@ -184,6 +184,7 @@ public class AiTrainerOI extends AiTrainer {
             StringBuilder log = new StringBuilder();
             
             if (g % toAve[0] == 0 && verbose) {
+                log.append("OI N=" + N + ", D=" + (doubleDeck ? 2 : 1) + "\n");
                 log.append(g + "/" + reps + ": \n");
                 log.append("     Best score: " + bestScore + " (" + overallBest + ")\n");
                 bestScore = Integer.MIN_VALUE;
@@ -210,8 +211,8 @@ public class AiTrainerOI extends AiTrainer {
                 if (dash != null) {
                     dash.updateEpoch(g / groupingSize);
                 }
-                List<double[]> ovlError = ovl.doEpoch(ovlWEta, ovlBEta, printError);
-                List<double[]> ivlError = ivl.doEpoch(ivlWEta, ivlBEta, printError);
+                List<double[]> ovlError = ovl.doEpoch(ovlEta, ovlEta, printError);
+                List<double[]> ivlError = ivl.doEpoch(ivlEta, ivlEta, printError);
                 if (printError) {
                     if (dash != null) {
                         dash.addGraphData(0, 0, aves[0]);
@@ -227,8 +228,8 @@ public class AiTrainerOI extends AiTrainer {
             
             if (g % saveEvery == 0) {
                 if (saveToFile) {
-                    ovl.saveToFile(new File(folder + "ovlN" + N + fileSuffix + ".txt"));
-                    ivl.saveToFile(new File(folder + "ivlN" + N + fileSuffix + ".txt"));
+                    ovl.saveToFile(new File(folder + "ovlN" + N + "D" + D + fileSuffix + ".txt"));
+                    ivl.saveToFile(new File(folder + "ivlN" + N + "D" + D + fileSuffix + ".txt"));
                 }
             }
         }

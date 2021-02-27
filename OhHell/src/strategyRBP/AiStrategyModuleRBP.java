@@ -326,7 +326,7 @@ public class AiStrategyModuleRBP extends AiStrategyModule {
         for (Card card : canPlay) {
             List<Vector> iIns = null;
             double probOfWinning = 0;
-            if (core.cardWinning(card)) {
+            if (core.cardCanWin(card)) {
                 iIns = getIvlInputs(card);
                 probOfWinning = ivl.testValue(iIns.get(0)).get(1).get(0);
             }

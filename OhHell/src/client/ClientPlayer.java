@@ -294,6 +294,10 @@ public class ClientPlayer {
         this.hand = hand;
     }
     
+    public void removeCard(int index) {
+        hand.remove(index);
+    }
+    
     public void removeCard(Card card) {
         for (int i = 0; i < hand.size(); i++) {
             if (hand.get(i).equals(card) || i == hand.size() - 1) {

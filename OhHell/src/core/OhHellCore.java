@@ -17,6 +17,8 @@ public class OhHellCore {
     private AiKernel aiKernel;
     private AiTrainer aiTrainer;
     
+    private int robotDelay = 0;
+    
     private Random random = new Random();
     private Deck deck = new Deck();
     
@@ -107,9 +109,11 @@ public class OhHellCore {
     
     public void startGame(int robotCount, boolean doubleDeck, 
             List<AiStrategyModule> aiStrategyModules, int robotDelay) {
+        deck.setDoubleDeck(doubleDeck);
+        this.robotDelay = robotDelay;
         if (robotCount > 0) {
             List<AiPlayer> aiPlayers = aiKernel.createAiPlayers(
-                    players.size() + robotCount, robotCount, aiStrategyModules, robotDelay);
+                    players.size() + robotCount, robotCount, aiStrategyModules, 0);
             for (int i = 0; i < aiPlayers.size(); i++) {
                 aiPlayers.get(i).setId("@bot" + i);
             }
@@ -122,7 +126,6 @@ public class OhHellCore {
             players.addAll(aiPlayers);
             aiKernel.start();
         }
-        deck.setDoubleDeck(doubleDeck);
         //deck.setSeed(-4258269598777096215L);
         
         gameStarted = true;
@@ -166,12 +169,6 @@ public class OhHellCore {
     public void buildRounds(boolean doubleDeck) {
 //        rounds.add(new RoundDetails(2));
 //        rounds.add(new RoundDetails(2));
-//        rounds.add(new RoundDetails(2));
-//        rounds.add(new RoundDetails(10));
-//        rounds.add(new RoundDetails(2));
-//        rounds.add(new RoundDetails(6));
-//        rounds.add(new RoundDetails(5));
-//        rounds.add(new RoundDetails(4));
         
         int numDecks = doubleDeck ? 2 : 1;
         int maxHand = Math.min(10, (numDecks * 52 - 1) / players.size());
@@ -346,7 +343,7 @@ public class OhHellCore {
         }
         
         if (player.isHuman() && !players.get(turn).isHuman()) {
-            pendingAction = new PendingAction(2000) {
+            pendingAction = new PendingAction(robotDelay) {
                 private static final long serialVersionUID = 1L;
 
                 @Override
@@ -573,7 +570,57 @@ public class OhHellCore {
         aiKernel.reloadAiStrategyModules(N, null);
     }
     
+    public static int trickWinner(List<Card> trick, Card trump) {
+        Hashtable<String, Integer> counts = new Hashtable<>();
+        for (Card card : trick) {
+            String cardName = card.toString();
+            if (counts.get(cardName) == null) {
+                counts.put(cardName, 1);
+            } else {
+                counts.put(cardName, counts.get(cardName) + 1);
+            }
+        }
+
+        int out = 0;
+        for (int i = 0; i < trick.size(); i++) {
+            if (counts.get(trick.get(i).toString()) % 2 == 1 && 
+                    (trick.get(i).isGreaterThan(trick.get(out), trump.getSuit())
+                            || counts.get(trick.get(out).toString()) % 2 == 0
+                            && trick.get(out).getSuit().equals(trick.get(i).getSuit()))) {
+                out = i;
+            }
+        }
+        return out;
+    }
+    
     public int trickWinner() {
+        List<Card> trick = new ArrayList<>(players.size());
+        for (int i = 0; i < players.size(); i++) {
+            trick.add(players.get((leader + i) % players.size()).getTrick());
+        }
+        return (leader + trickWinner(trick, trump)) % players.size();
+    }
+    
+    /**
+     * TODO This function feels too complicated. This is used by the IVL as a first pass to 
+     * determine if a card can win the current trick. I should also look into having it take into
+     * account the number of players left (e.g., if it is the last player to play a trick, it 
+     * knows for sure if it will win; if it is the second to last player, the top two cannot both 
+     * be canceled, etc.).
+     */
+    public boolean cardCanWin(Card card) {
+        if (turn == leader) {
+//            System.out.println(card + " winnable = true");
+            return true;
+        }
+        
+        if (!card.getSuit().equals(players.get(leader).getTrick().getSuit())
+                && !card.getSuit().equals(trump.getSuit())) {
+//            System.out.println(card + " winnable = false:");
+//            System.out.println("   card is not led suit or trump");
+            return false;
+        }
+        
         Hashtable<String, Integer> counts = new Hashtable<>();
         for (Player player : players) {
             String cardName = player.getTrick().toString();
@@ -583,26 +630,47 @@ public class OhHellCore {
                 counts.put(cardName, counts.get(cardName) + 1);
             }
         }
+        
+        if (counts.get(card.toString()) != null && counts.get(card.toString()) == 1) {
+//            System.out.println(card + " winnable = false:");
+//            System.out.println("   card is canceled");
+            return false;
+        }
 
-        int out = leader;
-        for (Player player : players) {
-            if (counts.get(player.getTrick().toString()) == 1 && 
-                    (player.getTrick().isGreaterThan(players.get(out).getTrick(), trump.getSuit())
-                            || counts.get(players.get(out).getTrick().toString()) == 2)) {
-                out = player.getIndex();
+        Card smallestWinnable = players.get(leader).getTrick();
+        for (int i = 0; i < players.size(); i++) {
+            Card c = players.get(i).getTrick();
+            boolean cNotCanceled = counts.get(c.toString()) == 1;
+            boolean cNotCancelable = deck.matchingCardsLeft(c, new LinkedList<>()) == 1;
+            boolean cBeatsSmallestWinnable = c.isGreaterThan(smallestWinnable, trump.getSuit());
+            boolean cMatchesSuit = c.getSuit().equals(smallestWinnable.getSuit());
+            boolean smallestWinnableIsLosable = deck.matchingCardsLeft(smallestWinnable, new LinkedList<>()) == 2;
+            if (cNotCanceled 
+                    && cNotCancelable 
+                    && (cBeatsSmallestWinnable 
+                            || cMatchesSuit && smallestWinnableIsLosable)) {
+                smallestWinnable = c;
             }
         }
-        return out;
-    }
-    
-    public boolean cardWinning(Card card) {
-        int winning = leader;
-        for (Player player : players) {
-            if (player.getTrick().isGreaterThan(players.get(winning).getTrick(), trump.getSuit())) {
-                winning = player.getIndex();
-            }
-        }
-        return card.isGreaterThan(players.get(winning).getTrick(), trump.getSuit());
+
+        boolean cardBeatsSmallestWinnable = card.isGreaterThan(smallestWinnable, trump.getSuit());
+        boolean cardMatchesSuit = card.getSuit().equals(smallestWinnable.getSuit());
+        boolean smallestWinnableIsLosable = deck.matchingCardsLeft(smallestWinnable, new LinkedList<>()) == 2;
+        boolean ans = cardBeatsSmallestWinnable || cardMatchesSuit && smallestWinnableIsLosable;
+        
+//        if (ans) {
+//            System.out.println(card + " winnable = true");
+//        } else {
+//            System.out.println(card + " winnable = false:");
+//            if (!cardBeatsSmallestWinnable) {
+//                System.out.println("   card does not beat smallest winnable (" + smallestWinnable + ")");
+//            }
+//            if (!(cardMatchesSuit && smallestWinnableIsLosable)) {
+//                System.out.println("   smallest winnable (" + smallestWinnable + ") is not cancelable");
+//            }
+//        }
+        
+        return ans;
     }
     
     public void processUndoBid(Player player) {
@@ -635,13 +703,13 @@ public class OhHellCore {
         List<List<Card>> mySplit = Card.split(Arrays.asList(
                 player.getHand(), 
                 Arrays.asList(player.getTrick())
-                ));
+                ), true);
         for (Player p : players) {
             if (p != player && !p.isKicked()) {
                 List<List<Card>> yourSplit = Card.split(Arrays.asList(
                         p.getHand(), 
                         Arrays.asList(p.getTrick())
-                        ));
+                        ), false);
                 if (mySplit.get(trump.getSuitNumber() - 1).size()
                         < yourSplit.get(trump.getSuitNumber() - 1).size()) {
                     return false;

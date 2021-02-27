@@ -20,6 +20,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
     private OhHellCore core;
     private List<Player> players;
     private Deck deck;
+    private int D;
     private int maxH;
     private OverallValueLearner ovl;
     private ImmediateValueLearner ivl;
@@ -30,10 +31,16 @@ public class AiStrategyModuleOI extends AiStrategyModule {
     
     public AiStrategyModuleOI(OhHellCore core, int N,
             OverallValueLearner ovl, ImmediateValueLearner ivl) {
+        this(core, N, core.getDeck().isDoubleDeck() ? 2 : 1, ovl, ivl);
+    }
+    
+    public AiStrategyModuleOI(OhHellCore core, int N, int D,
+            OverallValueLearner ovl, ImmediateValueLearner ivl) {
         this.core = core;
         players = core.getPlayers();
         deck = core.getDeck();
-        maxH = Math.min(10, 51 / N);
+        this.D = D;
+        maxH = Math.min(10, (52 * D - 1) / N);
         this.ovl = ovl;
         this.ivl = ivl;
         aiTrainer = core.getAiTrainer();
@@ -87,12 +94,13 @@ public class AiStrategyModuleOI extends AiStrategyModule {
             }
         }
         in.addOneHot(numOfVoids + 1, 4);
-        in.addOneHot(deck.cardsLeftOfSuit(trump, Arrays.asList(split.get(trump.getSuitNumber() - 1), trick)) + 1, 13);
+        in.addOneHot(deck.cardsLeftOfSuit(trump, Arrays.asList(split.get(trump.getSuitNumber() - 1), trick)) + 1, 13 * D);
         
         in.addOneHot(card.getSuit().equals(trump.getSuit()) ? 2 : 1, 2);
-        in.addOneHot(deck.cardsLeftOfSuit(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)) + 1, 13);
-        
-        in.addOneHot(deck.adjustedCardValueSmall(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)) + 1, 13);
+        in.addOneHot(deck.cardsLeftOfSuit(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)) + 1, 13 * D);
+
+        in.addOneHot(deck.adjustedCardValueSmall(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)), 13 * D);
+        in.addOneHot(deck.matchingCardsLeft(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)), D - 1);
     }
     
     public void addIvlInput(SparseVector in, Card card) {
@@ -113,14 +121,15 @@ public class AiStrategyModuleOI extends AiStrategyModule {
                 }
             }
         }
-        in.addOneHot(deck.cardsLeftOfSuit(trump, Arrays.asList(split.get(trump.getSuitNumber() - 1), trick)) + 1, 13);
+        in.addOneHot(deck.cardsLeftOfSuit(trump, Arrays.asList(split.get(trump.getSuitNumber() - 1), trick)) + 1, 13 * D);
 
         Card led = players.get(core.getLeader()).getTrick().isEmpty() ? card : players.get(core.getLeader()).getTrick();
         in.addOneHot(led.getSuit().equals(trump.getSuit()) ? 2 : 1, 2);
-        in.addOneHot(deck.cardsLeftOfSuit(led, Arrays.asList(split.get(led.getSuitNumber() - 1), trick)) + 1, 13);
+        in.addOneHot(deck.cardsLeftOfSuit(led, Arrays.asList(split.get(led.getSuitNumber() - 1), trick)) + 1, 13 * D);
         
         in.addOneHot(card.getSuit().equals(trump.getSuit()) ? 2 : 1, 2);
-        in.addOneHot(deck.adjustedCardValueSmall(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)) + 1, 13);
+        in.addOneHot(deck.adjustedCardValueSmall(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)), 13 * D);
+        in.addOneHot(deck.matchingCardsLeft(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)), D - 1);
     }
     
     public static int voids(List<Card> hand) {
@@ -230,7 +239,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
             double probOfWinning = 0;
             
             //System.out.println(card);
-            if (core.cardWinning(card)) {
+            if (core.cardCanWin(card)) {
                 in = new SparseVector();
                 addIvlInput(in, card);
                 

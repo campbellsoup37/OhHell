@@ -64,7 +64,7 @@ public class Card {
     
     public Card() {}
     
-    public static List<List<Card>> split(List<List<Card>> hands) {
+    public static List<List<Card>> split(List<List<Card>> hands, boolean descending) {
         List<List<Card>> ans = new ArrayList<>(4);
         for (int i = 0; i < 4; i++) {
             ans.add(new LinkedList<>());
@@ -76,8 +76,9 @@ public class Card {
                 }
             }
         }
+        int sign = descending ? 1 : -1;
         for (int i = 0; i < 4; i++) {
-            ans.get(i).sort((c1, c2) -> c2.isGreaterThanSort(c1) ? 1 : -1);
+            ans.get(i).sort((c1, c2) -> c2.isGreaterThanSort(c1) ? sign : -sign);
         }
         return ans;
     }

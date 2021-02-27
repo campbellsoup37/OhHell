@@ -1,14 +1,16 @@
 package core;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
 public class Deck {
     private List<Card> deck = new ArrayList<Card>();
-    private boolean doubleDeck = false;
+    int D = 1;
     
     private List<List<Card>> played = new ArrayList<>();
+    private HashMap<String, Integer> playCounts = new HashMap<>();
     Random random = new Random();
     
     public Deck() {}
@@ -18,12 +20,16 @@ public class Deck {
     }
     
     public void setDoubleDeck(boolean doubleDeck) {
-        this.doubleDeck = doubleDeck;
+        D = doubleDeck ? 2 : 1;
+    }
+    
+    public boolean isDoubleDeck() {
+        return D == 2;
     }
     
     public void initialize() {
         deck = new ArrayList<>();
-        for (int d = 1; d <= (doubleDeck ? 2 : 1); d++) {
+        for (int d = 1; d <= D; d++) {
             for (int i = 2; i <= 14; i++) {
                 deck.add(new Card(i, "clubs"));
             }
@@ -42,6 +48,7 @@ public class Deck {
         for (int i = 0; i < 4; i++) {
             played.add(new LinkedList<>());
         }
+        playCounts = new HashMap<>();
     }
     
     public List<List<Card>> deal(int numHands, int handSize) {
@@ -74,22 +81,12 @@ public class Deck {
     public void playCard(Card card) {
         if (!card.isEmpty()) {
             played.get(card.getSuitNumber() - 1).add(card);
-        }
-    }
-    
-    public int adjustedCardValue(Card card, Card lead, Card trump) {
-        int numInSuit = card.getNum() - 2
-                + (int) played.get(card.getSuitNumber() - 1).stream()
-                .filter(c -> c.getNum() > card.getNum())
-                .count();
-        if (card.getSuit().equals(trump.getSuit())) {
-            return numInSuit + 26;
-        } else if (lead == null 
-                || lead.isEmpty()
-                || card.getSuit().equals(lead.getSuit())) {
-            return numInSuit + 13 + played.get(trump.getSuitNumber() - 1).size();
-        } else {
-            return numInSuit;
+            String cardName = card.toString();
+            if (playCounts.get(cardName) == null) {
+                playCounts.put(cardName, 1);
+            } else {
+                playCounts.put(cardName, playCounts.get(cardName) + 1);
+            }
         }
     }
     
@@ -102,19 +99,19 @@ public class Deck {
                 }
             }
         }
-        return 13 - played.get(card.getSuitNumber() - 1).size() - count;
+        return 13 * D - played.get(card.getSuitNumber() - 1).size() - count;
     }
     
     public int adjustedCardValueSmall(Card card, List<List<Card>> additionalPlayeds) {
-        int val = card.getNum() - 2;
+        int val = (card.getNum() - 2) * D;
         for (Card c : played.get(card.getSuitNumber() - 1)) {
-            if (c.getNum() > card.getNum()) {
+            if (c.getNum() >= card.getNum()) {
                 val++;
             }
         }
         for (List<Card> additionalPlayed : additionalPlayeds) {
             for (Card c : additionalPlayed) {
-                if (c != null && c.getNum() > card.getNum() && c.getSuit().equals(card.getSuit())) {
+                if (c != null && c.getNum() >= card.getNum() && c.getSuit().equals(card.getSuit())) {
                     val++;
                 }
             }
@@ -122,16 +119,23 @@ public class Deck {
         return val;
     }
     
-    public static int adjustedCardValueSmallNoPlayed(Card card, List<List<Card>> additionalPlayeds) {
-        int val = card.getNum() - 2;
-        for (List<Card> additionalPlayed : additionalPlayeds) {
-            for (Card c : additionalPlayed) {
-                if (c != null && c.getNum() > card.getNum() && c.getSuit().equals(card.getSuit())) {
-                    val++;
+    public int matchingCardsLeft(Card card, List<List<Card>> additionalPlayeds) {
+        if (D == 1) {
+            return 0;
+        } else {
+            int count = 0;
+            if (playCounts.get(card.toString()) != null) {
+                count += playCounts.get(card.toString());
+            }
+            for (List<Card> additionalPlayed : additionalPlayeds) {
+                for (Card c : additionalPlayed) {
+                    if (c != null && c.getNum() == card.getNum() && c.getSuit().equals(card.getSuit())) {
+                        count++;
+                    }
                 }
             }
+            return D - count;
         }
-        return val;
     }
     
     public List<Card> getPlayedCards() {

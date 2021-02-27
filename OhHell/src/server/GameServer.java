@@ -50,7 +50,7 @@ import common.OhcTextField;
 public class GameServer extends JFrame {
     private static final long serialVersionUID = 1L;
     
-    private final int robotDelay = 0;
+    private final int robotDelay = 2000;
     
     private String version;
     private boolean updateChecked = false;
