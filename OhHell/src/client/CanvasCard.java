@@ -36,6 +36,10 @@ public class CanvasCard extends CanvasInteractable {
         return 0;
     }
     
+    public int index() {
+        return 0;
+    }
+    
     @Override
     public int x() {
         return (int) ((double) xCenter() - scale * canvas.getCardWidth(small) / 2);
@@ -60,10 +64,18 @@ public class CanvasCard extends CanvasInteractable {
         return false;
     }
     
+    public boolean dark() {
+        return isMoused();
+    }
+    
     @Override
     public void paint(Graphics graphics) {
         if (isShown()) {
-            canvas.drawCard(graphics, hidden() ? new Card() : card, xCenter() + xPaintOffset(), yCenter() + yPaintOffset(), scale, small, isMoused());
+            canvas.drawCard(graphics, 
+                    hidden() ? new Card() : card, 
+                    xCenter() + xPaintOffset(), 
+                    yCenter() + yPaintOffset(), 
+                    scale, small, dark());
         }
     }
 }

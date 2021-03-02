@@ -1,5 +1,6 @@
 package client;
 
+import java.awt.Cursor;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
@@ -104,7 +105,7 @@ public abstract class OhcCanvas extends JPanel {
     public void customPaintLast(Graphics graphics) {}
     
     public void mousePressed(int x, int y) {
-        mouseMoved(x, y);
+        mouseMoved(x, y, false);
         if (interactableMoused != null) {
             interactableMoused.setPressed(true);
             interactablePressed = interactableMoused;
@@ -124,9 +125,18 @@ public abstract class OhcCanvas extends JPanel {
                 relay.click();
             }
         }
+        mouseMoved(x, y, false);
     }
     
-    public void mouseMoved(int x, int y) {
+    public void mouseMoved(int x, int y, boolean drag) {
+        if (drag && interactablePressed != null 
+                && interactablePressed.isDraggable()
+                && interactablePressed.isEnabled()
+                && interactablePressed.isShown()) {
+            interactablePressed.drag(x, y);
+            return;
+        }
+        
         boolean anyMoused = false;
         
         for (List<? extends CanvasInteractable> inters : interactables) {
@@ -149,6 +159,21 @@ public abstract class OhcCanvas extends JPanel {
             interactableMoused.setMoused(false);
             interactableMoused.setPressed(false);
             interactableMoused = null;
+        }
+        
+        updateCursor();
+    }
+    
+    public void updateCursor() {
+        if (interactableMoused != null) {
+            Cursor cursor = interactableMoused.mousedCursor();
+            if (cursor != null) {
+                setCursor(cursor);
+            } else {
+                setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+            }
+        } else {
+            setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
         }
     }
 }

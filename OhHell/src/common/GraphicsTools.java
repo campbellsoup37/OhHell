@@ -60,16 +60,19 @@ public class GraphicsTools {
                 m.stringWidth(text) + 40, 
                 m.getHeight() + 20, 
                 20);
+        graphics.setColor(Color.BLACK);
         graphics.drawString(text, 
                 (int) (x - m.stringWidth(text) / 2), 
                 (int) (y + m.getHeight() / 3));
     }
     
     public static void drawBox(Graphics graphics, double x, double y, double width, double height, double roundness) {
+        Color color = graphics.getColor();
         graphics.fillRoundRect(
                 (int) x, (int) y, (int) width, (int) height, (int) roundness, (int) roundness);
         graphics.setColor(Color.BLACK);
         graphics.drawRoundRect(
                 (int) x, (int) y, (int) width, (int) height, (int) roundness, (int) roundness);
+        graphics.setColor(color);
     }
 }

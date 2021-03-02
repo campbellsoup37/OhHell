@@ -1,8 +1,8 @@
-windowlocationmenu = 0,0
+windowlocationmenu = 353,127
 windowlocationingame = -8,-8
 windowsizeingame = 1936,1056
 windowmaximizedingame = true
-recentusername = soup2
+recentusername = soup
 recentaddress = localhost
 recentport = 6066
 playsound = false

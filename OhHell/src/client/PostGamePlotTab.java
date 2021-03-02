@@ -66,6 +66,7 @@ public class PostGamePlotTab extends CanvasInteractable {
                 height(),
                 10);
         graphics.setFont(GraphicsTools.fontBold);
+        graphics.setColor(Color.BLACK);
         GraphicsTools.drawStringJustified(graphics, 
                 "Final scores", 
                 x() + GameCanvas.finalScoreListWidth / 2, 

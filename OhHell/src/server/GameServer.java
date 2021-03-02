@@ -61,13 +61,13 @@ public class GameServer extends JFrame {
     private OhcButton updateButton = new OhcButton("Check for update");
     private JTextArea logTextArea = new JTextArea();
     private JScrollPane logScrollPane = new OhcScrollPane(logTextArea,
-            JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+            JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
             JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
     private DefaultListModel<String> playersListModel = new DefaultListModel<>();
     private List<Player> playersInList = new ArrayList<>();
     private JList<String> playersJList = new JList<>(playersListModel);
     private JScrollPane playersScrollPane = new OhcScrollPane(playersJList,
-            JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
+            JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED,
             JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
     private JButton dcButton = new OhcButton("DC Player");
     private JButton kickButton = new OhcButton("Kick Player");
@@ -542,7 +542,7 @@ public class GameServer extends JFrame {
         } else {
             try {
                 downloadUpdater();
-                String path = getDirectory() + "/updater.jar";
+                String path = getDirectory() + "/serverupdater.jar";
                 
                 if (new File(path).exists()) {
                     String command = "java -jar " 
@@ -578,7 +578,7 @@ public class GameServer extends JFrame {
             
             BufferedInputStream newUpdaterJarInput = new BufferedInputStream(
                     url.openStream());
-            FileOutputStream newUpdaterJarOutput = new FileOutputStream(getDirectory() + "/updater.jar");
+            FileOutputStream newUpdaterJarOutput = new FileOutputStream(getDirectory() + "/serverupdater.jar");
             
             byte[] dataBuffer = new byte[1024];
             int bytesRead;
@@ -597,7 +597,7 @@ public class GameServer extends JFrame {
     
     public void deleteUpdater() {
         try {
-            new File(getDirectory() + "/updater.jar").delete();
+            new File(getDirectory() + "/serverupdater.jar").delete();
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }

@@ -51,6 +51,7 @@ public class OhcButton extends JButton {
         GraphicsTools.drawBox(graphics2, 0, 0, getWidth() - 1, getHeight() - 1, 15);
         
         graphics2.setFont(GraphicsTools.fontBold);
+        graphics2.setColor(Color.BLACK);
         GraphicsTools.drawStringJustified(graphics2, getText(), getWidth() / 2, getHeight() / 2, 1, 1);
         
         //super.paintComponent(graphics2);

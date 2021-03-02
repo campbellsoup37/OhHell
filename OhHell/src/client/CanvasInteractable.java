@@ -1,4 +1,5 @@
 package client;
+import java.awt.Cursor;
 import java.awt.Graphics;
 
 public abstract class CanvasInteractable {
@@ -40,7 +41,13 @@ public abstract class CanvasInteractable {
     }
     
     public CanvasInteractable updateMoused(int x, int y) {
-        setMoused(isShown() && isEnabled() && x >= x() && x <= x() + width() && y >= y() && y <= y() + height());
+        setMoused(
+                isShown() 
+                && isEnabled() 
+                && x >= x() 
+                && x <= x() + width() 
+                && y >= y() 
+                && y <= y() + height());
         return isMoused() ? this : null;
     }
     
@@ -57,4 +64,14 @@ public abstract class CanvasInteractable {
     public void wheel(int clicks) {}
     
     public void pressKey(int keyCode) {}
+    
+    public boolean isDraggable() {
+        return false;
+    }
+    
+    public void drag(int x, int y) {}
+    
+    public Cursor mousedCursor() {
+        return null;
+    }
 }

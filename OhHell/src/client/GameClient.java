@@ -367,7 +367,11 @@ public class GameClient extends JFrame {
     }
     
     public int[] thisRound() {
-        return rounds.get(roundNumber);
+        if (roundNumber >= rounds.size()) {
+            return new int[] {-1, -1};
+        } else {
+            return rounds.get(roundNumber);
+        }
     }
     
     public void reconnectAs(int index) {
@@ -785,7 +789,8 @@ public class GameClient extends JFrame {
                 public void customPaintFirst(Graphics graphics) {
                     graphics.setColor(new Color(255, 255, 255, 180));
                     GraphicsTools.drawBox(graphics, 200, 80, 285, 320, 20);
-                    
+
+                    graphics.setColor(Color.BLACK);
                     graphics.setFont(GraphicsTools.fontTitle);
                     GraphicsTools.drawStringJustified(graphics, "Oh Hell", 342, 100, 1, 2);
                     
@@ -1206,12 +1211,12 @@ public class GameClient extends JFrame {
                 c.addMouseMotionListener(new MouseMotionListener() {
                     @Override
                     public void mouseDragged(MouseEvent e) {
-                        c.mouseMoved(e.getX(), e.getY());
+                        c.mouseMoved(e.getX(), e.getY(), true);
                     }
 
                     @Override
                     public void mouseMoved(MouseEvent e) {
-                        c.mouseMoved(e.getX(), e.getY());
+                        c.mouseMoved(e.getX(), e.getY(), false);
                     }
                 });
             }
@@ -1784,7 +1789,7 @@ public class GameClient extends JFrame {
         } else {
             try {
                 downloadUpdater();
-                String path = getDirectory() + "/updater.jar";
+                String path = getDirectory() + "/clientupdater.jar";
                 
                 if (new File(path).exists()) {
                     String command = "java -jar " 
@@ -1820,7 +1825,7 @@ public class GameClient extends JFrame {
             
             BufferedInputStream newUpdaterJarInput = new BufferedInputStream(
                     url.openStream());
-            FileOutputStream newUpdaterJarOutput = new FileOutputStream(getDirectory() + "/updater.jar");
+            FileOutputStream newUpdaterJarOutput = new FileOutputStream(getDirectory() + "/clientupdater.jar");
             
             byte[] dataBuffer = new byte[1024];
             int bytesRead;
@@ -1839,7 +1844,7 @@ public class GameClient extends JFrame {
     
     public void deleteUpdater() {
         try {
-            new File(getDirectory() + "/updater.jar").delete();
+            new File(getDirectory() + "/clientupdater.jar").delete();
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }

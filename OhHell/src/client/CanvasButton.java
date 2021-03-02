@@ -1,5 +1,7 @@
 package client;
 import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Font;
 import java.awt.Graphics;
 
 import common.GraphicsTools;
@@ -19,8 +21,17 @@ public class CanvasButton extends CanvasInteractable {
         return text;
     }
     
+    public Font font() {
+        return GraphicsTools.fontBold;
+    }
+    
     public boolean alert() {
         return false;
+    }
+    
+    @Override
+    public Cursor mousedCursor() {
+        return new Cursor(Cursor.HAND_CURSOR);
     }
     
     @Override
@@ -50,7 +61,8 @@ public class CanvasButton extends CanvasInteractable {
                 }
             }
             GraphicsTools.drawBox(graphics, x(), y(), width(), height(), 15);
-            graphics.setFont(GraphicsTools.fontBold);
+            graphics.setFont(font());
+            graphics.setColor(Color.BLACK);
             GraphicsTools.drawStringJustified(graphics, text(), x() + width() / 2, y() + height() / 2, 1, 1);
             graphics.setFont(GraphicsTools.font);
         }

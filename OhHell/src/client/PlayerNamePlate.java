@@ -67,11 +67,12 @@ public class PlayerNamePlate extends CanvasInteractable {
         GraphicsTools.drawBox(graphics, x(), y(), width(), height(), 20);
         
         // Name
-        if (player.isDisconnected()) {
-            graphics.setColor(Color.GRAY);
-        }
         if (player.isKicked()) {
             graphics.setColor(Color.RED);
+        } else if (player.isDisconnected()) {
+            graphics.setColor(Color.GRAY);
+        } else {
+            graphics.setColor(Color.BLACK);
         }
         GraphicsTools.drawStringJustified(graphics, 
                 GraphicsTools.fitString(graphics, player.getName(), width() - 20 * 2), 

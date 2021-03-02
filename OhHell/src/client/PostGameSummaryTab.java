@@ -5,6 +5,7 @@ import java.awt.Graphics;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
+import java.util.LinkedList;
 import java.util.List;
 
 import core.Card;
@@ -16,6 +17,7 @@ public class PostGameSummaryTab extends CanvasInteractable {
     private final int margin = 4;
     private final int buttonSize = 18;
 
+    private final double nameColumn = 3.0 / 32;
     private final double scoreColumn = 7.0 / 32;
     private final double deltaColumn = 13.0 / 32;
     private final double bSkillColumn = 19.0 / 32;
@@ -31,11 +33,77 @@ public class PostGameSummaryTab extends CanvasInteractable {
     private List<Double> lucks;
     private List<Double> totalDiffs;
     
+    private class SortButton extends CanvasButton {
+        public boolean down = true;
+        public int index = 0;
+        public PostGameSummaryTab tab;
+        double column;
+        
+        public SortButton(int index, PostGameSummaryTab tab, double column) {
+            super("");
+            this.index = index;
+            this.tab = tab;
+            this.column = column;
+        }
+        
+        @Override
+        public int x() {
+            return (int) (tab.x() + column * tab.width() - buttonSize / 2);
+        }
+        
+        @Override
+        public int y() {
+            return tab.y()
+                    + tab.height()
+                    - 2 * margin
+                    - 2 * buttonSize;
+        }
+        
+        @Override
+        public int width() {
+            return buttonSize;
+        }
+        
+        @Override
+        public int height() {
+            return buttonSize;
+        }
+        
+        @Override
+        public String text() {
+            return down ? "\u25BC" : "\u25B2";
+        }
+        
+        @Override
+        public boolean isSelected() {
+            return sortSelected == index;
+        }
+        
+        public double value(ClientPlayer player) {
+            return 0;
+        }
+        
+        @Override
+        public void click() {
+            if (isSelected()) {
+                down = !down;
+            } else {
+                sortSelected = index;
+            }
+            tab.players.sort((p1, p2) -> (down ? 1 : -1) * (int) Math.signum(value(p2) - value(p1)));
+        }
+    }
+    
+    private List<SortButton> sortButtons;
+    private int sortSelected = 0;
+    
     public PostGameSummaryTab(List<ClientPlayer> players, List<int[]> rounds) {
-        this.players = players;
+        this.players = new ArrayList<>(players.size());
+        this.players.addAll(players);
         
         PostGameSummaryTab tab = this;
         deltas = new ArrayList<>(players.size());
+        List<List<Double>> deltasData = new ArrayList<>(players.size());
         bidSkills = new ArrayList<>(players.size());
         playSkills = new ArrayList<>(players.size());
         lucks = new ArrayList<>(players.size());
@@ -43,6 +111,7 @@ public class PostGameSummaryTab extends CanvasInteractable {
         for (int j = 0; j < players.size(); j++) {
             ClientPlayer player = players.get(j);
             List<Double> playerDeltas = new ArrayList<>(9);
+            deltasData.add(playerDeltas);
             for (int k = -4; k <= 4; k++) {
                 playerDeltas.add(0D);
             }
@@ -50,11 +119,10 @@ public class PostGameSummaryTab extends CanvasInteractable {
             double pointsLost = 0;
             double mistakes = 0;
             
-//            double skill = 0;
             double luck = 0;
             double totalDiff = 0;
             for (int i = 0; i < rounds.size() && i != player.getKickedAtRound(); i++) {
-                double delta = player.getBids().get(i) - player.getTakens().get(i);
+                double delta = player.getTakens().get(i) - player.getBids().get(i);
                 double diff = player.getDiffs().get(i);
                 int cannotBid = rounds.get(i)[1];
                 for (ClientPlayer p : players) {
@@ -124,7 +192,7 @@ public class PostGameSummaryTab extends CanvasInteractable {
                 }
             }
             
-            final int jF = j;
+            final ClientPlayer playerF = players.get(j);
             CanvasPlot dPlot = new CanvasPlot() {
                 @Override
                 public int x() {
@@ -134,7 +202,7 @@ public class PostGameSummaryTab extends CanvasInteractable {
                 @Override
                 public int y() {
                     int h = (tab.height() - trumpRowHeight - 3 * margin - 2 * buttonSize) / players.size();
-                    return tab.y() + trumpRowHeight + jF * h;
+                    return tab.y() + trumpRowHeight + tab.players.indexOf(playerF) * h;
                 }
                 
                 @Override
@@ -150,7 +218,7 @@ public class PostGameSummaryTab extends CanvasInteractable {
             };
             dPlot.setBoxed(false);
             dPlot.setAxes(false);
-            dPlot.addData("bid - took", playerDeltas);
+            dPlot.addData("Tricks over", playerDeltas);
             dPlot.setTicks(Arrays.asList("<-3", "-3", "-2", "-1", "0", "1", "2", "3", ">3"));
             dPlot.setMinY(-0.4 * rounds.size());
             dPlot.setMaxY(rounds.size());
@@ -160,6 +228,50 @@ public class PostGameSummaryTab extends CanvasInteractable {
             lucks.add(luck);
             totalDiffs.add(totalDiff);
         }
+        
+        sortButtons = new LinkedList<>();
+        sortButtons.add(new SortButton(0, tab, nameColumn) {
+            @Override
+            public double value(ClientPlayer player) {
+                return -player.getIndex();
+            }
+        });
+        sortButtons.add(new SortButton(1, tab, scoreColumn) {
+            @Override
+            public double value(ClientPlayer player) {
+                return player.getScore();
+            }
+        });
+        sortButtons.add(new SortButton(2, tab, deltaColumn) {
+            @Override
+            public double value(ClientPlayer player) {
+                return deltasData.get(player.getIndex()).get(4);
+            }
+        });
+        sortButtons.add(new SortButton(3, tab, bSkillColumn) {
+            @Override
+            public double value(ClientPlayer player) {
+                return bidSkills.get(player.getIndex());
+            }
+        });
+        sortButtons.add(new SortButton(4, tab, pSkillColumn) {
+            @Override
+            public double value(ClientPlayer player) {
+                return playSkills.get(player.getIndex());
+            }
+        });
+        sortButtons.add(new SortButton(5, tab, luckColumn) {
+            @Override
+            public double value(ClientPlayer player) {
+                return lucks.get(player.getIndex());
+            }
+        });
+        sortButtons.add(new SortButton(6, tab, diffColumn) {
+            @Override
+            public double value(ClientPlayer player) {
+                return totalDiffs.get(player.getIndex());
+            }
+        });
     }
     
     @Override
@@ -168,13 +280,14 @@ public class PostGameSummaryTab extends CanvasInteractable {
         GraphicsTools.drawBox(graphics, x(), y(), width(), height(), 10);
         
         graphics.setFont(GraphicsTools.fontSmall);
+        graphics.setColor(Color.BLACK);
         GraphicsTools.drawStringJustified(graphics, 
                 "Score", 
                 x() + scoreColumn * width(), 
                 y() + trumpRowHeight / 2, 
                 1, 1);
         GraphicsTools.drawStringJustified(graphics, 
-                "Bids - tooks", 
+                "Tricks over", 
                 x() + deltaColumn * width(), 
                 y() + trumpRowHeight / 2, 
                 1, 1);
@@ -244,31 +357,35 @@ public class PostGameSummaryTab extends CanvasInteractable {
                         1, 1);
                 
                 GraphicsTools.drawStringJustified(graphics, 
-                        players.get(i).isHuman() ? String.format("%.1f", bidSkills.get(i)) : "-", 
+                        player.isHuman() ? String.format("%.1f", bidSkills.get(player.getIndex())) : "-", 
                         x() + bSkillColumn * width(), 
                         y() + trumpRowHeight + i * h + h / 2, 
                         1, 1);
                 
                 GraphicsTools.drawStringJustified(graphics, 
-                        players.get(i).isHuman() ? String.format("%.1f", playSkills.get(i)) : "-", 
+                        player.isHuman() ? String.format("%.1f", playSkills.get(player.getIndex())) : "-", 
                         x() + pSkillColumn * width(), 
                         y() + trumpRowHeight + i * h + h / 2, 
                         1, 1);
                 
                 GraphicsTools.drawStringJustified(graphics, 
-                        String.format("%.1f", lucks.get(i)), 
+                        String.format("%.1f", lucks.get(player.getIndex())), 
                         x() + luckColumn * width(), 
                         y() + trumpRowHeight + i * h + h / 2, 
                         1, 1);
                 
                 GraphicsTools.drawStringJustified(graphics, 
-                        String.format("%.1f", totalDiffs.get(i)), 
+                        String.format("%.1f", totalDiffs.get(player.getIndex())), 
                         x() + diffColumn * width(), 
                         y() + trumpRowHeight + i * h + h / 2, 
                         1, 1);
                 
-                deltas.get(i).paint(graphics);
+                deltas.get(player.getIndex()).paint(graphics);
             }
+        }
+        
+        for (CanvasButton button : sortButtons) {
+            button.paint(graphics);
         }
     }
     
@@ -278,6 +395,12 @@ public class PostGameSummaryTab extends CanvasInteractable {
         if (isMoused()) {
             for (CanvasPlot plot : deltas) {
                 CanvasInteractable inter = plot.updateMoused(x, y);
+                if (inter != null) {
+                    ans = inter;
+                }
+            }
+            for (CanvasButton button : sortButtons) {
+                CanvasInteractable inter = button.updateMoused(x, y);
                 if (inter != null) {
                     ans = inter;
                 }
