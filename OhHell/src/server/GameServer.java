@@ -361,28 +361,23 @@ public class GameServer extends JFrame {
                 players.get(i).setIndex(i);
             }
             kibitzers.add(player);
-            for (Player p : players) {
-                p.commandRemovePlayer(player);
-            }
-            for (Player p : kibitzers) {
-                p.commandRemovePlayer(player);
-            }
-            for (Player p : players) {
-                p.commandAddPlayers(null, Arrays.asList(player));
-            }
-            for (Player p : kibitzers) {
-                p.commandAddPlayers(null, Arrays.asList(player));
-            }
         } else if (wasKibitzer && !kibitzer) {
             players.add(player);
             player.setIndex(players.size() - 1);
             kibitzers.remove(player);
-            for (Player p : players) {
-                p.commandAddPlayers(Arrays.asList(player), null);
-            }
-            for (Player p : kibitzers) {
-                p.commandAddPlayers(Arrays.asList(player), null);
-            }
+        }
+
+        for (Player p : players) {
+            p.commandRemovePlayer(player);
+        }
+        for (Player p : kibitzers) {
+            p.commandRemovePlayer(player);
+        }
+        for (Player p : players) {
+            p.commandAddPlayers(Arrays.asList(player), null);
+        }
+        for (Player p : kibitzers) {
+            p.commandAddPlayers(Arrays.asList(player), null);
         }
     }
     
@@ -401,9 +396,10 @@ public class GameServer extends JFrame {
     }
     
     public void removePlayer(HumanPlayer player, boolean kick) {
-        if (!players.contains(player) 
+        if ((!players.contains(player)
                 || player.isKicked() 
-                || player.isDisconnected() && !kick) {
+                || player.isDisconnected() && !kick)
+                && !kibitzers.contains(player)) {
             return;
         }
         

@@ -267,7 +267,6 @@ public class GameClient extends JFrame {
                 kibitzers.add(player);
             } else {
                 this.players.add(player);
-//                player.setIndex(this.players.size() - 1);
                 anyDc = anyDc || player.isDisconnected() && !player.isKicked();
             }
             if (player.getId().equals(username)) {
@@ -279,15 +278,11 @@ public class GameClient extends JFrame {
         }
 
         final boolean anyDcF = anyDc;
-//        SwingUtilities.invokeLater(new Runnable() {
-//            public void run() {
-                canvas.updatePlayersOnTimer();
-                
-                if (state == ClientState.IN_MULTIPLAYER_GAME && anyDcF) {
-                    canvas.setConnectionStatusOnTimer(false);
-                }
-//            }
-//        });
+        canvas.updatePlayersOnTimer();
+        
+        if (state == ClientState.IN_MULTIPLAYER_GAME && anyDcF) {
+            canvas.setConnectionStatusOnTimer(false);
+        }
     }
     
     public void removePlayer(String id) {
@@ -296,9 +291,6 @@ public class GameClient extends JFrame {
             if (players.get(i).getId().equals(id)) {
                 toRemove = i;
             }
-//            if (i > toRemove) {
-//                players.get(i).setIndex(i - 1);
-//            }
         }
         if (toRemove < players.size()) {
             players.remove(toRemove);
@@ -312,11 +304,7 @@ public class GameClient extends JFrame {
             kibitzers.remove(toRemove);
         }
         
-//        SwingUtilities.invokeLater(new Runnable() {
-//            public void run() {
-                canvas.updatePlayersOnTimer();
-//            }
-//        });
+        canvas.updatePlayersOnTimer();
     }
     
     public void updatePlayers(List<ClientPlayer> newPlayers) {
@@ -340,15 +328,11 @@ public class GameClient extends JFrame {
         players.sort((p1, p2) -> (int) Math.signum(p1.getIndex() - p2.getIndex()));
 
         final boolean anyDcF = anyDc;
-//        SwingUtilities.invokeLater(new Runnable() {
-//            public void run() {
-                canvas.updatePlayersOnTimer();
-                
-                if (state == ClientState.IN_MULTIPLAYER_GAME) {
-                    canvas.setConnectionStatusOnTimer(!anyDcF);
-                }
-//            }
-//        });
+        canvas.updatePlayersOnTimer();
+        
+        if (state == ClientState.IN_MULTIPLAYER_GAME) {
+            canvas.setConnectionStatusOnTimer(!anyDcF);
+        }
         
         if (state == ClientState.IN_MULTIPLAYER_GAME) {
             canvas.setConnectionStatusOnTimer(!anyDc);
@@ -449,6 +433,10 @@ public class GameClient extends JFrame {
     
     public List<ClientPlayer> getPlayers() {
         return players;
+    }
+    
+    public List<ClientPlayer> getKibitzers() {
+        return kibitzers;
     }
     
     public ClientPlayer getMyPlayer() {
@@ -1299,7 +1287,7 @@ public class GameClient extends JFrame {
             public void actionPerformed(ActionEvent arg0) {
                 SwingUtilities.invokeLater(new Runnable() {
                     public void run() {
-                        stateCanvas.repaint();
+                        stateCanvas.updateUI();
                     }
                 });
             }

@@ -1,6 +1,7 @@
 package client;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.Graphics;
 import java.awt.event.KeyAdapter;
@@ -725,6 +726,9 @@ public class GameCanvas extends OhcCanvas {
             inter.dispose();
         }
 
+        for (Component c : getComponents()) {
+            remove(c);
+        }
         embeddedSwings = new LinkedList<>();
         bidButtons = new LinkedList<>();
         cardInteractables = new LinkedList<>();
@@ -1431,7 +1435,9 @@ public class GameCanvas extends OhcCanvas {
             @Override
             public int height() {
                 int numRounds = getRoundsForScoreSheet().size();
-                return scoreVSpacing * (numRounds + 1) + CanvasScoreSheet.lineV + 2 * CanvasScoreSheet.margin;
+                return Math.min(
+                        scoreVSpacing * (numRounds + 1) + CanvasScoreSheet.lineV + 2 * CanvasScoreSheet.margin,
+                        500);
             }
 
             @Override
@@ -1542,6 +1548,13 @@ public class GameCanvas extends OhcCanvas {
                                     addChatLine("<b>Underbid by " + (h - total) + "</b>");
                                 } else {
                                     addChatLine("<b>Overbid by " + (total - h) + "</b>");
+                                }
+                                refreshChat();
+                            } else if (command.equals("kibitzers")) {
+                                List<ClientPlayer> kibitzers = client.getKibitzers();
+                                addChatLine("<b>Kibitzers:" + (kibitzers.size() == 0 ? " none" : "") + "</b>");
+                                for (ClientPlayer kibitzer : kibitzers) {
+                                    addChatLine("<b>" + kibitzer.getName() + " (" + kibitzer.getId() + ")</b>");
                                 }
                                 refreshChat();
                             } else if (command.equals("w") && commandContent.length == 2) {

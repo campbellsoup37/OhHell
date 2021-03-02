@@ -649,9 +649,9 @@ public class OhHellCore {
         for (int i = 0; i < players.size(); i++) {
             Card c = players.get(i).getTrick();
             boolean cNotCanceled = counts.get(c.toString()) == 1;
-            boolean cNotCancelable = deck.matchingCardsLeft(c, new LinkedList<>()) == 1;
+            boolean cNotCancelable = deck.matchingCardsLeft(c, new LinkedList<>()) == deck.getD() - 1;
             boolean cBeatsSmallestWinnable = c.isGreaterThan(smallestWinnable, trump.getSuit());
-            boolean cMatchesSuit = c.getSuit().equals(smallestWinnable.getSuit());
+            boolean cMatchesSuit = c.getSuit().equals(players.get(leader).getTrick().getSuit());
             boolean smallestWinnableIsLosable = deck.matchingCardsLeft(smallestWinnable, new LinkedList<>()) == 2;
             if (cNotCanceled 
                     && cNotCancelable 
@@ -662,7 +662,7 @@ public class OhHellCore {
         }
 
         boolean cardBeatsSmallestWinnable = card.isGreaterThan(smallestWinnable, trump.getSuit());
-        boolean cardMatchesSuit = card.getSuit().equals(smallestWinnable.getSuit());
+        boolean cardMatchesSuit = card.getSuit().equals(players.get(leader).getTrick().getSuit());
         boolean smallestWinnableIsLosable = deck.matchingCardsLeft(smallestWinnable, new LinkedList<>()) == 2;
         boolean ans = cardBeatsSmallestWinnable || cardMatchesSuit && smallestWinnableIsLosable;
         
