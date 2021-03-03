@@ -169,6 +169,10 @@ public class GameClient extends JFrame {
         OhcCanvas oldStateCanvas = stateCanvas;
         state = newState;
         
+        if (oldStateCanvas == canvas) {
+            canvas.clearActionQueue();
+        }
+        
         switch (newState) {
         case MAIN_MENU:
             setMinimumSize(new Dimension(685, 500));

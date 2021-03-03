@@ -9,6 +9,7 @@ public class ClientWriteThread extends Thread {
     private boolean connected;
     
     public ClientWriteThread(Socket socket, GameClient client) {
+        setName("Client write thread");
         try {
             writer = new PrintWriter(
                         new OutputStreamWriter(
@@ -23,7 +24,13 @@ public class ClientWriteThread extends Thread {
     
     @Override
     public void run() {
-        while (connected) {}
+        try {
+            while (connected) {
+                sleep(1);
+            }
+        } catch (InterruptedException e) {
+            
+        }
     }
     
     public void write(String s) {
@@ -32,5 +39,6 @@ public class ClientWriteThread extends Thread {
     
     public void disconnect() {
         connected = false;
+        interrupt();
     }
 }

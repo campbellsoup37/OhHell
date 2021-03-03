@@ -1,4 +1,4 @@
-windowlocationmenu = 353,127
+windowlocationmenu = 502,195
 windowlocationingame = -8,-8
 windowsizeingame = 1936,1056
 windowmaximizedingame = true

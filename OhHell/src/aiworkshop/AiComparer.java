@@ -86,26 +86,26 @@ public class AiComparer extends AiTrainer {
                 winningScore = Math.max(winningScore, player.getScore());
             }
             
-//            int i = 0;
-//            for (AiStrategyModule aiStrategyModule : aiStrategyModules) {
-//                double x = scoreMap.get(aiStrategyModule);
-//                double prevMean = means[i];
-//                means[i] = (means[i] * (g - 1) + x) / g;
-//                if (g >= 2) {
-//                    vars[i] = (vars[i] * (g - 2) + Math.pow(x - means[i], 2)) / (g - 1) + Math.pow(prevMean - means[i], 2);
-//                }
-//                i++;
-//            }
-            
-            int i;
-            for (i = 0; i < players.size(); i++) {
-                double x = (players.get(i).getScore() == winningScore ? 1.0 : 0.0);
+            int i = 0;
+            for (AiStrategyModule aiStrategyModule : aiStrategyModules) {
+                double x = scoreMap.get(aiStrategyModule);
                 double prevMean = means[i];
                 means[i] = (means[i] * (g - 1) + x) / g;
                 if (g >= 2) {
                     vars[i] = (vars[i] * (g - 2) + Math.pow(x - means[i], 2)) / (g - 1) + Math.pow(prevMean - means[i], 2);
                 }
+                i++;
             }
+            
+//            int i;
+//            for (i = 0; i < players.size(); i++) {
+//                double x = (players.get(i).getScore() == winningScore ? 1.0 : 0.0);
+//                double prevMean = means[i];
+//                means[i] = (means[i] * (g - 1) + x) / g;
+//                if (g >= 2) {
+//                    vars[i] = (vars[i] * (g - 2) + Math.pow(x - means[i], 2)) / (g - 1) + Math.pow(prevMean - means[i], 2);
+//                }
+//            }
             
             long newTime = System.currentTimeMillis();
             long timeDiff = newTime - times[(g - 1) % R];

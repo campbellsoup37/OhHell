@@ -21,6 +21,7 @@ public class ClientReadThread extends Thread {
     
     public ClientReadThread(Socket socket, GameClient client) {
         this.client = client;
+        setName("Client read thread");
         
         try {
             reader = new BufferedReader(
@@ -52,6 +53,7 @@ public class ClientReadThread extends Thread {
     }
     
     public void receiveCommand(String line) {
+//        System.out.println(line);
         String[] splitLine = line.split(":", 3);
         long id = Long.parseLong(splitLine[0]);
         String command = splitLine[1];

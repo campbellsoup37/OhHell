@@ -1807,7 +1807,7 @@ public class GameCanvas extends OhcCanvas {
 
                 @Override
                 public void click() {
-                    if (myPlayer.isPlaying()) {
+                    if (myPlayer.isPlaying() && myPlayer.getTrick().isEmpty()) {
                         playCard(this);
                     } else {
                         if (preselectedCard == null || preselectedCard != this) {
@@ -1961,6 +1961,10 @@ public class GameCanvas extends OhcCanvas {
     public LinkedList<Timer> getActionQueue() {
         return actionQueue;
     }
+    
+    public void clearActionQueue() {
+        actionQueue.clear();
+    }
 
     public void setPerformingAction(boolean performingAction) {
         this.performingAction = performingAction;
@@ -2010,6 +2014,8 @@ public class GameCanvas extends OhcCanvas {
         trickTaken = false;
         animatingTaken = false;
         takenTimer = 1;
+        cardJustPlayed = 0;
+        preselectedCard = null;
         canUndoBid = false;
         undoBidTimer = -1;
         messageState = "UNBLOCKED";
@@ -2292,6 +2298,7 @@ public class GameCanvas extends OhcCanvas {
                 }
                 state = GameState.BIDDING;
                 if (myPlayer.getBidding() != 0) {
+                    preselectedCard = null;
                     makeBidInteractables();
                 }
                 resetPokeTime();
@@ -2370,6 +2377,7 @@ public class GameCanvas extends OhcCanvas {
                 state = GameState.BIDDING;
                 if (myPlayer.getBidding() != 0) {
                     makeBidInteractables();
+                    preselectedCard = null;
                 }
                 resetPokeTime();
             }
