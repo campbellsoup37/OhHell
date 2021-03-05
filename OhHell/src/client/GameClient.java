@@ -18,24 +18,17 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
 import java.awt.image.BufferedImage;
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -1278,7 +1271,7 @@ public class GameClient extends JFrame {
             changeState(ClientState.MAIN_MENU);
             
             if (deleteUpdater) {
-                deleteUpdater();
+                FileTools.deleteFile(getDirectory() + "/clientupdater.jar");
             }
             BufferedReader versionReader = FileTools.getInternalFile("version", this);
             version = versionReader.readLine();
@@ -1772,17 +1765,8 @@ public class GameClient extends JFrame {
     }
     
     public void checkForUpdates() {
-        try {
-            BufferedReader versionReader = new BufferedReader(
-                    new InputStreamReader(
-                            new URL("https://raw.githubusercontent.com/campbellsoup37/OhHell/master/OhHell/version")
-                            .openStream()));
-            newVersion = versionReader.readLine();
-            versionReader.close();
-            updateChecked = true;
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        newVersion = FileTools.getCurrentVersion();
+        updateChecked = true;
     }
     
     public void updatePressed() {
@@ -1792,11 +1776,14 @@ public class GameClient extends JFrame {
             checkForUpdates();
         } else {
             try {
-                downloadUpdater();
                 String path = getDirectory() + "/clientupdater.jar";
                 
+                FileTools.downloadFile(
+                        "https://raw.githubusercontent.com/campbellsoup37/OhHell/master/OhHell/updater.jar", 
+                        path);
+                
                 if (new File(path).exists()) {
-                    String command = "java -jar " 
+                    String command = FileTools.cmdJava() + " -jar " 
                                         + "\"" + path + "\""
                                         + " \"" + newVersion + "\""
                                         + " \"OhHellClient.jar\""
@@ -1813,44 +1800,6 @@ public class GameClient extends JFrame {
             } catch (URISyntaxException e) {
                 e.printStackTrace();
             }
-        }
-    }
-    
-    public void downloadUpdater() {
-        try {
-            URL url = new URL("https://raw.githubusercontent.com/campbellsoup37/OhHell/master/OhHell/updater.jar");
-            
-            URLConnection connection = url.openConnection();
-            if (connection instanceof HttpURLConnection) {
-                ((HttpURLConnection) connection).setRequestMethod("GET");
-            }
-            InputStream in = connection.getInputStream();
-            in.close();
-            
-            BufferedInputStream newUpdaterJarInput = new BufferedInputStream(
-                    url.openStream());
-            FileOutputStream newUpdaterJarOutput = new FileOutputStream(getDirectory() + "/clientupdater.jar");
-            
-            byte[] dataBuffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = newUpdaterJarInput.read(dataBuffer, 0, 1024)) != -1) {
-                newUpdaterJarOutput.write(dataBuffer, 0, bytesRead);
-            }
-            
-            newUpdaterJarInput.close();
-            newUpdaterJarOutput.close();
-        } catch (IOException e1) {
-            e1.printStackTrace();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
-    }
-    
-    public void deleteUpdater() {
-        try {
-            new File(getDirectory() + "/clientupdater.jar").delete();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
         }
     }
     

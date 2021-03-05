@@ -4,19 +4,12 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -176,7 +169,11 @@ public class GameServer extends JFrame {
         });
         
         if (deleteUpdater) {
-            deleteUpdater();
+            try {
+                FileTools.deleteFile(getDirectory() + "/serverupdater.jar");
+            } catch (URISyntaxException e1) {
+                e1.printStackTrace();
+            }
         }
         checkForUpdates();
     }
@@ -508,30 +505,21 @@ public class GameServer extends JFrame {
     }
     
     public void checkForUpdates() {
-        try {
-            BufferedReader versionReader = new BufferedReader(
-                    new InputStreamReader(
-                            new URL("https://raw.githubusercontent.com/campbellsoup37/OhHell/master/OhHell/version")
-                            .openStream()));
-            newVersion = versionReader.readLine();
-            versionReader.close();
-            updateChecked = true;
-            if (newVersion.equals(version)) {
-                SwingUtilities.invokeLater(new Runnable() {
-                    public void run() {
-                        updateButton.setText("Version up to date");
-                    }
-                });
-            } else {
-                SwingUtilities.invokeLater(new Runnable() {
-                    public void run() {
-                        updateButton.setAlert(true);
-                        updateButton.setText("Download v" + newVersion);
-                    }
-                });
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+        newVersion = FileTools.getCurrentVersion();
+        updateChecked = true;
+        if (newVersion.equals(version)) {
+            SwingUtilities.invokeLater(new Runnable() {
+                public void run() {
+                    updateButton.setText("Version up to date");
+                }
+            });
+        } else {
+            SwingUtilities.invokeLater(new Runnable() {
+                public void run() {
+                    updateButton.setAlert(true);
+                    updateButton.setText("Download v" + newVersion);
+                }
+            });
         }
     }
     
@@ -541,11 +529,13 @@ public class GameServer extends JFrame {
             checkForUpdates();
         } else {
             try {
-                downloadUpdater();
                 String path = getDirectory() + "/serverupdater.jar";
+                FileTools.downloadFile(
+                        "https://raw.githubusercontent.com/campbellsoup37/OhHell/master/OhHell/updater.jar", 
+                        getDirectory() + "/serverupdater.jar");
                 
                 if (new File(path).exists()) {
-                    String command = "java -jar " 
+                    String command = FileTools.cmdJava() + " -jar " 
                                         + "\"" + path + "\""
                                         + " \"" + newVersion + "\""
                                         + " \"OhHellServer.jar\""
@@ -562,44 +552,6 @@ public class GameServer extends JFrame {
             } catch (URISyntaxException e) {
                 e.printStackTrace();
             }
-        }
-    }
-    
-    public void downloadUpdater() {
-        try {
-            URL url = new URL("https://raw.githubusercontent.com/campbellsoup37/OhHell/master/OhHell/updater.jar");
-            
-            URLConnection connection = url.openConnection();
-            if (connection instanceof HttpURLConnection) {
-                ((HttpURLConnection) connection).setRequestMethod("GET");
-            }
-            InputStream in = connection.getInputStream();
-            in.close();
-            
-            BufferedInputStream newUpdaterJarInput = new BufferedInputStream(
-                    url.openStream());
-            FileOutputStream newUpdaterJarOutput = new FileOutputStream(getDirectory() + "/serverupdater.jar");
-            
-            byte[] dataBuffer = new byte[1024];
-            int bytesRead;
-            while ((bytesRead = newUpdaterJarInput.read(dataBuffer, 0, 1024)) != -1) {
-                newUpdaterJarOutput.write(dataBuffer, 0, bytesRead);
-            }
-            
-            newUpdaterJarInput.close();
-            newUpdaterJarOutput.close();
-        } catch (IOException e1) {
-            e1.printStackTrace();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-        }
-    }
-    
-    public void deleteUpdater() {
-        try {
-            new File(getDirectory() + "/serverupdater.jar").delete();
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
         }
     }
     

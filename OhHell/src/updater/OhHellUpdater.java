@@ -124,7 +124,7 @@ public class OhHellUpdater extends JFrame {
     }
     
     public void closeAndRunClient() throws IOException {
-        Runtime.getRuntime().exec("java -jar \"" + path + "\"" + " -deleteupdater");
+        Runtime.getRuntime().exec(FileTools.cmdJava() + " -jar \"" + path + "\"" + " -deleteupdater");
         dispose();
         System.exit(0);
     }
