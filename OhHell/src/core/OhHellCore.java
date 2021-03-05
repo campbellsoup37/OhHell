@@ -320,11 +320,24 @@ public class OhHellCore {
     }
     
     public void incomingBid(Player player, int bid) {
+        // Validity check
+        if (player.getIndex() != turn) {
+            System.out.println(
+                    "ERROR: Player \"" + player.getName() + "\" attempted to bid out of turn.");
+            return;
+        } else if (bid < 0 || bid > player.getHand().size()) {
+            System.out.println(
+                    "ERROR: Player \"" + player.getName() + "\" attempted to bid " + bid
+                    + " with a hand size of " + player.getHand().size() + ".");
+            return;
+        } else if (turn == getDealer() && bid == whatCanINotBid()) {
+            System.out.println(
+                    "ERROR: Player \"" + player.getName() + "\" attempted to bid what they cannot bid as dealer.");
+            return;
+        }
+        
         if (verbose) {
             System.out.println(player.getId() + " bid " + bid);
-        }
-        if (bid < 0 || bid > player.getHand().size()) {
-            System.out.println("ERROR: Player \"" + player.getName() + "\" bid " + bid + " with a hand size of " + player.getHand().size() + ".");
         }
         
         player.addBid(bid);
@@ -429,6 +442,23 @@ public class OhHellCore {
     }
     
     public void incomingPlay(Player player, Card card) {
+        // Validity check
+        if (player.getIndex() != turn) {
+            System.out.println(
+                    "ERROR: Player \"" + player.getName() + "\" attempted to play out of turn.");
+            return;
+        } else if (player.getHand().stream().noneMatch(c -> c.equals(card))) {
+            System.out.println(
+                    "ERROR: Player \"" + player.getName() + "\" attempted to play " + card
+                    + ", but they do not have that card.");
+            return;
+        } else if (whatCanIPlay(player).stream().noneMatch(c -> c.equals(card))) {
+            System.out.println(
+                    "ERROR: Player \"" + player.getName() + "\" attempted to play " + card
+                    + ", failing to follow suit.");
+            return;
+        }
+        
         if (verbose) {
             System.out.println(player.getId() + " played " + card);
         }
@@ -683,7 +713,9 @@ public class OhHellCore {
     
     public void processUndoBid(Player player) {
         Player nextPlayer = players.get(nextUnkicked(player.getIndex()));
-        if (!nextPlayer.hasBid() || player.getIndex() == getDealer() && nextPlayer.getTrick().isEmpty()) {
+        if (nextPlayer.getIndex() == turn 
+                && (!nextPlayer.hasBid() 
+                || player.getIndex() == getDealer() && nextPlayer.getTrick().isEmpty())) {
             if (pendingAction != null) {
                 pendingAction.turnOff();
             }
@@ -699,6 +731,8 @@ public class OhHellCore {
             for (Player p : players) {
                 p.commandUndoBidReport(player.getIndex());
             }
+        } else {
+            System.out.println("ERROR: Player \"" + player.getName() + "\" attempted to undo bid too late.");
         }
     }
     

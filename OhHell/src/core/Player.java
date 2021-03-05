@@ -173,7 +173,6 @@ public class Player {
                 return;
             }
         }
-        System.out.println("ERROR: Player \"" + name + "\" attempted to play " + card + ", but they do not have that card.");
     }
     
     public List<Integer> getBids() {
