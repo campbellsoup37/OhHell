@@ -1,7 +1,7 @@
 windowlocationmenu = 502,195
-windowlocationingame = -8,-8
-windowsizeingame = 1936,1056
-windowmaximizedingame = true
+windowlocationingame = 61,144
+windowsizeingame = 1200,700
+windowmaximizedingame = false
 recentusername = soup
 recentaddress = localhost
 recentport = 6066

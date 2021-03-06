@@ -524,6 +524,10 @@ public class GameClient extends JFrame {
         roundNumber++;
     }
     
+    public int getRoundNumber() {
+        return roundNumber;
+    }
+    
     public void chat(String text) {
         canvas.chat(text);
     }
@@ -549,6 +553,8 @@ public class GameClient extends JFrame {
             setTitle("Oh Hell");
             
             setIconImage(FileTools.loadImage("resources/icon/cw.png", this));
+
+            setSize(windowSizeMenu);
             
             BufferedImage tableImg = FileTools.loadImage("resources/client/tableimage.png", this);
             
@@ -1190,19 +1196,13 @@ public class GameClient extends JFrame {
 
                     @Override
                     public void mousePressed(MouseEvent e) {
-                        if (e.getButton() == MouseEvent.BUTTON1) {
-                            c.mousePressed(e.getX(), e.getY());
-                        } else if (e.getButton() == MouseEvent.BUTTON3 && stopperSelected) {
-                            //menuCanvas.removeStopper();
-                        }
+                        c.mousePressed(e.getX(), e.getY(), e.getButton());
                         c.grabFocus();
                     }
 
                     @Override
                     public void mouseReleased(MouseEvent e) {
-                        if (e.getButton() == MouseEvent.BUTTON1) {
-                            c.mouseReleased(e.getX(), e.getY());
-                        }
+                        c.mouseReleased(e.getX(), e.getY(), e.getButton());
                     }
                 });
                 c.addMouseMotionListener(new MouseMotionListener() {

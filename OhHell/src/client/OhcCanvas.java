@@ -3,6 +3,7 @@ package client;
 import java.awt.Cursor;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.util.LinkedList;
 import java.util.List;
@@ -104,11 +105,15 @@ public abstract class OhcCanvas extends JPanel {
     
     public void customPaintLast(Graphics graphics) {}
     
-    public void mousePressed(int x, int y) {
-        mouseMoved(x, y, false);
-        if (interactableMoused != null) {
-            interactableMoused.setPressed(true);
-            interactablePressed = interactableMoused;
+    public void mousePressed(int x, int y, int button) {
+        if (button == MouseEvent.BUTTON1) {
+            mouseMoved(x, y, false);
+            if (interactableMoused != null) {
+                interactableMoused.setPressed(true);
+                interactablePressed = interactableMoused;
+            }
+        } else if (button == MouseEvent.BUTTON3) {
+            rightClick(x, y);
         }
     }
     
@@ -116,16 +121,18 @@ public abstract class OhcCanvas extends JPanel {
         return true;
     }
     
-    public void mouseReleased(int x, int y) {
-        if (canClick()) {
-            if (interactableMoused != null && interactableMoused == interactablePressed) {
-                CanvasInteractable relay = interactableMoused;
-                interactableMoused = null;
-                interactablePressed = null;
-                relay.click();
+    public void mouseReleased(int x, int y, int button) {
+        if (button == MouseEvent.BUTTON1) {
+            if (canClick()) {
+                if (interactableMoused != null && interactableMoused == interactablePressed) {
+                    CanvasInteractable relay = interactableMoused;
+                    interactableMoused = null;
+                    interactablePressed = null;
+                    relay.click();
+                }
             }
+            mouseMoved(x, y, false);
         }
-        mouseMoved(x, y, false);
     }
     
     public void mouseMoved(int x, int y, boolean drag) {
@@ -163,6 +170,8 @@ public abstract class OhcCanvas extends JPanel {
         
         updateCursor();
     }
+    
+    public void rightClick(int x, int y) {}
     
     public void updateCursor() {
         if (interactableMoused != null) {

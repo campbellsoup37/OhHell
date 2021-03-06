@@ -3,6 +3,9 @@ package client;
 import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Rectangle;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionListener;
 
 import javax.swing.SwingUtilities;
 
@@ -13,7 +16,42 @@ public class CanvasEmbeddedSwing extends CanvasInteractable {
     public CanvasEmbeddedSwing(Component component, OhcCanvas canvas) {
         this.component = component;
         this.canvas = canvas;
+        component.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                canvas.dispatchEvent(displacedMouseEvent(e));
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                canvas.dispatchEvent(displacedMouseEvent(e));
+            }
+        });
+        component.addMouseMotionListener(new MouseMotionListener() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                canvas.dispatchEvent(displacedMouseEvent(e));
+            }
+
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                canvas.dispatchEvent(displacedMouseEvent(e));
+            }
+        });
         canvas.add(component);
+    }
+    
+    private MouseEvent displacedMouseEvent(MouseEvent e) {
+        return new MouseEvent(
+                canvas,
+                e.getID(),
+                e.getWhen(),
+                e.getModifiers(),
+                e.getX() + x(),
+                e.getY() + y(),
+                e.getClickCount(),
+                e.isPopupTrigger(),
+                e.getButton());
     }
     
     public Component getComponent() {

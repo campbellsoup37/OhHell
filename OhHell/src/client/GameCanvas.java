@@ -120,7 +120,7 @@ public class GameCanvas extends OhcCanvas {
     private boolean performingAction = false;
 
     private boolean trickTaken = false;
-    private CanvasCard preselectedCard;
+    private List<CanvasCard> preselectedCards = new ArrayList<>();
     private int cardJustPlayed = 0;
     private boolean animatingTaken = false;
     private double takenTimer = 1;
@@ -136,6 +136,8 @@ public class GameCanvas extends OhcCanvas {
 
     private boolean showOneCard = false;
 
+    private CanvasScoreSheet scoreSheet;
+    
     private PostGamePage postGamePage;
     private List<ClientPlayer> postGamePlayers;
     private List<ClientPlayer> postGamePlayersScoreSorted;
@@ -511,6 +513,11 @@ public class GameCanvas extends OhcCanvas {
 
     public GameState getState() {
         return state;
+    }
+    
+    @Override
+    public void rightClick(int x, int y) {
+        preselectedCards.clear();
     }
 
     public void setPlayerPositions() {
@@ -1090,7 +1097,7 @@ public class GameCanvas extends OhcCanvas {
             @Override
             public int y() {
                 return getHeight() - 210 - 15
-                        - (preselectedCard != null ? preselectedCardYOffset : 0);
+                        - (!preselectedCards.isEmpty() ? preselectedCardYOffset + 20 : 0);
             }
 
             @Override
@@ -1451,7 +1458,7 @@ public class GameCanvas extends OhcCanvas {
         };
 
         // Score sheet
-        CanvasScoreSheet scoreSheet = new CanvasScoreSheet(this) {
+        scoreSheet = new CanvasScoreSheet(this) {
             @Override
             public int x() {
                 return getWidth() - (450 - scoreMargin);
@@ -1733,7 +1740,8 @@ public class GameCanvas extends OhcCanvas {
 
                 @Override
                 public int y() {
-                    return getHeight() - 210 - 15;
+                    return getHeight() - 210 - 15
+                            - (preselectedCards.isEmpty() ? 0 : preselectedCardYOffset + 20);
                 }
 
                 @Override
@@ -1783,7 +1791,7 @@ public class GameCanvas extends OhcCanvas {
                 @Override
                 public int yCenter() {
                     return getHeight() - handYOffset 
-                            - (preselectedCard == this ? preselectedCardYOffset : 0);
+                            - (preselectedCards.contains(this) ? preselectedCardYOffset : 0);
                 }
 
                 @Override
@@ -1793,10 +1801,7 @@ public class GameCanvas extends OhcCanvas {
 
                 @Override
                 public boolean isEnabled() {
-                    return state == GameState.BIDDING && myPlayer.hasBid()
-                            || state == GameState.PLAYING 
-                                && (!myPlayer.getTrick().isEmpty()
-                                        || canPlayThis(getCard()));
+                    return state == GameState.BIDDING || state == GameState.PLAYING;
                 }
 
                 @Override
@@ -1808,24 +1813,44 @@ public class GameCanvas extends OhcCanvas {
                 @Override
                 public void click() {
                     if (myPlayer.isPlaying() && myPlayer.getTrick().isEmpty()) {
-                        playCard(this);
-                    } else {
-                        if (preselectedCard == null || preselectedCard != this) {
-                            preselectedCard = this;
+                        if (preselectedCards.isEmpty()) {
+                            playCard(this);
                         } else {
-                            preselectedCard = null;
+                            return;
+                        }
+                    } else {
+                        int index = preselectedCards.indexOf(this);
+                        if (index == -1) {
+                            preselectedCards.add(this);
+                        } else {
+                            while (index < preselectedCards.size()) {
+                                preselectedCards.remove(index);
+                            }
                         }
                     }
                 }
                 
                 @Override
                 public boolean dark() {
-                    return isMoused() || preselectedCard != null && preselectedCard != this;
+                    return isMoused() || !preselectedCards.isEmpty() && !preselectedCards.contains(this);
                 }
                 
                 @Override
                 public Cursor mousedCursor() {
                     return new Cursor(Cursor.HAND_CURSOR);
+                }
+                
+                @Override
+                public void paint(Graphics graphics) {
+                    int index = preselectedCards.indexOf(this);
+                    if (index != -1 && preselectedCards.size() > 1) {
+                        graphics.setColor(Color.BLUE);
+                        graphics.setFont(GraphicsTools.fontBold);
+                        GraphicsTools.drawStringJustified(graphics, (index + 1) + "", x() + 20, y() - 20, 1, 1);
+                        graphics.setColor(Color.BLACK);
+                        graphics.setFont(GraphicsTools.font);
+                    }
+                    super.paint(graphics);
                 }
             });
         }
@@ -1836,6 +1861,8 @@ public class GameCanvas extends OhcCanvas {
             myPlayer.setPlaying(false);
             cardJustPlayed = canvasCard.index();
             client.makePlay(canvasCard.getCard());
+        } else {
+            preselectedCards.clear();
         }
     }
 
@@ -2015,7 +2042,7 @@ public class GameCanvas extends OhcCanvas {
         animatingTaken = false;
         takenTimer = 1;
         cardJustPlayed = 0;
-        preselectedCard = null;
+        preselectedCards.clear();
         canUndoBid = false;
         undoBidTimer = -1;
         messageState = "UNBLOCKED";
@@ -2298,7 +2325,7 @@ public class GameCanvas extends OhcCanvas {
                 }
                 state = GameState.BIDDING;
                 if (myPlayer.getBidding() != 0) {
-                    preselectedCard = null;
+                    preselectedCards.clear();
                     makeBidInteractables();
                 }
                 resetPokeTime();
@@ -2319,9 +2346,8 @@ public class GameCanvas extends OhcCanvas {
                 state = GameState.PLAYING;
                 resetPokeTime();
                 
-                if (index == myPlayer.getIndex() && preselectedCard != null) {
-                    playCard(preselectedCard);
-                    preselectedCard = null;
+                if (index == myPlayer.getIndex() && !preselectedCards.isEmpty()) {
+                    playCard(preselectedCards.remove(0));
                 }
             }
         };
@@ -2377,7 +2403,7 @@ public class GameCanvas extends OhcCanvas {
                 state = GameState.BIDDING;
                 if (myPlayer.getBidding() != 0) {
                     makeBidInteractables();
-                    preselectedCard = null;
+                    preselectedCards.clear();
                 }
                 resetPokeTime();
             }
@@ -2411,6 +2437,8 @@ public class GameCanvas extends OhcCanvas {
                 }
                 client.incrementRoundNumber();
                 playersScoreSorted.sort((p1, p2) -> (int) Math.signum(p2.getScore() - p1.getScore()));
+                
+                scoreSheet.autoScroll(client.getRoundNumber());
             }
         };
     }

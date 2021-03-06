@@ -22,7 +22,7 @@ public class CanvasScoreSheet extends CanvasInteractable {
     public static final int bidInfoHeight = 20;
     public static final int buttonWidth = 60;
     public static final int px = 1;
-    public static final int py = 5;
+    public static final int py = 0;
     
     private double dealerHWidth = 10;
     
@@ -33,6 +33,7 @@ public class CanvasScoreSheet extends CanvasInteractable {
     private String sortBy = "Seat";
     
     private JPanel scorePanel;
+    private OhcScrollPane swingScrollPane;
     private List<CanvasButton> buttons;
     private CanvasEmbeddedSwing scoreScrollPane;
     
@@ -135,7 +136,7 @@ public class CanvasScoreSheet extends CanvasInteractable {
                     numRoundsMemo = numRounds;
                     setPreferredSize(new Dimension(
                             sheet.width(), 
-                            scoreVSpacing * numRounds + CanvasScoreSheet.lineV / 2 + CanvasScoreSheet.margin - 4));
+                            scoreVSpacing * numRounds));
                 }
                 
                 double wid = (double) (width() - 4 * margin - 2 * dealerHWidth) / players.size();
@@ -148,12 +149,12 @@ public class CanvasScoreSheet extends CanvasInteractable {
                     GraphicsTools.drawStringJustified(graphics, 
                             "" + round[1], 
                             margin + dealerHWidth / 2 - px, 
-                            scoreVSpacing * (i + 1) - py, 
+                            scoreVSpacing * (i + 0.5) - py, 
                             1, 1);
                     GraphicsTools.drawStringJustified(graphics, 
                             playersSortedIndex.get(round[0]).getName().substring(0, 1), 
                             2 * margin + 1.5 * dealerHWidth - px, 
-                            scoreVSpacing * (i + 1) - py, 
+                            scoreVSpacing * (i + 0.5) - py, 
                             1, 1);
                 }
 
@@ -185,20 +186,20 @@ public class CanvasScoreSheet extends CanvasInteractable {
                         graphics.setColor(new Color(200, 200, 200, 180));
                         graphics.fillOval(
                                 (int) (3 * margin + 2 * dealerHWidth + i * wid + 1 + wid - margin - b) - px, 
-                                (int) (scoreVSpacing * (j + 1) - b / 2) - py, 
+                                (int) (scoreVSpacing * (j + 0.5) - b / 2) - py, 
                                 b, b);
                         graphics.setColor(Color.BLACK);
                         GraphicsTools.drawStringJustified(graphics, 
                                 bid, 
                                 (int) (3 * margin + 2 * dealerHWidth + i * wid + 1 + wid - margin - b / 2) - px, 
-                                scoreVSpacing * (j + 1) - py, 
+                                scoreVSpacing * (j + 0.5) - py, 
                                 1, 1);
                         
                         // scores
                         GraphicsTools.drawStringJustified(graphics, 
                                 score, 
                                 (int) (3 * margin + 2 * dealerHWidth + i * wid + 1 + wid / 2 - margin / 2 - b / 2) - px, 
-                                scoreVSpacing * (j + 1) - py, 
+                                scoreVSpacing * (j + 0.5) - py, 
                                 1, 1);
 
                         graphics.setFont(GraphicsTools.font);
@@ -206,7 +207,7 @@ public class CanvasScoreSheet extends CanvasInteractable {
                 }
             }
         };
-        OhcScrollPane swingScrollPane = new OhcScrollPane(scorePanel,
+        swingScrollPane = new OhcScrollPane(scorePanel,
                 JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         swingScrollPane.setBoxed(false);
         swingScrollPane.setBorder(BorderFactory.createEmptyBorder());
@@ -237,6 +238,15 @@ public class CanvasScoreSheet extends CanvasInteractable {
                 return sheet.isShown();
             }
         };
+    }
+    
+    public void autoScroll(int roundNumber) {
+        int newY = scoreVSpacing * roundNumber - py;
+        swingScrollPane.getVerticalScrollBar().setValue(
+                Math.min(Math.max(
+                            swingScrollPane.getVerticalScrollBar().getValue(), 
+                            newY + scoreVSpacing - swingScrollPane.getHeight()),
+                        newY));
     }
     
     @Override
