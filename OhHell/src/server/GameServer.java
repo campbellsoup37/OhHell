@@ -535,20 +535,26 @@ public class GameServer extends JFrame {
                         getDirectory() + "/serverupdater.jar");
                 
                 if (new File(path).exists()) {
-                    String command = FileTools.cmdJava() + " -jar " 
-                                        + "\"" + path + "\""
-                                        + " \"" + newVersion + "\""
-                                        + " \"OhHellServer.jar\""
-                                        + " \"" + getFileName() + "\"";
-                    System.out.println("RUNNING TERMINAL COMMAND: " + command);
-                    Runtime.getRuntime().exec(command);
+                    if (FileTools.isUnix()) {
+                        FileTools.runTerminalCommand(new String[] {
+                                "chmod",
+                                "777",
+                                path
+                        }, false);
+                    }
+                    FileTools.runTerminalCommand(new String[] {
+                            FileTools.cmdJava(),
+                            "-jar",
+                            path,
+                            newVersion,
+                            "OhHellServer.jar",
+                            getFileName()
+                    }, false);
                     dispose();
                     System.exit(0);
                 } else {
                     System.out.println("Error: Failed to download updater.");
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
             } catch (URISyntaxException e) {
                 e.printStackTrace();
             }

@@ -124,9 +124,20 @@ public class OhHellUpdater extends JFrame {
     }
     
     public void closeAndRunClient() throws IOException {
-        String command = FileTools.cmdJava() + " -jar \"" + path + "\"" + " -deleteupdater";
-        System.out.println("Running terminal command: " + command);
-        Runtime.getRuntime().exec(command);
+        if (FileTools.isUnix()) {
+            FileTools.runTerminalCommand(new String[] {
+                    "chmod",
+                    "777",
+                    path
+            }, false);
+        }
+        FileTools.runTerminalCommand(new String[] {
+                FileTools.cmdJava(),
+                "-jar",
+                path,
+                "-deleteupdater"
+        }, false);
+        
         dispose();
         System.exit(0);
     }

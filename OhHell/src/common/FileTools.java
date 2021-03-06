@@ -119,4 +119,44 @@ public class FileTools {
         
         return version;
     }
+    
+    public static void runTerminalCommand(String[] command, boolean verbose) {
+        if (verbose) {
+            System.out.println(
+                    "Running terminal command: "
+                    + "\"" + String.join("\" \"", command) + "\"");
+        }
+        
+        try {
+            Process proc = Runtime.getRuntime().exec(command);
+            
+            if (verbose) {
+                BufferedReader reader1 = new BufferedReader(new InputStreamReader(proc.getInputStream()));
+                String line = "";
+                while((line = reader1.readLine()) != null) {
+                    System.out.print(line + "\n");
+                }
+                
+                BufferedReader reader2 = new BufferedReader(new InputStreamReader(proc.getErrorStream()));
+                line = "";
+                while((line = reader2.readLine()) != null) {
+                    System.out.print(line + "\n");
+                }
+
+                proc.waitFor();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public static boolean isUnix() {
+        String os = System.getProperty("os.name").toLowerCase();
+        return os.contains("mac") 
+                || os.contains("nix") 
+                || os.contains("nux") 
+                || os.contains("aix");
+    }
 }
