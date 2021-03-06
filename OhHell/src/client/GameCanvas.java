@@ -1801,7 +1801,13 @@ public class GameCanvas extends OhcCanvas {
 
                 @Override
                 public boolean isEnabled() {
-                    return state == GameState.BIDDING || state == GameState.PLAYING;
+                    return state == GameState.BIDDING
+                            && myPlayer.hasBid()
+                            || state == GameState.PLAYING
+                            && (!myPlayer.isPlaying() 
+                                    || myPlayer.isPlaying() 
+                                    && canPlayThis(getCard())
+                                    && preselectedCards.isEmpty());
                 }
 
                 @Override
