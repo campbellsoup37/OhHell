@@ -49,6 +49,8 @@ public class GameCanvas extends OhcCanvas {
     public static final int lastTrickSeparation = 20;
     public static final int preselectedCardYOffset = 50;
 
+    public static final int maxUndos = 2;
+    
     public static final int scoreVSpacing = 20;
     public static final int scoreMargin = 10;
     public static final int bidStayTime = 1500;
@@ -126,7 +128,9 @@ public class GameCanvas extends OhcCanvas {
     private double takenTimer = 1;
 
     private boolean canUndoBid = false;
+    private boolean showBidDots = false;
     private long undoBidTimer = -1;
+    private int bidCount = 0;
 
     private boolean claimBlocked = false;
     private int claimer = -1;
@@ -379,6 +383,23 @@ public class GameCanvas extends OhcCanvas {
                                 (int) (x + i * separation - (handSize - 1) * separation / 2 - (pos - 1) * maxWid / 2),
                                 y - yOffset, smallCardScale, true, false);
                     }
+                }
+            }
+            
+            if (showBidDots) {
+                for (int i = 0; i < maxUndos + 1; i++) {
+                    if (i < bidCount) {
+                        graphics.setColor(Color.WHITE);
+                    } else {
+                        graphics.setColor(new Color(175, 175, 175));
+                    }
+                    graphics.fillOval(
+                            (getWidth() - 450) / 2 
+                                - (4 * (maxUndos + 1) + 10 * maxUndos) / 2 
+                                + 14 * i, 
+                            getHeight() - 210 - 15 - 40
+                                - (!preselectedCards.isEmpty() ? preselectedCardYOffset + 20 : 0), 
+                            4, 4);
                 }
             }
         }
@@ -1112,8 +1133,8 @@ public class GameCanvas extends OhcCanvas {
 
             @Override
             public boolean isShown() {
-                return state != GameState.PREGAME && canUndoBid
-                // && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME
+                return state != GameState.PREGAME
+                        && canUndoBid
                         && !myPlayer.isKibitzer();
             }
 
@@ -2047,6 +2068,8 @@ public class GameCanvas extends OhcCanvas {
         trickTaken = false;
         animatingTaken = false;
         takenTimer = 1;
+        bidCount = 0;
+        showBidDots = false;
         cardJustPlayed = 0;
         preselectedCards.clear();
         canUndoBid = false;
@@ -2333,6 +2356,7 @@ public class GameCanvas extends OhcCanvas {
                 if (myPlayer.getBidding() != 0) {
                     preselectedCards.clear();
                     makeBidInteractables();
+                    bidCount = 0;
                 }
                 resetPokeTime();
             }
@@ -2360,32 +2384,39 @@ public class GameCanvas extends OhcCanvas {
     }
 
     public void setBidOnTimer(int index, int bid, int delay) {
+        long time = System.currentTimeMillis();
         new CanvasTimerEntry(delay, this, actionQueue, false) {
             @Override
             public void onLastAction() {
                 players.get(index).addBid(bid);
                 players.get(index).setBidTimer(0);
+                if (players.stream().filter(p -> !p.hasBid() && !p.isKicked()).count() == 0) {
+                    animateBids();
+                }
+                
                 if (index == myPlayer.getIndex()) {
-                    canUndoBid = true;
-
-                    if (!client.devSpeedSelected()) {
-                        for (int i = 1; i < players.size(); i++) {
-                            ClientPlayer nextPlayer = players.get((i + index) % players.size());
-                            if (!nextPlayer.isKicked()) {
-                                if (!nextPlayer.isHuman()) {
-                                    undoBidTimer = System.currentTimeMillis();
-                                } else {
-                                    undoBidTimer = -1;
+                    bidCount++;
+                    showBidDots = true;
+                    
+                    if (bidCount < maxUndos + 1) {
+                        canUndoBid = true;
+                        if (!client.devSpeedSelected()) {
+                            for (int i = 1; i < players.size(); i++) {
+                                ClientPlayer nextPlayer = players.get((i + index) % players.size());
+                                if (!nextPlayer.isKicked()) {
+                                    if (!nextPlayer.isHuman()) {
+                                        undoBidTimer = time;
+                                    } else {
+                                        undoBidTimer = -1;
+                                    }
+                                    break;
                                 }
-                                break;
                             }
                         }
                     }
                 } else {
                     canUndoBid = false;
-                }
-                if (players.stream().filter(p -> !p.hasBid() && !p.isKicked()).count() == 0) {
-                    animateBids();
+                    showBidDots = false;
                 }
             }
         };
@@ -2428,6 +2459,7 @@ public class GameCanvas extends OhcCanvas {
                     players.get(index).removeCard(card);
                 }
                 canUndoBid = false;
+                showBidDots = false;
             }
         };
     }

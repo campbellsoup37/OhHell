@@ -402,7 +402,7 @@ public class OhHellCore {
     public int whatCanINotBid() {
         if (turn == getDealer()) {
             return rounds.get(roundNumber).getHandSize()
-                    - players.stream().map(Player::getBid).reduce(0, (a, b) -> a + b);
+                    - players.stream().map(p -> p.hasBid() ? p.getBid() : 0).reduce(0, (a, b) -> a + b);
         } else {
             return -1;
         }
