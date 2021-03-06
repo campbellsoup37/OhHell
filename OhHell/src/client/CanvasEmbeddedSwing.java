@@ -20,11 +20,13 @@ public class CanvasEmbeddedSwing extends CanvasInteractable {
             @Override
             public void mousePressed(MouseEvent e) {
                 canvas.dispatchEvent(displacedMouseEvent(e));
+                component.requestFocus();
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
                 canvas.dispatchEvent(displacedMouseEvent(e));
+                component.requestFocus();
             }
         });
         component.addMouseMotionListener(new MouseMotionListener() {
