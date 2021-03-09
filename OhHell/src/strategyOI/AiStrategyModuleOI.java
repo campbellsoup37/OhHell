@@ -133,7 +133,9 @@ public class AiStrategyModuleOI extends AiStrategyModule {
         in.addOneHot(deck.adjustedCardValueSmall(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)), 13 * D);
         in.addOneHot(deck.matchingCardsLeft(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)), D - 1);
         
-        in.addOneHot(requiredCancels, maxCancels);
+        if (deck.getD() == 2) {
+            in.addOneHot(requiredCancels, maxCancels);
+        }
     }
     
     public static int voids(List<Card> hand) {
