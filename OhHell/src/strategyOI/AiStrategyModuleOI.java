@@ -22,6 +22,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
     private Deck deck;
     private int D;
     private int maxH;
+    private int maxCancels;
     private OverallValueLearner ovl;
     private ImmediateValueLearner ivl;
     
@@ -41,6 +42,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
         deck = core.getDeck();
         this.D = D;
         maxH = Math.min(10, (52 * D - 1) / N);
+        maxCancels = (N - 1) / 2;
         this.ovl = ovl;
         this.ivl = ivl;
         aiTrainer = core.getAiTrainer();
@@ -103,7 +105,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
         in.addOneHot(deck.matchingCardsLeft(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)), D - 1);
     }
     
-    public void addIvlInput(SparseVector in, Card card) {
+    public void addIvlInput(SparseVector in, Card card, int requiredCancels) {
         int turn = player.getIndex();
         int M = players.size();
         Card trump = core.getTrump();
@@ -130,6 +132,8 @@ public class AiStrategyModuleOI extends AiStrategyModule {
         in.addOneHot(card.getSuit().equals(trump.getSuit()) ? 2 : 1, 2);
         in.addOneHot(deck.adjustedCardValueSmall(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)), 13 * D);
         in.addOneHot(deck.matchingCardsLeft(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)), D - 1);
+        
+        in.addOneHot(requiredCancels, maxCancels);
     }
     
     public static int voids(List<Card> hand) {
@@ -239,9 +243,10 @@ public class AiStrategyModuleOI extends AiStrategyModule {
             double probOfWinning = 0;
             
             //System.out.println(card);
-            if (core.cardCanWin(card)) {
+            int requiredCancels = core.cardCanWin(card);
+            if (requiredCancels >= 0) {
                 in = new SparseVector();
-                addIvlInput(in, card);
+                addIvlInput(in, card, requiredCancels);
                 
                 probOfWinning = ivl.testValue(in).get(1).get(0);
                 

@@ -160,19 +160,26 @@ public class PostGamePlayingTab extends CanvasInteractable {
                     List<Card> hand = new ArrayList<>(rounds.get(i)[1]);
                     hand.addAll(players.get(k).getHands().get(i));
                     for (int j1 = 0; j1 < j; j1++) {
-                        final int iF = i;
-                        final int kF = k;
-                        final int j1F = j1;
-                        hand.removeIf(c -> c.equals(players.get(kF).getPlays().get(iF).get(j1F).getCard()));
+                        for (Card card : hand) {
+                            if (card.equals(players.get(k).getPlays().get(i).get(j1).getCard())) {
+                                hand.remove(card);
+                                break;
+                            }
+                        }
                     }
                     
+                    boolean playFound = false;
                     for (Card card : hand) {
                         CardInfo ci = new CardInfo();
                         ci.card = card;
                         ci.claimed = players.get(k).getPlays().get(i).get(j).isClaimed();
                         if (!ci.claimed) {
                             ci.prob = players.get(k).getMakingProbs().get(i).get(j).get(card);
-                            ci.played = card.equals(players.get(k).getPlays().get(i).get(j).getCard());
+                            if (card.equals(players.get(k).getPlays().get(i).get(j).getCard())
+                                    && !playFound) {
+                                ci.played = true;
+                                playFound = true;
+                            }
                         }
                         allCards.get(i).get(j).get(k).add(ci);
                     }

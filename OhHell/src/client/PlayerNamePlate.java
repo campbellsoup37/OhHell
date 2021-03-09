@@ -84,7 +84,7 @@ public class PlayerNamePlate extends CanvasInteractable {
             // Bid chip
             if (player.hasBid()) {
                 int iRelToMe = player.getIndex() - canvas.getMyPlayer().getIndex();
-                double startX = (canvas.getWidth() - 450) / 2
+                double startX = (canvas.getWidth() - canvas.getScoreWidth()) / 2
                         - 100 * Math.sin(2 * Math.PI * iRelToMe / canvas.getPlayers().size());
                 double startY = canvas.getHeight() / 2 - 50
                         + 100 * Math.cos(2 * Math.PI * iRelToMe / canvas.getPlayers().size());

@@ -231,7 +231,7 @@ public class ClientPlayer {
     }
     
     public int getScore() {
-        return scores.get(scores.size() - 1);
+        return scores.isEmpty() ? 0 : scores.get(scores.size() - 1);
     }
     
     public void setScores(List<Integer> scores) {

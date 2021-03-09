@@ -28,7 +28,7 @@ public class AiThread extends Thread {
         while (running) {
             try {
                 while (true) {
-                    sleep(1000);
+                    sleep(Integer.MAX_VALUE);
                 }
             } catch (InterruptedException e) {
                 try {

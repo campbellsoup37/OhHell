@@ -356,14 +356,16 @@ public class PostGameSummaryTab extends CanvasInteractable {
                         y() + trumpRowHeight + i * h + h / 2, 
                         1, 1);
                 
+                double bSkill = bidSkills.get(player.getIndex());
                 GraphicsTools.drawStringJustified(graphics, 
-                        player.isHuman() ? String.format("%.1f", bidSkills.get(player.getIndex())) : "-", 
+                        player.isHuman() || bSkill < 9.9 ? String.format("%.1f", bSkill) : "-", 
                         x() + bSkillColumn * width(), 
                         y() + trumpRowHeight + i * h + h / 2, 
                         1, 1);
                 
+                double pSkill = playSkills.get(player.getIndex());
                 GraphicsTools.drawStringJustified(graphics, 
-                        player.isHuman() ? String.format("%.1f", playSkills.get(player.getIndex())) : "-", 
+                        player.isHuman() || pSkill < 9.9 ? String.format("%.1f", pSkill) : "-", 
                         x() + pSkillColumn * width(), 
                         y() + trumpRowHeight + i * h + h / 2, 
                         1, 1);

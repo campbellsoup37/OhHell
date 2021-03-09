@@ -640,23 +640,43 @@ public class OhHellCore {
     }
     
     /**
-     * TODO This function feels too complicated. This is used by the IVL as a first pass to 
-     * determine if a card can win the current trick. I should also look into having it take into
-     * account the number of players left (e.g., if it is the last player to play a trick, it 
-     * knows for sure if it will win; if it is the second to last player, the top two cannot both 
-     * be canceled, etc.).
+     * This function is used by the IVL as a first pass to determine if a card can win the current 
+     * trick. Given a card, a return value of -1 guarantees that the card will not win the trick if
+     * played by the current player. Otherwise, a nonnegative integer will be returned that will 
+     * convey information about the likelihood of winning.
+     * 
+     * - In standard single-deck, it returns 0 if the card will currently be winning the trick.
+     * 
+     * - In double-deck, it returns the number of cards already played that would need to be 
+     * canceled in order for the card to win. Note that this number will not exceed the number of
+     * cards currently in the trick or the number of cards to be played afterward. In particular, 
+     * this number will not exceed (N - 1) / 2, where N is the number of players.
+     * 
+     * Note that this function only uses information currently available to the current player. 
+     * Also note that it is imperfect; for example (TODO), it does not take into account suit 
+     * voids known to all players. Therefore, currently, the return value may not be -1 even if it 
+     * can be deduced with certainty that the card will not win the trick.
      */
-    public boolean cardCanWin(Card card) {
+    public int cardCanWin(Card card) {
+        final boolean debug = false;
+        
+        // If the player is leading, always return 0.
         if (turn == leader) {
-//            System.out.println(card + " winnable = true");
-            return true;
+            if (debug) {
+                System.out.println(card + " winnable = 0");
+                System.out.println("   card is led");
+            }
+            return 0;
         }
         
+        // If the card does not match the led suit or trump suit, return -1.
         if (!card.getSuit().equals(players.get(leader).getTrick().getSuit())
                 && !card.getSuit().equals(trump.getSuit())) {
-//            System.out.println(card + " winnable = false:");
-//            System.out.println("   card is not led suit or trump");
-            return false;
+            if (debug) {
+                System.out.println(card + " winnable = -1:");
+                System.out.println("   card is not led suit or trump");
+            }
+            return -1;
         }
         
         Hashtable<String, Integer> counts = new Hashtable<>();
@@ -669,46 +689,65 @@ public class OhHellCore {
             }
         }
         
+        // If the matching copy of this card is in the trick already, return -1.
         if (counts.get(card.toString()) != null && counts.get(card.toString()) == 1) {
-//            System.out.println(card + " winnable = false:");
-//            System.out.println("   card is canceled");
-            return false;
+            if (debug) {
+                System.out.println(card + " winnable = -1:");
+                System.out.println("   card is canceled");
+            }
+            return -1;
         }
+        
+        int requiredCancels = 0;
 
-        Card smallestWinnable = players.get(leader).getTrick();
         for (int i = 0; i < players.size(); i++) {
             Card c = players.get(i).getTrick();
-            boolean cNotCanceled = counts.get(c.toString()) == 1;
-            boolean cNotCancelable = deck.matchingCardsLeft(c, new LinkedList<>()) == deck.getD() - 1;
-            boolean cBeatsSmallestWinnable = c.isGreaterThan(smallestWinnable, trump.getSuit());
-            boolean cMatchesSuit = c.getSuit().equals(players.get(leader).getTrick().getSuit());
-            boolean smallestWinnableIsLosable = deck.matchingCardsLeft(smallestWinnable, new LinkedList<>()) == 2;
-            if (cNotCanceled 
-                    && cNotCancelable 
-                    && (cBeatsSmallestWinnable 
-                            || cMatchesSuit && smallestWinnableIsLosable)) {
-                smallestWinnable = c;
+            
+            // If c is not canceled...
+            if (counts.get(c.toString()) == 1) {
+                // If c beats card...
+                if (c.isGreaterThan(card, trump.getSuit())) {
+                    // If c cannot be canceled, we can return -1 immediately. Otherwise, increment
+                    // requiredCancels.
+                    boolean uncancelableBecauseSeenAlready = 
+                            deck.matchingCardsLeft(c, new LinkedList<>()) == deck.getD() - 1;
+                    boolean uncancelableBecauseIHaveIt = 
+                            players.get(turn).getHand().stream().anyMatch(c1 -> c1.equals(c));
+                    if (uncancelableBecauseSeenAlready) {
+                        if (debug) {
+                            System.out.println(card + " winnable = -1:");
+                            System.out.println("   card is beat by " + c + ", which was seen already");
+                        }
+                        return -1;
+                    } else if (uncancelableBecauseIHaveIt) {
+                        if (debug) {
+                            System.out.println(card + " winnable = -1:");
+                            System.out.println("   card is beat by " + c + ", which is in my hand");
+                        }
+                        return -1;
+                    }
+                    
+                    requiredCancels++;
+                }
             }
         }
-
-        boolean cardBeatsSmallestWinnable = card.isGreaterThan(smallestWinnable, trump.getSuit());
-        boolean cardMatchesSuit = card.getSuit().equals(players.get(leader).getTrick().getSuit());
-        boolean smallestWinnableIsLosable = deck.matchingCardsLeft(smallestWinnable, new LinkedList<>()) == 2;
-        boolean ans = cardBeatsSmallestWinnable || cardMatchesSuit && smallestWinnableIsLosable;
         
-//        if (ans) {
-//            System.out.println(card + " winnable = true");
-//        } else {
-//            System.out.println(card + " winnable = false:");
-//            if (!cardBeatsSmallestWinnable) {
-//                System.out.println("   card does not beat smallest winnable (" + smallestWinnable + ")");
-//            }
-//            if (!(cardMatchesSuit && smallestWinnableIsLosable)) {
-//                System.out.println("   smallest winnable (" + smallestWinnable + ") is not cancelable");
-//            }
-//        }
-        
-        return ans;
+        int N = (int) players.stream().filter(p -> !p.isKicked()).count();
+        int playersLeft = (leader - turn - 1 + N) % N;
+        // If there are more cards to be canceled than there are players left to play in the trick,
+        // then return -1.
+        if (requiredCancels > playersLeft) {
+            if (debug) {
+                System.out.println(card + " winnable = -1:");
+                System.out.println("   " + playersLeft + " remaining players cannot cancel " + requiredCancels + " cards");
+            }
+            return -1;
+        } else {
+            if (debug) {
+                System.out.println(card + " winnable = " + requiredCancels);
+            }
+            return requiredCancels;
+        }
     }
     
     public void processUndoBid(Player player) {

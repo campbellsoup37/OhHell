@@ -29,7 +29,7 @@ public class AiTrainerOI extends AiTrainer {
     }
     
     public void run() {
-        int N = 8;
+        int N = 10;
         boolean doubleDeck = true;
         int reps = 1000000;
         boolean verbose = true;
@@ -40,10 +40,11 @@ public class AiTrainerOI extends AiTrainer {
         double ovlEta = 1;
         double ivlEta = 1;
         double scale = 0.1;
-        int groupingSize = 2;
+        int groupingSize = 3;
 
         int D = doubleDeck ? 2 : 1;
         int maxH = Math.min(10, (52 * D - 1) / N);
+        int maxCancels = (N - 1) / 2;
         int[] ovlLayers = {
                 maxH              // Cards left in hand
                 + (maxH + 1) * N  // Bids - takens
@@ -66,7 +67,9 @@ public class AiTrainerOI extends AiTrainer {
                 
                 + 2                  // Card is trump
                 + 13 * D             // Card's adjusted number
-                + (D - 1),           // Matching cards left
+                + (D - 1)            // Matching cards left
+                
+                + maxCancels,        // Required cancels
                 30,                  // Hidden layer
                 1                    // Card's predicted value
         };
@@ -143,7 +146,7 @@ public class AiTrainerOI extends AiTrainer {
             
             try {
                 while (true) {
-                    sleep(10);
+                    sleep(Integer.MAX_VALUE);
                 }
             } catch (InterruptedException e) {
                 

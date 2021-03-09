@@ -26,7 +26,7 @@ public class ClientWriteThread extends Thread {
     public void run() {
         try {
             while (connected) {
-                sleep(1);
+                sleep(Integer.MAX_VALUE);
             }
         } catch (InterruptedException e) {
             

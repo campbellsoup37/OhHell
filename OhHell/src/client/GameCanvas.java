@@ -12,9 +12,11 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import javax.sound.sampled.Clip;
@@ -110,6 +112,7 @@ public class GameCanvas extends OhcCanvas {
     private List<CanvasButton> kickButtons = new LinkedList<>();
     private List<CanvasInteractable> miscInteractables = new LinkedList<>();
 
+    private int scoreWidth = 450;
     private double scoreChatDivision = 0.6;
     
     private JTextPane chatArea = new JTextPane();
@@ -123,6 +126,7 @@ public class GameCanvas extends OhcCanvas {
 
     private boolean trickTaken = false;
     private List<CanvasCard> preselectedCards = new ArrayList<>();
+    private Set<CanvasCard> playedCards = new HashSet<>();
     private int cardJustPlayed = 0;
     private boolean animatingTaken = false;
     private double takenTimer = 1;
@@ -225,7 +229,7 @@ public class GameCanvas extends OhcCanvas {
 
     @Override
     public int backgroundCenterX() {
-        return (getWidth() - 450) / 2;
+        return (getWidth() - scoreWidth) / 2;
     }
 
     @Override
@@ -254,17 +258,23 @@ public class GameCanvas extends OhcCanvas {
             if (frameTimes[frameQueueSize - 1] != 0 && client.showFpsSelected()) {
                 GraphicsTools.drawStringJustified(graphics,
                         "FPS: " + String.format("%.2f", (double) 1000 * frameQueueSize / frameTotalTime),
-                        getWidth() - 450 - 100, 10, 0, 1);
+                        getWidth() - scoreWidth - 100, 10, 0, 1);
             }
         }
         if (client.showPingSelected()) {
             GraphicsTools.drawStringJustified(graphics, "Ping: " + String.format("%.2f", client.getPing()) + "ms",
-                    getWidth() - 450 - 100, 25, 0, 1);
+                    getWidth() - scoreWidth - 100, 25, 0, 1);
         }
 
         if (!performingAction && !actionQueue.isEmpty()) {
             performingAction = true;
             actionQueue.remove().start();
+        }
+        
+        // It is possible for a card to be added to preselectedCards twice, probably due to some 
+        // multithreading issue. This is supposed to fix this when it happens.
+        if (!preselectedCards.isEmpty() && playedCards.contains(preselectedCards.get(0))) {
+            preselectedCards.remove(0);
         }
     }
 
@@ -279,15 +289,15 @@ public class GameCanvas extends OhcCanvas {
     public void paintPregame(Graphics graphics) {
         if (state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME) {
             graphics.setColor(new Color(255, 255, 255, 180));
-            GraphicsTools.drawBox(graphics, (getWidth() - 450) / 2 - 200, getHeight() / 2 - 150, 400, 300, 20);
+            GraphicsTools.drawBox(graphics, (getWidth() - scoreWidth) / 2 - 200, getHeight() / 2 - 150, 400, 300, 20);
             graphics.setColor(Color.BLACK);
             graphics.setFont(GraphicsTools.fontBold);
-            GraphicsTools.drawStringJustified(graphics, "Name:", (getWidth() - 450) / 2 - 140, getHeight() / 2 - 105, 2,
+            GraphicsTools.drawStringJustified(graphics, "Name:", (getWidth() - scoreWidth) / 2 - 140, getHeight() / 2 - 105, 2,
                     1);
-            GraphicsTools.drawStringJustified(graphics, "Join as kibitzer:", (getWidth() - 450) / 2 - 20,
+            GraphicsTools.drawStringJustified(graphics, "Join as kibitzer:", (getWidth() - scoreWidth) / 2 - 20,
                     getHeight() / 2 - 60, 2, 1);
-            GraphicsTools.drawStringJustified(graphics, "Robots:", (getWidth() - 450) / 2 - 20, getHeight() / 2, 2, 1);
-            GraphicsTools.drawStringJustified(graphics, "Double deck:", (getWidth() - 450) / 2 - 20,
+            GraphicsTools.drawStringJustified(graphics, "Robots:", (getWidth() - scoreWidth) / 2 - 20, getHeight() / 2, 2, 1);
+            GraphicsTools.drawStringJustified(graphics, "Double deck:", (getWidth() - scoreWidth) / 2 - 20,
                     getHeight() / 2 + 40, 2, 1);
             graphics.setFont(GraphicsTools.font);
         }
@@ -319,7 +329,7 @@ public class GameCanvas extends OhcCanvas {
     }
 
     public void paintMessage(Graphics graphics) {
-        GraphicsTools.drawStringJustifiedBacked(graphics, message, (getWidth() - 450) / 2, getHeight() / 2);
+        GraphicsTools.drawStringJustifiedBacked(graphics, message, (getWidth() - scoreWidth) / 2, getHeight() / 2);
     }
 
     public void paintTrick(Graphics graphics) {
@@ -340,12 +350,12 @@ public class GameCanvas extends OhcCanvas {
                     double starty = player.getY();
 
                     if (iRelToLeader == myPlayer.getIndex()) {
-                        startx = (getWidth() - 450) / 2 + cardJustPlayed * cardSeparation
+                        startx = (getWidth() - scoreWidth) / 2 + cardJustPlayed * cardSeparation
                                 - (myPlayer.getHand().size()) * cardSeparation / 2;
                         starty = getHeight() - handYOffset;
                     }
 
-                    double endx = (getWidth() - 450) / 2
+                    double endx = (getWidth() - scoreWidth) / 2
                             - player.getTrickRad() * Math.sin(2 * Math.PI * iRelToMe / players.size());
                     double endy = getHeight() / 2 - 50
                             + player.getTrickRad() * Math.cos(2 * Math.PI * iRelToMe / players.size());
@@ -386,7 +396,7 @@ public class GameCanvas extends OhcCanvas {
                 }
             }
             
-            if (showBidDots) {
+            if (showBidDots && !myPlayer.isKibitzer()) {
                 for (int i = 0; i < maxUndos + 1; i++) {
                     if (i < bidCount) {
                         graphics.setColor(Color.WHITE);
@@ -394,7 +404,7 @@ public class GameCanvas extends OhcCanvas {
                         graphics.setColor(new Color(175, 175, 175));
                     }
                     graphics.fillOval(
-                            (getWidth() - 450) / 2 
+                            (getWidth() - scoreWidth) / 2 
                                 - (4 * (maxUndos + 1) + 10 * maxUndos) / 2 
                                 + 14 * i, 
                             getHeight() - 210 - 15 - 40
@@ -421,7 +431,7 @@ public class GameCanvas extends OhcCanvas {
                     int x = takenX + takenXSeparation * j;
                     int y = takenY + takenYSeparation * j;
                     if (animatingTaken && isLastTrick) {
-                        x = (int) (timer * (takenX + takenXSeparation * j) + (1 - timer) * (getWidth() - 450) / 2);
+                        x = (int) (timer * (takenX + takenXSeparation * j) + (1 - timer) * (getWidth() - scoreWidth) / 2);
                         y = (int) (timer * (takenY + takenYSeparation * j) + (1 - timer) * getHeight() / 2);
                     }
 
@@ -596,7 +606,7 @@ public class GameCanvas extends OhcCanvas {
                 player.setPos(new CanvasPlayerPosition() {
                     @Override
                     public int x() {
-                        return (getWidth() - 450) * (index - cut1 + 1) / (cut2 - cut1 + 1);
+                        return (getWidth() - scoreWidth) * (index - cut1 + 1) / (cut2 - cut1 + 1);
                     }
 
                     @Override
@@ -633,7 +643,7 @@ public class GameCanvas extends OhcCanvas {
                 player.setPos(new CanvasPlayerPosition() {
                     @Override
                     public int x() {
-                        return getWidth() - 450 - 10;
+                        return getWidth() - scoreWidth - 10;
                     }
 
                     @Override
@@ -670,7 +680,7 @@ public class GameCanvas extends OhcCanvas {
                 player.setPos(new CanvasPlayerPosition() {
                     @Override
                     public int x() {
-                        return (getWidth() - 450) / 2;
+                        return (getWidth() - scoreWidth) / 2;
                     }
 
                     @Override
@@ -774,6 +784,10 @@ public class GameCanvas extends OhcCanvas {
         }
     }
     
+    public int getScoreWidth() {
+        return scoreWidth;
+    }
+    
     public int scoreHeight() {
         int numRounds = getRoundsForScoreSheet().size();
         return scoreVSpacing * (numRounds + 1)
@@ -829,7 +843,7 @@ public class GameCanvas extends OhcCanvas {
                             .collect(Collectors.toList());
                     for (int k = 0; k < unkickedPlayers.size(); k++) {
                         int x0 = Math.min(xCenter() + 50,
-                                (int) (getWidth() - 450 - lastTrickSeparation * (unkickedPlayers.size() - 1)
+                                (int) (getWidth() - scoreWidth - lastTrickSeparation * (unkickedPlayers.size() - 1)
                                         - cardWidth * trickCardScale / 2 - 10));
                         int y0 = Math.max(yCenter(), (int) (cardWidth * trickCardScale / 2 + 10));
 
@@ -858,7 +872,7 @@ public class GameCanvas extends OhcCanvas {
 
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 - 130;
+                return (getWidth() - scoreWidth) / 2 - 130;
             }
 
             @Override
@@ -892,7 +906,7 @@ public class GameCanvas extends OhcCanvas {
         miscInteractables.add(new CanvasButton("Change name") {
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 + 80;
+                return (getWidth() - scoreWidth) / 2 + 80;
             }
 
             @Override
@@ -924,7 +938,7 @@ public class GameCanvas extends OhcCanvas {
         miscInteractables.add(new CanvasButton("") {
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 + 20;
+                return (getWidth() - scoreWidth) / 2 + 20;
             }
 
             @Override
@@ -961,7 +975,7 @@ public class GameCanvas extends OhcCanvas {
         CanvasSpinner robotsSpinner = new CanvasSpinner(0) {
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 + 20;
+                return (getWidth() - scoreWidth) / 2 + 20;
             }
             
             @Override
@@ -994,7 +1008,7 @@ public class GameCanvas extends OhcCanvas {
         miscInteractables.add(new CanvasButton("") {
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 + 20;
+                return (getWidth() - scoreWidth) / 2 + 20;
             }
 
             @Override
@@ -1036,7 +1050,7 @@ public class GameCanvas extends OhcCanvas {
         miscInteractables.add(new CanvasButton("Start") {
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 - 160;
+                return (getWidth() - scoreWidth) / 2 - 160;
             }
 
             @Override
@@ -1074,7 +1088,7 @@ public class GameCanvas extends OhcCanvas {
         miscInteractables.add(new CanvasButton("Leave table") {
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 + 10;
+                return (getWidth() - scoreWidth) / 2 + 10;
             }
 
             @Override
@@ -1112,7 +1126,7 @@ public class GameCanvas extends OhcCanvas {
         miscInteractables.add(new CanvasButton("Undo bid") {
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 - 40;
+                return (getWidth() - scoreWidth) / 2 - 40;
             }
 
             @Override
@@ -1161,7 +1175,7 @@ public class GameCanvas extends OhcCanvas {
         miscInteractables.add(new CanvasButton("Show card") {
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 - 40;
+                return (getWidth() - scoreWidth) / 2 - 40;
             }
 
             @Override
@@ -1274,7 +1288,7 @@ public class GameCanvas extends OhcCanvas {
         miscInteractables.add(new CanvasButton("Back to lobby") {
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 - (numPgButtons * width() + (numPgButtons - 1) * 20) / 2
+                return (getWidth() - scoreWidth) / 2 - (numPgButtons * width() + (numPgButtons - 1) * 20) / 2
                         + 0 * (width() + 20);
             }
 
@@ -1316,7 +1330,7 @@ public class GameCanvas extends OhcCanvas {
         miscInteractables.add(new CanvasButton("Leave table") {
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 - (numPgButtons * width() + (numPgButtons - 1) * 20) / 2
+                return (getWidth() - scoreWidth) / 2 - (numPgButtons * width() + (numPgButtons - 1) * 20) / 2
                         + 1 * (width() + 20);
             }
 
@@ -1350,7 +1364,7 @@ public class GameCanvas extends OhcCanvas {
         miscInteractables.add(new CanvasButton("Save game") {
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 - (numPgButtons * width() + (numPgButtons - 1) * 20) / 2
+                return (getWidth() - scoreWidth) / 2 - (numPgButtons * width() + (numPgButtons - 1) * 20) / 2
                         + 2 * (width() + 20);
             }
 
@@ -1385,7 +1399,7 @@ public class GameCanvas extends OhcCanvas {
         miscInteractables.add(new CanvasButton("Accept") {
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 - 125;
+                return (getWidth() - scoreWidth) / 2 - 125;
             }
 
             @Override
@@ -1419,7 +1433,7 @@ public class GameCanvas extends OhcCanvas {
         miscInteractables.add(new CanvasButton("Refuse") {
             @Override
             public int x() {
-                return (getWidth() - 450) / 2 + 25;
+                return (getWidth() - scoreWidth) / 2 + 25;
             }
 
             @Override
@@ -1453,7 +1467,7 @@ public class GameCanvas extends OhcCanvas {
         postGamePage = new PostGamePage() {
             @Override
             public int x() {
-                return Math.max((getWidth() - 450) / 2 - finalScoreMaxWidth / 2, finalScoreOuterMargin);
+                return Math.max((getWidth() - scoreWidth) / 2 - finalScoreMaxWidth / 2, finalScoreOuterMargin);
             }
 
             @Override
@@ -1464,7 +1478,7 @@ public class GameCanvas extends OhcCanvas {
 
             @Override
             public int width() {
-                return Math.min(finalScoreMaxWidth, getWidth() - 450 - 2 * finalScoreOuterMargin);
+                return Math.min(finalScoreMaxWidth, getWidth() - scoreWidth - 2 * finalScoreOuterMargin);
             }
 
             @Override
@@ -1482,7 +1496,7 @@ public class GameCanvas extends OhcCanvas {
         scoreSheet = new CanvasScoreSheet(this) {
             @Override
             public int x() {
-                return getWidth() - (450 - scoreMargin);
+                return getWidth() - (scoreWidth - scoreMargin);
             }
 
             @Override
@@ -1492,7 +1506,7 @@ public class GameCanvas extends OhcCanvas {
 
             @Override
             public int width() {
-                return 450 - 2 * scoreMargin;
+                return scoreWidth - 2 * scoreMargin;
             }
 
             @Override
@@ -1507,7 +1521,7 @@ public class GameCanvas extends OhcCanvas {
         };
 
         // Chat areas
-        chatArea.setContentType("text/html");
+        chatArea.setContentType("text/html; charset=UTF-8");
         if (chatArea.getHyperlinkListeners().length == 0) {
             chatArea.addHyperlinkListener(new HyperlinkListener() {
                 @Override
@@ -1531,7 +1545,7 @@ public class GameCanvas extends OhcCanvas {
 
             @Override
             public int x() {
-                return getWidth() - 450 + scoreMargin;
+                return getWidth() - scoreWidth + scoreMargin;
             }
 
             @Override
@@ -1541,7 +1555,7 @@ public class GameCanvas extends OhcCanvas {
 
             @Override
             public int width() {
-                return 450 - 2 * scoreMargin + 1;
+                return scoreWidth - 2 * scoreMargin + 1;
             }
 
             @Override
@@ -1654,7 +1668,7 @@ public class GameCanvas extends OhcCanvas {
         CanvasEmbeddedSwing chatField = new CanvasEmbeddedSwing(chatJField, this) {
             @Override
             public int x() {
-                return getWidth() - 450 + scoreMargin;
+                return getWidth() - scoreWidth + scoreMargin;
             }
 
             @Override
@@ -1664,7 +1678,7 @@ public class GameCanvas extends OhcCanvas {
 
             @Override
             public int width() {
-                return 450 - 2 * scoreMargin + 1;
+                return scoreWidth - 2 * scoreMargin + 1;
             }
 
             @Override
@@ -1680,11 +1694,68 @@ public class GameCanvas extends OhcCanvas {
         embeddedSwings.add(chatScrollPane);
         embeddedSwings.add(chatField);
         
+        // Vertical score divider
+        miscInteractables.add(new CanvasDivider(false, scoreWidth) {
+            @Override
+            public int x() {
+                return getWidth() - scoreWidth;
+            }
+            
+            @Override
+            public int y() {
+                if (state == GameState.PREGAME) {
+                    return chatScrollPane.y();
+                } else {
+                    return scoreMargin;
+                }
+            }
+            
+            @Override
+            public int width() {
+                return 3;
+            }
+            
+            @Override
+            public int height() {
+                if (client.getClientState() == ClientState.FILE_VIEWER) {
+                    return scoreSheet.height() - CanvasScoreSheet.bidInfoHeight;
+                } else {
+                    return getHeight() - y() - scoreMargin;
+                }
+            }
+            
+            @Override
+            public double min() {
+                return 400;
+            }
+            
+            @Override
+            public double max() {
+                return 750;
+            }
+            
+            @Override
+            public boolean isShown() {
+                return true;
+            }
+            
+            @Override
+            public void drag(int x, int y) {
+                setValue(getWidth() - x);
+            }
+            
+            @Override
+            public void paint(Graphics graphics) {
+                super.paint(graphics);
+                scoreWidth = (int) getValue();
+            }
+        });
+        
         // Score-chat divider
         miscInteractables.add(new CanvasDivider(true, scoreChatDivision) {
             @Override
             public int x() {
-                return getWidth() - 450 + scoreMargin;
+                return getWidth() - scoreWidth + scoreMargin;
             }
             
             @Override
@@ -1694,7 +1765,7 @@ public class GameCanvas extends OhcCanvas {
             
             @Override
             public int width() {
-                return 450 - 2 * scoreMargin;
+                return scoreWidth - 2 * scoreMargin;
             }
             
             @Override
@@ -1756,7 +1827,7 @@ public class GameCanvas extends OhcCanvas {
             bidButtons.add(new CanvasButton(bid + "") {
                 @Override
                 public int x() {
-                    return (getWidth() - 450) / 2 + bid * 40 - myPlayer.getHand().size() * 40 / 2 - 15;
+                    return (getWidth() - scoreWidth) / 2 + bid * 40 - myPlayer.getHand().size() * 40 / 2 - 15;
                 }
 
                 @Override
@@ -1805,7 +1876,7 @@ public class GameCanvas extends OhcCanvas {
 
                 @Override
                 public int xCenter() {
-                    return (getWidth() - 450) / 2 + index() * cardSeparation
+                    return (getWidth() - scoreWidth) / 2 + index() * cardSeparation
                             - (myPlayer.getHand().size() - 1) * cardSeparation / 2;
                 }
 
@@ -1833,7 +1904,9 @@ public class GameCanvas extends OhcCanvas {
 
                 @Override
                 public boolean hidden() {
-                    return myPlayer.getIndex() == dealer && !myPlayer.isKibitzer() && client.isOneRound()
+                    return myPlayer.getIndex() == dealer
+                            && !myPlayer.isKibitzer()
+                            && client.isOneRound()
                             && !showOneCard;
                 }
 
@@ -1885,6 +1958,7 @@ public class GameCanvas extends OhcCanvas {
     
     public void playCard(CanvasCard canvasCard) {
         if (canPlayThis(canvasCard.getCard())) {
+            playedCards.add(canvasCard);
             myPlayer.setPlaying(false);
             cardJustPlayed = canvasCard.index();
             client.makePlay(canvasCard.getCard());
@@ -2072,6 +2146,7 @@ public class GameCanvas extends OhcCanvas {
         showBidDots = false;
         cardJustPlayed = 0;
         preselectedCards.clear();
+        playedCards.clear();
         canUndoBid = false;
         undoBidTimer = -1;
         messageState = "UNBLOCKED";
@@ -2310,6 +2385,7 @@ public class GameCanvas extends OhcCanvas {
                 players.get(index).setHand(hand);
                 if (index == myPlayer.getIndex()) {
                     makeHandInteractables();
+                    playedCards.clear();
                 }
             }
         };
@@ -2680,6 +2756,7 @@ public class GameCanvas extends OhcCanvas {
             @Override
             public void onFirstAction() {
                 players.get(index).setScores(scores);
+                playersScoreSorted.sort((p1, p2) -> (int) Math.signum(p2.getScore() - p1.getScore()));
             }
         };
     }
