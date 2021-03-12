@@ -2312,6 +2312,7 @@ public class GameCanvas extends OhcCanvas {
                         player.setHand(new LinkedList<>());
                     }
                     cardInteractables.clear();
+                    preselectedCards.clear();
                     state = GameState.ENDOFROUND;
                 } else if (claimer == myPlayer.getIndex()) {
                     claimBlocked = true;
