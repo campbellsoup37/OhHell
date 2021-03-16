@@ -60,4 +60,12 @@ public class AiPlayer extends Player {
         int points = getScores().get(round) - (round == 0 ? 0 : getScores().get(round - 1));
         getAiStrategyModule().endOfRound(points);
     }
+    
+    @Override
+    public void commandChat(String text) {
+        if (!text.isEmpty() && text.charAt(0) == '*') {
+            String name = text.substring(1).split(" \\(to you\\): ", 2)[0];
+            aiKernel.sendChat(this, name, "lol");
+        }
+    }
 }

@@ -256,12 +256,14 @@ public class GameCanvas extends OhcCanvas {
             frameTimes[framePointer] = newFrameTime;
             framePointer = (framePointer + 1) % frameQueueSize;
             if (frameTimes[frameQueueSize - 1] != 0 && client.showFpsSelected()) {
+                graphics.setColor(Color.BLACK);
                 GraphicsTools.drawStringJustified(graphics,
                         "FPS: " + String.format("%.2f", (double) 1000 * frameQueueSize / frameTotalTime),
                         getWidth() - scoreWidth - 100, 10, 0, 1);
             }
         }
         if (client.showPingSelected()) {
+            graphics.setColor(Color.BLACK);
             GraphicsTools.drawStringJustified(graphics, "Ping: " + String.format("%.2f", client.getPing()) + "ms",
                     getWidth() - scoreWidth - 100, 25, 0, 1);
         }

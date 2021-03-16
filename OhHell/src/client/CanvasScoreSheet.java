@@ -278,6 +278,16 @@ public class CanvasScoreSheet extends CanvasInteractable {
                 y() + margin + scoreVSpacing + lineV / 2);
         for (int i = 0; i < players.size(); i++) {
             ClientPlayer player = players.get(i);
+            
+            if (!player.isHuman()) {
+                graphics.setColor(new Color(210, 255, 255, 100));
+                graphics.fillRect(
+                        (int) (x() + 3 * margin + 2 * dealerHWidth + i * wid), 
+                        (int) y() + margin, 
+                        (int) wid + 1, 
+                        (int) (scoreVSpacing + lineV / 2));
+            }
+            
             // name
             graphics.setColor(Color.BLACK);
             if (player.isDisconnected()) {
@@ -300,6 +310,7 @@ public class CanvasScoreSheet extends CanvasInteractable {
             graphics.setFont(GraphicsTools.font);
             
             // vertical line
+            graphics.setColor(Color.BLACK);
             if (i > 0) {
                 graphics.drawLine(
                         (int) (x() + 3 * margin + 2 * dealerHWidth + i * wid), 

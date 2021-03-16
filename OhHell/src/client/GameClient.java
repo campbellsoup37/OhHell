@@ -1508,7 +1508,7 @@ public class GameClient extends JFrame {
         switch (state) {
         case IN_SINGLE_PLAYER_GAME:
         case SINGLE_PLAYER_POST_GAME:
-            core.sendChat(spPlayer, null, text);
+            core.sendChat(spPlayer, "", text);
             break;
         case IN_MULTIPLAYER_GAME:
         case MULTIPLAYER_POST_GAME:

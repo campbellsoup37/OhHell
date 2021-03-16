@@ -859,19 +859,37 @@ public class OhHellCore {
     }
     
     public void sendChat(Player sender, List<Player> recips, String text) {
-        if (recips == null || recips.isEmpty()) {
+        if (recips == null) {
             for (Player player : players) {
                 player.commandChat(sender.getName() + ": " + text);
             }
             for (Player player : kibitzers) {
                 player.commandChat(sender.getName() + ": " + text);
             }
-        } else {
+        } else if (recips.size() > 0) {
             sender.commandChat("*" + sender.getName() + " (to " + recips.get(0).getName() + "): " + text);
             for (Player player : recips) {
                 player.commandChat("*" + sender.getName() + " (to you): " + text);
             }
         }
+    }
+    
+    public void sendChat(Player sender, String recipient, String text) {
+        List<Player> recips = null;
+        if (!recipient.isEmpty()) {
+            recips = new LinkedList<>();
+            for (Player player : players) {
+                if (player.getName().equals(recipient)) {
+                    recips.add(player);
+                }
+            }
+            for (Player player : kibitzers) {
+                if (player.getName().equals(recipient)) {
+                    recips.add(player);
+                }
+            }
+        }
+        sendChat(sender, recips, text);
     }
     
     public void pokePlayer() {

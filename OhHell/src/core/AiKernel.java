@@ -156,4 +156,8 @@ public class AiKernel {
     public void processClaimRequest(AiPlayer player, int index) {
         core.processClaimResponse(player, true);
     }
+    
+    public void sendChat(AiPlayer sender, String recipient, String text) {
+        core.sendChat(sender, recipient, text);
+    }
 }

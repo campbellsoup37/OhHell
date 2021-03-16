@@ -62,7 +62,11 @@ public class PlayerNamePlate extends CanvasInteractable {
                 graphics.setColor(Color.WHITE);
             }
         } else {
-            graphics.setColor(new Color(210, 255, 255));
+            if (isMoused() && isEnabled()) {
+                graphics.setColor(new Color(147, 192, 192));
+            } else {
+                graphics.setColor(new Color(210, 255, 255));
+            }
         }
         GraphicsTools.drawBox(graphics, x(), y(), width(), height(), 20);
         
