@@ -72,17 +72,17 @@ public class OhHellCore {
             players.add(player);
             player.setIndex(players.size() - i);
         }
-        players.get(0).setTeam(1);
-        players.get(1).setTeam(2);
-        players.get(2).setTeam(3);
-        players.get(3).setTeam(4);
-        players.get(4).setTeam(5);
-        players.get(5).setTeam(1);
-        players.get(6).setTeam(2);
-        players.get(7).setTeam(3);
-        players.get(8).setTeam(4);
-        players.get(9).setTeam(5);
-        options.setTeams(true);
+//        players.get(0).setTeam(1);
+//        players.get(1).setTeam(2);
+//        players.get(2).setTeam(3);
+//        players.get(3).setTeam(4);
+//        players.get(4).setTeam(5);
+//        players.get(5).setTeam(1);
+//        players.get(6).setTeam(2);
+//        players.get(7).setTeam(3);
+//        players.get(8).setTeam(4);
+//        players.get(9).setTeam(5);
+//        options.setTeams(true);
         for (Player player : players) {
             player.commandUpdatePlayers(players);
         }

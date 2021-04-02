@@ -76,7 +76,9 @@ public class PlayerThread extends Thread {
                 } else if (command.equals("RETEAM")) {
                     server.reteamPlayer(player, Integer.parseInt(parsedContent.get(0)));
                 } else if (command.equals("OPTIONS")) {
-                    server.updateOptions(new GameOptions(parsedContent.get(0)));
+                    if (player.isHost()) {
+                        server.updateOptions(new GameOptions(parsedContent.get(0)));
+                    }
                 } else if (command.equals("START")) {
                     if (player.isHost()) {
                         GameOptions options = new GameOptions(parsedContent.get(0));
