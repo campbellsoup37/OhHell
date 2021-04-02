@@ -42,14 +42,21 @@ public class Recorder {
         if (options.isOregon()) {
             file.add("oregon" + commandDelimiter1 + "true");
         }
-        String line = "players";
+        String line1 = "players";
         for (Player player : players) {
-            line += commandDelimiter1
+            line1 += commandDelimiter1
                     + encodeString(player.getId()) + commandDelimiter2
                     + encodeString(player.getName()) + commandDelimiter2
                     + (player.isHuman() ? "human" : "ai");
         }
-        file.add(line);
+        file.add(line1);
+        if (options.isTeams()) {
+            String line2 = "teams";
+            for (Player player : players) {
+                line2 += commandDelimiter1 + player.getTeam();
+            }
+            file.add(line2);
+        }
     }
     
     public void recordRoundInfo(int handSize, int dealer, List<Player> players, Card trump) {

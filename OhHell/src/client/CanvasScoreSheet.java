@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -27,7 +28,7 @@ public class CanvasScoreSheet extends CanvasInteractable {
     private double dealerHWidth = 10;
     
     private GameCanvas canvas;
-    private List<ClientPlayer> players;
+    private List<? extends ClientPlayer> players;
     private List<int[]> rounds;
     private ClientPlayer myPlayer;
     private String sortBy = "Seat";
@@ -138,11 +139,12 @@ public class CanvasScoreSheet extends CanvasInteractable {
                             sheet.width(), 
                             scoreVSpacing * numRounds));
                 }
-                
-                double wid = (double) (width() - 4 * margin - 2 * dealerHWidth) / players.size();
+
+                double N = canvas.getPlayersForScoreSheet("*Seat").size();
+                double wid = (double) (width() - 4 * margin - 2 * dealerHWidth) / N;
                 
                 // dealers and hand sizes
-                List<ClientPlayer> playersSortedIndex = canvas.getPlayersForScoreSheet("Seat");
+                List<? extends ClientPlayer> playersSortedIndex = canvas.getPlayersForScoreSheet("*Seat");
                 graphics.setColor(Color.BLACK);
                 for (int i = 0; i < numRounds; i++) {
                     int[] round = rounds.get(i);
@@ -158,52 +160,69 @@ public class CanvasScoreSheet extends CanvasInteractable {
                             1, 1);
                 }
 
+                double currentX = 3 * margin + 2 * dealerHWidth;
                 for (int i = 0; i < players.size(); i++) {
                     ClientPlayer player = players.get(i);
+                    
+                    double fullWid = player.isTeam() ? ((ClientTeam) player).getMembers().size() * wid : wid;
+                    
                     // vertical line
                     if (i > 0) {
                         graphics.drawLine(
-                                (int) (3 * margin + 2 * dealerHWidth + i * wid - px), 
+                                (int) (currentX - px), 
                                 0, 
-                                (int) (3 * margin + 2 * dealerHWidth + i * wid - px), 
+                                (int) (currentX - px), 
                                 getHeight());
                     }
                     
-                    for (int j = 0; j < player.getBids().size()
+                    for (int j = 0; j < rounds.size()
                             && (player.getKickedAtRound() == -1 || j < player.getKickedAtRound()); j++) {
-                        String bid = player.getBids().get(j) + "";
                         String score = j < player.getScores().size() ? player.getScores().get(j) + "" : "";
+                        
+                        List<ClientPlayer> members = 
+                                player.isTeam() ? ((ClientTeam) player).getMembers()
+                                                : Arrays.asList(player);
+                        int k = members.size();
+                                
                         double currentWid = 3 * margin 
                                 + graphics.getFontMetrics().stringWidth(score)
-                                + GraphicsTools.font.getSize();
-                        if (currentWid >= wid) {
+                                + (GraphicsTools.font.getSize() + margin) * k
+                                - margin;
+                        if (currentWid >= fullWid) {
                             graphics.setFont(GraphicsTools.fontSmall);
                         }
-                        
-                        int b = graphics.getFont().getSize() + 3;
 
                         // bid chips
-                        graphics.setColor(new Color(200, 200, 200, 180));
-                        graphics.fillOval(
-                                (int) (3 * margin + 2 * dealerHWidth + i * wid + 1 + wid - margin - b) - px, 
-                                (int) (scoreVSpacing * (j + 0.5) - b / 2) - py, 
-                                b, b);
-                        graphics.setColor(Color.BLACK);
-                        GraphicsTools.drawStringJustified(graphics, 
-                                bid, 
-                                (int) (3 * margin + 2 * dealerHWidth + i * wid + 1 + wid - margin - b / 2) - px, 
-                                scoreVSpacing * (j + 0.5) - py, 
-                                1, 1);
+                        int b = graphics.getFont().getSize() + 3;
+                        for (ClientPlayer p : members) {
+                            if (j < p.getBids().size()) {
+                                graphics.setColor(new Color(200, 200, 200, 180));
+                                graphics.fillOval(
+                                        (int) (currentX + 1 + fullWid - (margin + b) * k) - px, 
+                                        (int) (scoreVSpacing * (j + 0.5) - b / 2) - py, 
+                                        b, b);
+                                graphics.setColor(Color.BLACK);
+                                GraphicsTools.drawStringJustified(graphics, 
+                                        p.getBids().get(j) + "", 
+                                        (int) (currentX + 1 + fullWid - (margin + b) * k + b / 2) - px, 
+                                        scoreVSpacing * (j + 0.5) - py, 
+                                        1, 1);
+                            }
+                            k--;
+                        }
                         
                         // scores
+                        k = members.size();
                         GraphicsTools.drawStringJustified(graphics, 
                                 score, 
-                                (int) (3 * margin + 2 * dealerHWidth + i * wid + 1 + wid / 2 - margin / 2 - b / 2) - px, 
+                                (int) (currentX + 1 + fullWid / 2 - margin * k / 2 - b * k / 2) - px, 
                                 scoreVSpacing * (j + 0.5) - py, 
                                 1, 1);
 
                         graphics.setFont(GraphicsTools.font);
                     }
+                    
+                    currentX += fullWid;
                 }
             }
         };
@@ -220,7 +239,7 @@ public class CanvasScoreSheet extends CanvasInteractable {
             
             @Override
             public int y() {
-                return sheet.y() + margin + scoreVSpacing + lineV / 2 + 1;
+                return sheet.y() + margin + columnHeadingHeight() + lineV / 2 + 1;
             }
             
             @Override
@@ -230,7 +249,7 @@ public class CanvasScoreSheet extends CanvasInteractable {
             
             @Override
             public int height() {
-                return sheet.height() - margin - scoreVSpacing - lineV / 2 - 4 - sortByHeight - bidInfoHeight - margin;
+                return sheet.height() - margin - columnHeadingHeight() - lineV / 2 - 4 - sortByHeight - bidInfoHeight - margin;
             }
             
             @Override
@@ -238,6 +257,10 @@ public class CanvasScoreSheet extends CanvasInteractable {
                 return sheet.isShown();
             }
         };
+    }
+    
+    public int columnHeadingHeight() {
+        return scoreVSpacing * (canvas.getGameOptions().isTeams() ? 2 : 1);
     }
     
     public void autoScroll(int roundNumber) {
@@ -267,26 +290,40 @@ public class CanvasScoreSheet extends CanvasInteractable {
         graphics.setColor(Color.WHITE);
         GraphicsTools.drawBox(graphics, x(), y(), width(), height() - bidInfoHeight - margin, 10);
         
-        double wid = (double) (width() - 4 * margin - 2 * dealerHWidth) / players.size();
-
+        double N = canvas.getPlayersForScoreSheet("*Seat").size();
+        double wid = (double) (width() - 4 * margin - 2 * dealerHWidth) / N;
+        double currentX = x() + 3 * margin + 2 * dealerHWidth;
+        
         // horizontal line
         graphics.setColor(Color.BLACK);
         graphics.drawLine(
-                (int) (x() + 3 * margin + 2 * dealerHWidth), 
-                y() + margin + scoreVSpacing + lineV / 2, 
+                (int) currentX, 
+                y() + margin + columnHeadingHeight() + lineV / 2, 
                 x() + width() - margin, 
-                y() + margin + scoreVSpacing + lineV / 2);
+                y() + margin + columnHeadingHeight() + lineV / 2);
+//        if (canvas.getGameOptions().isTeams()) {
+//            graphics.setColor(Color.GRAY);
+//            graphics.drawLine(
+//                    (int) currentX, 
+//                    y() + margin + scoreVSpacing, 
+//                    x() + width() - margin, 
+//                    y() + margin + scoreVSpacing);
+//        }
+//        graphics.setColor(Color.BLACK);
+        
         for (int i = 0; i < players.size(); i++) {
             ClientPlayer player = players.get(i);
             
-            if (!player.isHuman()) {
-                graphics.setColor(new Color(210, 255, 255, 100));
-                graphics.fillRect(
-                        (int) (x() + 3 * margin + 2 * dealerHWidth + i * wid), 
-                        (int) y() + margin, 
-                        (int) wid + 1, 
-                        (int) (scoreVSpacing + lineV / 2));
-            }
+            double fullWid = player.isTeam() ? ((ClientTeam) player).getMembers().size() * wid : wid;
+            
+//            if (!player.isHuman()) {
+//                graphics.setColor(new Color(210, 255, 255, 100));
+//                graphics.fillRect(
+//                        (int) (x() + 3 * margin + 2 * dealerHWidth + i * wid), 
+//                        (int) y() + margin, 
+//                        (int) wid + 1, 
+//                        (int) (scoreVSpacing + lineV / 2));
+//            }
             
             // name
             graphics.setColor(Color.BLACK);
@@ -304,20 +341,47 @@ public class CanvasScoreSheet extends CanvasInteractable {
             }
             GraphicsTools.drawStringJustified(graphics, 
                     GraphicsTools.fitString(graphics, player.getName(), wid - 2), 
-                    (int) (x() + 3 * margin + 2 * dealerHWidth + i * wid + wid / 2), 
+                    (int) (currentX + fullWid / 2), 
                     y() + margin + scoreVSpacing / 2, 
                     1, 1);
+            if (player.isTeam()) {
+                int j = 0;
+                for (ClientPlayer p : ((ClientTeam) player).getMembers()) {
+                    if (p.equals(myPlayer)) {
+                        graphics.setFont(GraphicsTools.fontBold);
+                    } else {
+                        graphics.setFont(GraphicsTools.font);
+                    }
+                    GraphicsTools.drawStringJustified(graphics, 
+                            GraphicsTools.fitString(graphics, p.getName(), wid - 2), 
+                            (int) (currentX + 1 + wid * j + wid / 2), 
+                            y() + margin + 3 * scoreVSpacing / 2, 
+                            1, 1);
+                    if (j > 0) {
+                        graphics.setColor(Color.GRAY);
+                        graphics.drawLine(
+                                (int) (currentX + 1 + wid * j), 
+                                y() + margin + scoreVSpacing, 
+                                (int) (currentX + 1 + wid * j), 
+                                y() + margin + columnHeadingHeight() + lineV / 2);
+                    }
+                    graphics.setColor(Color.BLACK);
+                    j++;
+                }
+            }
             graphics.setFont(GraphicsTools.font);
             
             // vertical line
             graphics.setColor(Color.BLACK);
             if (i > 0) {
                 graphics.drawLine(
-                        (int) (x() + 3 * margin + 2 * dealerHWidth + i * wid), 
+                        (int) currentX, 
                         y() + margin, 
-                        (int) (x() + 3 * margin + 2 * dealerHWidth + i * wid), 
-                        y() + margin + scoreVSpacing + lineV / 2);
+                        (int) currentX, 
+                        y() + margin + columnHeadingHeight() + lineV / 2);
             }
+            
+            currentX += fullWid;
         }
         
         graphics.setFont(GraphicsTools.fontSmall);

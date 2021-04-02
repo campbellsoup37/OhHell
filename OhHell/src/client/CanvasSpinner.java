@@ -46,6 +46,7 @@ public class CanvasSpinner extends CanvasInteractable {
                     @Override
                     public void click() {
                         value = Math.max(min(), value - step());
+                        onUpdate();
                     }
                 },
                 new CanvasButton("+") {
@@ -77,6 +78,7 @@ public class CanvasSpinner extends CanvasInteractable {
                     @Override
                     public void click() {
                         value = Math.min(max(), value + step());
+                        onUpdate();
                     }
                 });
     }
@@ -88,8 +90,10 @@ public class CanvasSpinner extends CanvasInteractable {
     public int value() {
         if (value < min()) {
             value = min();
+            onUpdate();
         } else if (value > max()) {
             value = max();
+            onUpdate();
         }
         return value;
     }
@@ -114,6 +118,10 @@ public class CanvasSpinner extends CanvasInteractable {
     
     public int getValue() {
         return value;
+    }
+    
+    public void setValue(int value) {
+        this.value = value;
     }
     
     @Override
@@ -150,4 +158,6 @@ public class CanvasSpinner extends CanvasInteractable {
         }
         return ans;
     }
+    
+    public void onUpdate() {}
 }

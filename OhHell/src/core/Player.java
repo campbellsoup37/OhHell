@@ -6,6 +6,7 @@ public class Player {
     private String name;
     private String id;
     private int index = 0;
+    private int team = 0;
     private int score;
     private int place;
     private int bid;
@@ -70,6 +71,14 @@ public class Player {
     
     public int getIndex() {
         return index;
+    }
+    
+    public int getTeam() {
+        return team;
+    }
+    
+    public void setTeam(int team) {
+        this.team = team;
     }
     
     public void setHost(boolean host) {
@@ -314,6 +323,8 @@ public class Player {
     public void commandRemovePlayer(Player player) {}
     
     public void commandUpdatePlayers(List<? extends Player> player) {}
+    
+    public void commandUpdateOptions(GameOptions options) {}
     
     //public void commandPlayersInfo(List<Player> players, List<Player> kibitzers, Player player) {}
     

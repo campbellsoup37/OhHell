@@ -66,11 +66,16 @@ public class HumanPlayer extends Player {
         thread.sendCommand("UPDATEPLAYERS:"
                 + (players != null ? players.stream().map(p -> playerInfoString(p)).reduce("", (a, b) -> a + b) : ""));
     }
+    
+    @Override
+    public void commandUpdateOptions(GameOptions options) {
+        thread.sendCommand("OPTIONS:" + options);
+    }
 
     /*@Override
     public void commandPlayersInfo(List<Player> players, List<Player> kibitzers, Player player) {
         thread.sendCommand(playerInfoCommand(players, kibitzers, player));
-    }*/
+    }
 
     public String playerInfoCommand(List<Player> players, List<Player> kibitzers, Player player) {
         return players.stream()
@@ -93,7 +98,7 @@ public class HumanPlayer extends Player {
                         + p.isKibitzer() + ":"
                         + p.equals(player) + ":")
                 .reduce("", (sofar, pString) -> sofar + pString);
-    }
+    }*/
     
     public String playerInfoString(Player player) {
         return "STRING " + player.getName().length() + ":" + player.getName() + ":"
@@ -104,7 +109,8 @@ public class HumanPlayer extends Player {
                 + player.isDisconnected() + ":"
                 + player.isKicked() + ":"
                 + player.isKibitzer() + ":"
-                + player.equals(player) + ":";
+                + player.equals(player) + ":"
+                + player.getTeam() + ":";
     }
 
     @Override

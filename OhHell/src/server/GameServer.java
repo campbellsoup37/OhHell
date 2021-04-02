@@ -12,8 +12,11 @@ import java.net.Socket;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.swing.BorderFactory;
@@ -74,7 +77,7 @@ public class GameServer extends JFrame {
     
     private List<Player> players = new ArrayList<>();
     private List<Player> kibitzers = new ArrayList<>();
-    private GameOptions options;
+    private GameOptions options = new GameOptions();
     
     private Random random = new Random();
     
@@ -177,6 +180,12 @@ public class GameServer extends JFrame {
         checkForUpdates();
     }
     
+    public void fixPlayerIndices() {
+        for (int i = 0; i < players.size(); i++) {
+            players.get(i).setIndex(i);
+        }
+    }
+    
     public void goPressed() {
         try {
             core = new OhHellCore(true) {
@@ -208,9 +217,59 @@ public class GameServer extends JFrame {
         return core.getGameStarted();
     }
     
-    public void startGame(int robotCount, GameOptions options) {
+    public void updateOptions(GameOptions options) {
+        int dummiesToRemove = (int) players.stream().filter(p -> !p.isHuman()).count() - options.getNumRobots();
+        if (dummiesToRemove < 0) {
+            List<Player> newDummies = new LinkedList<>();
+            for (int i = 0; i < -dummiesToRemove; i++) {
+                Player newDummy = new DummyPlayer();
+                newDummy.setIndex(players.size() + i);
+                newDummies.add(newDummy);
+            }
+            for (Player player : players) {
+                player.commandAddPlayers(newDummies, null);
+            }
+            for (Player player : kibitzers) {
+                player.commandAddPlayers(newDummies, null);
+            }
+            players.addAll(newDummies);
+        } else if (dummiesToRemove > 0) {
+            kickDummies(dummiesToRemove);
+        }
+        
         this.options = options;
-        core.startGame(robotCount, options, null);
+        for (Player player : players) {
+            player.commandUpdateOptions(options);
+        }
+        for (Player kibitzer : kibitzers) {
+            kibitzer.commandUpdateOptions(options);
+        }
+    }
+    
+    public void kickDummies(int dummiesToRemove) {
+        List<Player> toRemove = new LinkedList<>();
+        for (Player player : players) {
+            if (!player.isHuman()) {
+                toRemove.add(player);
+                for (Player p : players) {
+                    p.commandRemovePlayer(player);
+                }
+                for (Player p : kibitzers) {
+                    p.commandRemovePlayer(player);
+                }
+                if (toRemove.size() == dummiesToRemove) {
+                    break;
+                }
+            }
+        }
+        players.removeAll(toRemove);
+        fixPlayerIndices();
+    }
+    
+    public void startGame(GameOptions options) {
+        this.options = options;
+        kickDummies(options.getNumRobots());
+        core.startGame(options, null);
     }
     
     public void updatePlayersList() {
@@ -308,7 +367,8 @@ public class GameServer extends JFrame {
             if (!reconnect) {
                 players.add(player);
                 player.setIndex(players.size() - 1);
-                if (players.size() == 1) {
+                if (players.stream().filter(Player::isHuman).count()
+                        + kibitzers.stream().filter(Player::isHuman).count() == 1) {
                     player.setHost(true);
                 }
                 for (Player p : players) {
@@ -325,12 +385,44 @@ public class GameServer extends JFrame {
             player.commandAddPlayers(players, kibitzers);
         }
         
+        player.commandUpdateOptions(options);
+        
         updatePlayersList();
     }
     
     public void renamePlayer(Player player, String name) {
         player.setName(name);
         for (Player p : players) {
+            p.commandUpdatePlayers(Arrays.asList(player));
+        }
+        for (Player p : kibitzers) {
+            p.commandUpdatePlayers(Arrays.asList(player));
+        }
+    }
+    
+    public void reteamPlayer(Player player, int team) {
+        if (team == -1) {
+            Set<Integer> teams = new HashSet<>();
+            for (Player p : players) {
+                if (p != player) {
+                    teams.add(p.getTeam());
+                }
+            }
+            for (Player p : kibitzers) {
+                teams.add(p.getTeam());
+            }
+            int i = 0;
+            while (teams.contains(i)) {
+                i++;
+            }
+            team = i;
+        }
+        
+        player.setTeam(team);
+        for (Player p : players) {
+            p.commandUpdatePlayers(Arrays.asList(player));
+        }
+        for (Player p : kibitzers) {
             p.commandUpdatePlayers(Arrays.asList(player));
         }
     }
@@ -361,6 +453,8 @@ public class GameServer extends JFrame {
             players.add(player);
             player.setIndex(players.size() - 1);
             kibitzers.remove(player);
+            
+            //kickExcessDummies();
         }
 
         for (Player p : players) {

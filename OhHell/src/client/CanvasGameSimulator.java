@@ -64,7 +64,7 @@ public class CanvasGameSimulator {
         players = new ArrayList<>(cPlayers.size());
         core.setPlayers(players);
         
-        core.startGame(cPlayers.size(), options, createAiStrategyModules(cPlayers.size(), options));
+        core.startGame(options, createAiStrategyModules(cPlayers.size(), options));
     }
     
     public List<AiStrategyModule> createAiStrategyModules(int N, GameOptions options) {

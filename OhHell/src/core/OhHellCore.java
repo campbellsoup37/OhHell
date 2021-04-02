@@ -1,6 +1,7 @@
 package core;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
@@ -17,7 +18,7 @@ public class OhHellCore {
     private AiKernel aiKernel;
     private AiTrainer aiTrainer;
     
-    private int robotDelay = 0;
+    private GameOptions options;
     
     private Random random = new Random();
     private Deck deck = new Deck();
@@ -71,6 +72,17 @@ public class OhHellCore {
             players.add(player);
             player.setIndex(players.size() - i);
         }
+        players.get(0).setTeam(1);
+        players.get(1).setTeam(2);
+        players.get(2).setTeam(3);
+        players.get(3).setTeam(4);
+        players.get(4).setTeam(5);
+        players.get(5).setTeam(1);
+        players.get(6).setTeam(2);
+        players.get(7).setTeam(3);
+        players.get(8).setTeam(4);
+        players.get(9).setTeam(5);
+        options.setTeams(true);
         for (Player player : players) {
             player.commandUpdatePlayers(players);
         }
@@ -107,9 +119,10 @@ public class OhHellCore {
         return gameStarted;
     }
     
-    public void startGame(int robotCount, GameOptions options, List<AiStrategyModule> aiStrategyModules) {
+    public void startGame(GameOptions options, List<AiStrategyModule> aiStrategyModules) {
+        this.options = options;
+        int robotCount = options.getNumRobots();
         deck.setD(options.getD());
-        robotDelay = options.getRobotDelay();
         int defaultStartingH = GameOptions.defaultStartingH(players.size() + robotCount, deck.getD());
         if (options.getStartingH() <= 0 || options.getStartingH() > defaultStartingH) {
             options.setStartingH(defaultStartingH);
@@ -364,7 +377,7 @@ public class OhHellCore {
         }
         
         if (player.isHuman() && !players.get(turn).isHuman()) {
-            pendingAction = new PendingAction(robotDelay) {
+            pendingAction = new PendingAction(options.getRobotDelay()) {
                 private static final long serialVersionUID = 1L;
 
                 @Override
@@ -517,14 +530,33 @@ public class OhHellCore {
     }
     
     public void doNextRound() {
+        HashMap<Integer, Integer> teamBids = new HashMap<>();
+        HashMap<Integer, Integer> teamTakens = new HashMap<>();
+        HashMap<Integer, Boolean> teamKickeds = new HashMap<>();
+        
+        if (options.isTeams()) {
+            for (Player p : players) {
+                if (teamBids.containsKey(p.getTeam())) {
+                    teamBids.put(p.getTeam(), teamBids.get(p.getTeam()) + p.getBid());
+                    teamTakens.put(p.getTeam(), teamTakens.get(p.getTeam()) + p.getTaken());
+                    teamKickeds.put(p.getTeam(), teamKickeds.get(p.getTeam()) && p.isKicked());
+                } else {
+                    teamBids.put(p.getTeam(), p.getBid());
+                    teamTakens.put(p.getTeam(), p.getTaken());
+                    teamKickeds.put(p.getTeam(), p.isKicked());
+                }
+            }
+        }
+        
         List<Integer> newScores = new LinkedList<>();
         for (Player p : players) {
-            if (p.isKicked()) {
+            if (!options.isTeams() && p.isKicked() || options.isTeams() && teamKickeds.get(p.getTeam())) {
                 newScores.add(null);
             } else {
                 p.addTaken();
-                int b = p.getBid();
-                int d = Math.abs(p.getTaken() - b);
+                int b = options.isTeams() ? teamBids.get(p.getTeam()) : p.getBid();
+                int t = options.isTeams() ? teamTakens.get(p.getTeam()) : p.getTaken();
+                int d = Math.abs(t - b);
                 if (d == 0) {
                     p.addScore(10 + b * b);
                 } else {

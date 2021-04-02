@@ -51,7 +51,7 @@ public class AiDataGenerator extends AiTrainer {
         int R = 20;
         long[] times = new long[R];
         for (int g = 1; g <= reps; g++) {
-            core.startGame(N, new GameOptions(), aiStrategyModules);
+            core.startGame(new GameOptions(N), aiStrategyModules);
             
             try {
                 while (true) {

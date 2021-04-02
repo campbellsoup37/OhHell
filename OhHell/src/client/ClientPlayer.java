@@ -14,6 +14,7 @@ public class ClientPlayer {
     private boolean disconnected;
     private boolean kicked;
     private boolean kibitzer;
+    private int team = 0;
     
     private CanvasPlayerPosition pos;
     
@@ -84,6 +85,10 @@ public class ClientPlayer {
     private List<Double> diffs = new ArrayList<>();
     
     public ClientPlayer() {}
+    
+    public boolean isTeam() {
+        return false;
+    }
     
     public void reset() {
         bid = 0;
@@ -163,6 +168,14 @@ public class ClientPlayer {
 
     public void setKibitzer(boolean kibitzer) {
         this.kibitzer = kibitzer;
+    }
+    
+    public int getTeam() {
+        return team;
+    }
+    
+    public void setTeam(int team) {
+        this.team = team;
     }
     
     public boolean posNotSet() {

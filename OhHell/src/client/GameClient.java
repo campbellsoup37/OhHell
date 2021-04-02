@@ -54,6 +54,7 @@ import core.GameOptions;
 import core.OhHellCore;
 import core.Player;
 import core.Recorder;
+import common.Constants;
 import common.FileTools;
 import common.GraphicsTools;
 import common.OhcTextField;
@@ -70,7 +71,6 @@ public class GameClient extends JFrame {
     private final boolean lowGraphicsOptionEnabled = true;
     private final boolean antialiasingOptionEnabled = true;
     
-    public static final int maxPlayers = 10;
     public static final int robotDelay = 2000;
     ///////////////////////////////////
     
@@ -140,7 +140,7 @@ public class GameClient extends JFrame {
     private volatile List<ClientPlayer> players = new ArrayList<>();
     private volatile List<ClientPlayer> kibitzers = new ArrayList<>();
     private volatile ClientPlayer myPlayer;
-    private volatile GameOptions options;
+    private volatile GameOptions options = new GameOptions();
     private volatile List<int[]> rounds = new ArrayList<>();
     private int roundNumber = 0;
     
@@ -317,6 +317,7 @@ public class GameClient extends JFrame {
                     oldPlayer.setDisconnected(newPlayer.isDisconnected());
                     oldPlayer.setKicked(newPlayer.isKicked());
                     oldPlayer.setKibitzer(newPlayer.isKibitzer());
+                    oldPlayer.setTeam(newPlayer.getTeam());
                     anyDc = anyDc || newPlayer.isDisconnected() && !newPlayer.isKicked();
                 }
             }
@@ -398,10 +399,11 @@ public class GameClient extends JFrame {
         changeState(ClientState.IN_SINGLE_PLAYER_GAME);
         
         GameOptions options = new GameOptions();
+        options.setNumRobots(numRobots);
         options.setD(doubleDeck ? 2 : 1);
         options.setRobotDelay(devSpeedSelected() ? 0 : robotDelay);
         
-        core.startGame(numRobots, options, null);
+        core.startGame(options, null);
     }
     
     public void startGame(GameOptions options) {
@@ -430,6 +432,14 @@ public class GameClient extends JFrame {
     
     public GameOptions getGameOptions() {
         return options;
+    }
+    
+    public void reportGameOptions(GameOptions options) {
+        sendCommandToServer("OPTIONS:" + options);
+    }
+    
+    public void updateGameOptions(GameOptions options) {
+        this.options.setTo(options);
     }
     
     public List<ClientPlayer> getPlayers() {
@@ -849,7 +859,7 @@ public class GameClient extends JFrame {
                         
                         @Override
                         public int max() {
-                            return maxPlayers - (botsOnlyOption.isSelected() ? 0 : 1);
+                            return Constants.maxPlayersWithRobots - (botsOnlyOption.isSelected() ? 0 : 1);
                         }
                     };
                     
@@ -1382,7 +1392,12 @@ public class GameClient extends JFrame {
         }
     }
     
-    public void readyPressed(int numRobots, boolean doubleDeck) {
+    public void reteam(int team) {
+        sendCommandToServer("RETEAM:" + team);
+    }
+    
+    public void readyPressed() {
+        int numRobots = options.getNumRobots();
         int numPlayers = (int) players.stream().filter(ClientPlayer::isHuman).count() + numRobots;
         if (myPlayer != null && myPlayer.isHost()) {
             if (numRobots > 0 && numPlayers >= 11) {
@@ -1390,10 +1405,7 @@ public class GameClient extends JFrame {
             } else if (numPlayers <= 1) {
                 notify("Not enough players.");
             } else {
-                GameOptions options = new GameOptions();
-                options.setD(doubleDeck ? 2 : 1);
-                options.setRobotDelay(devSpeedSelected() ? 0 : robotDelay);
-                sendCommandToServer("START:" + numRobots + ":" + options);
+                sendCommandToServer("START:" + options);
             }
         } else {
             notify("You are not the host.");

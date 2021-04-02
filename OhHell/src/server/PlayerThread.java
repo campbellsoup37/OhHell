@@ -73,11 +73,14 @@ public class PlayerThread extends Thread {
                     server.updatePlayersList();
                 } else if (command.equals("RENAME")) {
                     server.renamePlayer(player, parsedContent.get(0));
+                } else if (command.equals("RETEAM")) {
+                    server.reteamPlayer(player, Integer.parseInt(parsedContent.get(0)));
+                } else if (command.equals("OPTIONS")) {
+                    server.updateOptions(new GameOptions(parsedContent.get(0)));
                 } else if (command.equals("START")) {
                     if (player.isHost()) {
-                        int numRobots = Integer.parseInt(parsedContent.get(0));
-                        GameOptions options = new GameOptions(parsedContent.get(1));
-                        server.startGame(numRobots, options);
+                        GameOptions options = new GameOptions(parsedContent.get(0));
+                        server.startGame(options);
                     }
                 } else if (command.equals("BID")) {
                     server.makeBid(player, Integer.parseInt(parsedContent.get(0)));

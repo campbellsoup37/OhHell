@@ -135,14 +135,14 @@ public class AiTrainerOI extends AiTrainer {
             dash.setGraphColor(2, 0, ivlColor);
         }
         
-        GameOptions options = new GameOptions();
+        GameOptions options = new GameOptions(N);
         options.setD(D);
         options.setRobotDelay(0);
         
         int R = 20;
         long[] times = new long[R];
         for (int g = 1; g <= reps; g++) {
-            core.startGame(N, options, aiStrategyModules);
+            core.startGame(options, aiStrategyModules);
             
             try {
                 while (true) {

@@ -71,6 +71,7 @@ public class SinglePlayerPlayer extends Player {
         cPlayer.setDisconnected(player.isDisconnected());
         cPlayer.setKicked(player.isKicked());
         cPlayer.setKibitzer(player.isKibitzer());
+        cPlayer.setTeam(player.getTeam());
         return cPlayer;
     }
 

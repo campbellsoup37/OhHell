@@ -93,6 +93,8 @@ public class ClientReadThread extends Thread {
             client.updateRounds(rounds, roundNumber);
         } else if (command.equals("KICK")) {
             client.getKicked();
+        } else if (command.equals("OPTIONS")) {
+            client.updateGameOptions(new GameOptions(parsedContent.get(0)));
         } else if (command.equals("START")) {
             client.startGame(new GameOptions(parsedContent.get(0)));
         } else if (command.equals("STOP")) {
@@ -184,7 +186,7 @@ public class ClientReadThread extends Thread {
     }
     
     public List<ClientPlayer> contentToPlayers(List<String> content) {
-        int numParams = 9;
+        int numParams = 10;
         
         int numPlayers = content.size() / numParams;
         List<ClientPlayer> players = new ArrayList<>(numPlayers);
@@ -199,6 +201,7 @@ public class ClientReadThread extends Thread {
             cPlayer.setDisconnected(content.get(numParams * i + 5).equals("true"));
             cPlayer.setKicked(content.get(numParams * i + 6).equals("true"));
             cPlayer.setKibitzer(content.get(numParams * i + 7).equals("true"));
+            cPlayer.setTeam(Integer.parseInt(content.get(numParams * i + 9)));
             players.add(cPlayer);
         }
         

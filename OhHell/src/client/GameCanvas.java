@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -90,11 +91,11 @@ public class GameCanvas extends OhcCanvas {
     private List<ClientPlayer> players;
     private List<ClientPlayer> playersScoreSorted;
     private ClientPlayer myPlayer;
+    
+    private List<ClientTeam> teams;
+    private List<ClientTeam> teamsScoreSorted;
 
     private double maxWid;
-
-    private int numRobots = 0;
-    private boolean doubleDeck = false;
 
     private Card trump;
     private List<Card> trumps;
@@ -149,6 +150,8 @@ public class GameCanvas extends OhcCanvas {
     private PostGamePage postGamePage;
     private List<ClientPlayer> postGamePlayers;
     private List<ClientPlayer> postGamePlayersScoreSorted;
+    private List<ClientTeam> postGameTeams;
+    private List<ClientTeam> postGameTeamsScoreSorted;
     private List<int[]> postGameRounds;
     private GameOptions postGameOptions;
 
@@ -217,6 +220,8 @@ public class GameCanvas extends OhcCanvas {
 
         players = new ArrayList<>();
         playersScoreSorted = new ArrayList<>();
+        teams = new ArrayList<>();
+        teamsScoreSorted = new ArrayList<>();
     }
 
     public double getCardWidth(boolean small) {
@@ -241,7 +246,6 @@ public class GameCanvas extends OhcCanvas {
     public void customPaintFirst(Graphics graphics) {
         graphics.setColor(Color.BLACK);
 
-        paintPregame(graphics);
         paintTrump(graphics);
         paintPlayers(graphics);
         paintTaken(graphics);
@@ -285,23 +289,6 @@ public class GameCanvas extends OhcCanvas {
         paintTrick(graphics);
         if (paintMessageMarker) {
             paintMessage(graphics);
-        }
-    }
-
-    public void paintPregame(Graphics graphics) {
-        if (state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME) {
-            graphics.setColor(new Color(255, 255, 255, 180));
-            GraphicsTools.drawBox(graphics, (getWidth() - scoreWidth) / 2 - 200, getHeight() / 2 - 150, 400, 300, 20);
-            graphics.setColor(Color.BLACK);
-            graphics.setFont(GraphicsTools.fontBold);
-            GraphicsTools.drawStringJustified(graphics, "Name:", (getWidth() - scoreWidth) / 2 - 140, getHeight() / 2 - 105, 2,
-                    1);
-            GraphicsTools.drawStringJustified(graphics, "Join as kibitzer:", (getWidth() - scoreWidth) / 2 - 20,
-                    getHeight() / 2 - 60, 2, 1);
-            GraphicsTools.drawStringJustified(graphics, "Robots:", (getWidth() - scoreWidth) / 2 - 20, getHeight() / 2, 2, 1);
-            GraphicsTools.drawStringJustified(graphics, "Double deck:", (getWidth() - scoreWidth) / 2 - 20,
-                    getHeight() / 2 + 40, 2, 1);
-            graphics.setFont(GraphicsTools.font);
         }
     }
 
@@ -860,269 +847,32 @@ public class GameCanvas extends OhcCanvas {
         miscInteractables = new LinkedList<>();
 
         // Pre-game interactables
-        OhcTextField nameField = new OhcTextField("Name");
-        nameField.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    client.rename(nameField.getText());
-                }
-            }
-        });
-        embeddedSwings.add(new CanvasEmbeddedSwing(nameField, this) {
-            private boolean showing = false;
-
+        PreGameMenu preGameMenu = new PreGameMenu(client, this) {
             @Override
             public int x() {
-                return (getWidth() - scoreWidth) / 2 - 130;
+                return (getWidth() - scoreWidth) / 2 - PreGameMenu.menuWidth / 2;
             }
 
             @Override
             public int y() {
-                return getHeight() / 2 - 120;
+                return getHeight() / 2 - PreGameMenu.menuWidth / 2;
             }
 
             @Override
             public int width() {
-                return 200;
+                return PreGameMenu.menuWidth + PreGameMenu.menuTeamGap + PreGameMenu.teamWidth;
             }
 
             @Override
             public int height() {
-                return 30;
-            }
-
-            @Override
-            public boolean isShown() {
-                boolean ans = state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
-                if (!showing && ans) {
-                    nameField.setText(myPlayer != null ? myPlayer.getName() : client.getUsername());
-                    showing = true;
-                } else if (showing && !ans) {
-                    showing = false;
-                }
-                return ans;
-            }
-        });
-
-        miscInteractables.add(new CanvasButton("Change name") {
-            @Override
-            public int x() {
-                return (getWidth() - scoreWidth) / 2 + 80;
-            }
-
-            @Override
-            public int y() {
-                return getHeight() / 2 - 120;
-            }
-
-            @Override
-            public int width() {
-                return 100;
-            }
-
-            @Override
-            public int height() {
-                return 30;
+                return 340;
             }
 
             @Override
             public boolean isShown() {
                 return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
-            }
-
-            @Override
-            public void click() {
-                client.rename(nameField.getText());
-            }
-        });
-
-        miscInteractables.add(new CanvasButton("") {
-            @Override
-            public int x() {
-                return (getWidth() - scoreWidth) / 2 + 20;
-            }
-
-            @Override
-            public int y() {
-                return getHeight() / 2 - 70;
-            }
-
-            @Override
-            public int width() {
-                return 20;
-            }
-
-            @Override
-            public int height() {
-                return 20;
-            }
-
-            @Override
-            public boolean isShown() {
-                return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
-            }
-
-            @Override
-            public String text() {
-                return myPlayer != null && myPlayer.isKibitzer() ? "x" : "";
-            }
-
-            @Override
-            public void click() {
-                client.toggleKibitzer();
-            }
-        });
-        
-        CanvasSpinner robotsSpinner = new CanvasSpinner(0) {
-            @Override
-            public int x() {
-                return (getWidth() - scoreWidth) / 2 + 20;
-            }
-            
-            @Override
-            public int y() {
-                return getHeight() / 2 - 15;
-            }
-            
-            @Override
-            public int min() {
-                return 0;
-            }
-            
-            @Override
-            public int max() {
-                return GameClient.maxPlayers - players.size();
-            }
-
-            @Override
-            public boolean isShown() {
-                return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
-            }
-
-            @Override
-            public boolean isEnabled() {
-                return myPlayer != null && myPlayer.isHost();
             }
         };
-        miscInteractables.add(robotsSpinner);
-
-        miscInteractables.add(new CanvasButton("") {
-            @Override
-            public int x() {
-                return (getWidth() - scoreWidth) / 2 + 20;
-            }
-
-            @Override
-            public int y() {
-                return getHeight() / 2 + 30;
-            }
-
-            @Override
-            public int width() {
-                return 20;
-            }
-
-            @Override
-            public int height() {
-                return 20;
-            }
-
-            @Override
-            public boolean isShown() {
-                return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
-            }
-
-            @Override
-            public boolean isEnabled() {
-                return myPlayer != null && myPlayer.isHost();
-            }
-
-            @Override
-            public String text() {
-                return doubleDeck ? "x" : "";
-            }
-
-            @Override
-            public void click() {
-                doubleDeck = !doubleDeck;
-            }
-        });
-
-        miscInteractables.add(new CanvasButton("Start") {
-            @Override
-            public int x() {
-                return (getWidth() - scoreWidth) / 2 - 160;
-            }
-
-            @Override
-            public int y() {
-                return getHeight() / 2 + 90;
-            }
-
-            @Override
-            public int width() {
-                return 150;
-            }
-
-            @Override
-            public int height() {
-                return 40;
-            }
-
-            @Override
-            public boolean isShown() {
-                return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
-            }
-
-            @Override
-            public boolean isEnabled() {
-                return myPlayer != null && myPlayer.isHost();
-            }
-
-            @Override
-            public void click() {
-                numRobots = robotsSpinner.getValue();
-                client.readyPressed(numRobots, doubleDeck);
-            }
-        });
-
-        miscInteractables.add(new CanvasButton("Leave table") {
-            @Override
-            public int x() {
-                return (getWidth() - scoreWidth) / 2 + 10;
-            }
-
-            @Override
-            public int y() {
-                return getHeight() / 2 + 90;
-            }
-
-            @Override
-            public int width() {
-                return 150;
-            }
-
-            @Override
-            public int height() {
-                return 40;
-            }
-
-            @Override
-            public boolean isShown() {
-                return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
-            }
-
-            @Override
-            public boolean isEnabled() {
-                return myPlayer != null;
-            }
-
-            @Override
-            public void click() {
-                client.leaveGame();
-            }
-        });
 
         // Undo bid button
         miscInteractables.add(new CanvasButton("Undo bid") {
@@ -1818,8 +1568,17 @@ public class GameCanvas extends OhcCanvas {
             }
         });
 
-        setInteractables(Arrays.asList(embeddedSwings, Arrays.asList(scoreSheet), bidButtons, cardInteractables,
-                namePlates, Arrays.asList(lastTrick), kickButtons, miscInteractables, Arrays.asList(postGamePage)));
+        setInteractables(Arrays.asList(
+                embeddedSwings, 
+                Arrays.asList(preGameMenu),
+                Arrays.asList(scoreSheet), 
+                bidButtons, 
+                cardInteractables,
+                namePlates, 
+                Arrays.asList(lastTrick), 
+                kickButtons, 
+                miscInteractables, 
+                Arrays.asList(postGamePage)));
     }
 
     public void makeBidInteractables() {
@@ -1969,18 +1728,34 @@ public class GameCanvas extends OhcCanvas {
         }
     }
 
-    public List<ClientPlayer> getPlayersForScoreSheet(String sortBy) {
+    public List<? extends ClientPlayer> getPlayersForScoreSheet(String sortBy) {
         if (state == GameState.POSTGAME) {
-            if (sortBy.equals("Score")) {
-                return postGamePlayersScoreSorted;
+            if (client.getGameOptions().isTeams() && sortBy.charAt(0) != '*') {
+                if (sortBy.equals("Score")) {
+                    return postGameTeamsScoreSorted;
+                } else {
+                    return postGameTeams;
+                }
             } else {
-                return postGamePlayers;
+                if (sortBy.equals("Score")) {
+                    return postGamePlayersScoreSorted;
+                } else {
+                    return postGamePlayers;
+                }
             }
         } else {
-            if (sortBy.equals("Score")) {
-                return playersScoreSorted;
+            if (client.getGameOptions().isTeams() && sortBy.charAt(0) != '*') {
+                if (sortBy.equals("Score")) {
+                    return teamsScoreSorted;
+                } else {
+                    return teams;
+                }
             } else {
-                return players;
+                if (sortBy.equals("Score")) {
+                    return playersScoreSorted;
+                } else {
+                    return players;
+                }
             }
         }
     }
@@ -2001,6 +1776,10 @@ public class GameCanvas extends OhcCanvas {
         } else {
             return new int[] {-1, -1};
         }
+    }
+    
+    public GameOptions getGameOptions() {
+        return client.getGameOptions();
     }
 
     public List<ClientPlayer> getPlayers() {
@@ -2120,10 +1899,35 @@ public class GameCanvas extends OhcCanvas {
             players.get(i).setIndex(i);
         }
         myPlayer = client.getMyPlayer();
+        
+        if (client.getGameOptions().isTeams()) {
+            updateTeams();
+        }
+        
         maxWid = 9 * 10 + cardWidthSmall;
         setPlayerPositions();
         resetNamePlates();
         resetKickButtons();
+    }
+    
+    public void updateTeams() {
+        HashMap<Integer, List<ClientPlayer>> teamMap = new HashMap<>();
+        for (ClientPlayer player : players) {
+            if (!teamMap.containsKey(player.getTeam())) {
+                teamMap.put(player.getTeam(), new LinkedList<>(Arrays.asList(player)));
+            } else {
+                teamMap.get(player.getTeam()).add(player);
+            }
+        }
+        
+        teams.clear();
+        for (Integer teamNumber : teamMap.keySet()) {
+            ClientTeam team = new ClientTeam(teamNumber, teamMap.get(teamNumber));
+            teams.add(team);
+        }
+        teams.sort((t1, t2) -> (int) Math.signum(t1.getNumber() - t2.getNumber()));
+        teamsScoreSorted.clear();
+        teamsScoreSorted.addAll(teams);
     }
 
     public void pregameOnTimer(boolean immediate) {
@@ -2154,6 +1958,8 @@ public class GameCanvas extends OhcCanvas {
         messageState = "UNBLOCKED";
         claimBlocked = false;
         claimer = -1;
+        
+        client.reportGameOptions(client.getGameOptions());
     }
 
     public void initializingOnTimer(boolean immediate) {
@@ -2554,6 +2360,9 @@ public class GameCanvas extends OhcCanvas {
                 }
                 client.incrementRoundNumber();
                 playersScoreSorted.sort((p1, p2) -> (int) Math.signum(p2.getScore() - p1.getScore()));
+                if (client.getGameOptions().isTeams()) {
+                    teamsScoreSorted.sort((t1, t2) -> (int) Math.signum(t2.getScore() - t1.getScore()));
+                }
                 
                 scoreSheet.autoScroll(client.getRoundNumber());
             }
@@ -2581,10 +2390,14 @@ public class GameCanvas extends OhcCanvas {
 
                 trumps = new ArrayList<>();
                 postGamePlayers = new ArrayList<>();
+                postGameTeams = new ArrayList<>();
                 postGameRounds = new ArrayList<>();
                 postGameOptions = new GameOptions();
                 try {
-                    loadPostGameFromFile(lines, trumps, postGamePlayers, postGameRounds, postGameOptions);
+                    loadPostGameFromFile(lines, trumps, postGamePlayers, 
+                            postGameRounds, postGameOptions, postGameTeams);
+                    postGameOptions.setNumRobots(postGamePlayers.size());
+                    client.updateGameOptions(postGameOptions);
                     simulateGame();
                 } catch (Exception e) {
                     client.notify("Unable to load post-game page.");
@@ -2594,12 +2407,15 @@ public class GameCanvas extends OhcCanvas {
                 postGamePlayersScoreSorted = new ArrayList<>(postGamePlayers.size());
                 postGamePlayersScoreSorted.addAll(postGamePlayers);
                 postGamePlayersScoreSorted.sort((p1, p2) -> (int) Math.signum(p2.getScore() - p1.getScore()));
+                postGameTeamsScoreSorted = new ArrayList<>(postGameTeams.size());
+                postGameTeamsScoreSorted.addAll(postGameTeams);
+                postGameTeamsScoreSorted.sort((t1, t2) -> (int) Math.signum(t2.getScore() - t1.getScore()));
             }
         };
     }
 
     public static void loadPostGameFromFile(List<String> lines, List<Card> trumps, List<ClientPlayer> players,
-            List<int[]> rounds, GameOptions options) {
+            List<int[]> rounds, GameOptions options, List<ClientTeam> teams) {
         trumps.clear();
         players.clear();
         rounds.clear();
@@ -2625,6 +2441,23 @@ public class GameCanvas extends OhcCanvas {
                     player.setIndex(index);
                     players.add(player);
                     index++;
+                }
+            } else if (type.equals("teams")) {
+                options.setTeams(true);
+                HashMap<Integer, List<ClientPlayer>> teamMap = new HashMap<>();
+                int index = 0;
+                for (String teamInfo : content) {
+                    String[] info = teamInfo.split(Recorder.splitPreceder + Recorder.commandDelimiter2);
+                    int teamNumber = Integer.parseInt(info[0]);
+                    if (!teamMap.containsKey(teamNumber)) {
+                        teamMap.put(teamNumber, new LinkedList<>());
+                    }
+                    teamMap.get(teamNumber).add(players.get(index));
+                    index++;
+                }
+                
+                for (Integer teamNumber : teamMap.keySet()) {
+                    teams.add(new ClientTeam(teamNumber, teamMap.get(teamNumber)));
                 }
             } else if (type.equals("round")) {
                 rounds.add(new int[] { Integer.parseInt(content[0]), Integer.parseInt(content[1]), 0 });
