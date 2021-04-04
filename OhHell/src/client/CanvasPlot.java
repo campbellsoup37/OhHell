@@ -19,20 +19,20 @@ public class CanvasPlot extends CanvasInteractable {
         @Override
         public void paint(Graphics graphics, double x, double y) {
             graphics.fillOval(
-                    (int) (x - GameCanvas.pointSize / 2), 
-                    (int) (y - GameCanvas.pointSize / 2), 
-                    (int) GameCanvas.pointSize, 
-                    (int) GameCanvas.pointSize);
+                    (int) (x - GraphicsTools.pointSize / 2), 
+                    (int) (y - GraphicsTools.pointSize / 2), 
+                    (int) GraphicsTools.pointSize, 
+                    (int) GraphicsTools.pointSize);
         }
     };
     public static final PointStyle squarePoint = new PointStyle() {
         @Override
         public void paint(Graphics graphics, double x, double y) {
             graphics.fillRect(
-                    (int) (x - GameCanvas.pointSize / 2), 
-                    (int) (y - GameCanvas.pointSize / 2), 
-                    (int) GameCanvas.pointSize, 
-                    (int) GameCanvas.pointSize);
+                    (int) (x - GraphicsTools.pointSize / 2), 
+                    (int) (y - GraphicsTools.pointSize / 2), 
+                    (int) GraphicsTools.pointSize, 
+                    (int) GraphicsTools.pointSize);
         }
     };
     public static final PointStyle starPoint = new PointStyle() {
@@ -45,8 +45,8 @@ public class CanvasPlot extends CanvasInteractable {
             for (int i = 0; i < 2 * N; i++) {
                 // Sweet formula for points of a star
                 double r = i % 2 == 0 ? 
-                        GameCanvas.pointSize : 
-                        GameCanvas.pointSize / (1.0 + 2.0 * Math.cos(Math.PI / N));
+                        GraphicsTools.pointSize : 
+                            GraphicsTools.pointSize / (1.0 + 2.0 * Math.cos(Math.PI / N));
                 xs[i] = (int) (x + r * Math.sin(Math.PI * i / N));
                 ys[i] = (int) (y - r * Math.cos(Math.PI * i / N));
             }
@@ -162,7 +162,7 @@ public class CanvasPlot extends CanvasInteractable {
         
         int p = 0;
         for (List<Double> data : datas) {
-            graphics.setColor(GameCanvas.colors[dataColorIndices.get(p)]);
+            graphics.setColor(GraphicsTools.colors[dataColorIndices.get(p)]);
             double x = 0;
             double y = 0;
             for (Double newY : data) {
@@ -218,7 +218,7 @@ public class CanvasPlot extends CanvasInteractable {
                     0, 2);
             
             for (int k = 0; k < boxData.size(); k++) {
-                graphics.setColor(GameCanvas.colors[dataColorIndices.get((int) boxData.get(k)[0])]);
+                graphics.setColor(GraphicsTools.colors[dataColorIndices.get((int) boxData.get(k)[0])]);
                 dataPointStyles.get((int) boxData.get(k)[0]).paint(
                         graphics, 
                         ttX + tooltipMargin, 

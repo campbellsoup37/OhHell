@@ -1,6 +1,6 @@
-windowlocationmenu = 457,157
-windowlocationingame = -298,241
-windowsizeingame = 1700,867
+windowlocationmenu = 1013,217
+windowlocationingame = 76,48
+windowsizeingame = 1775,950
 windowmaximizedingame = false
 recentusername = soup
 recentaddress = localhost

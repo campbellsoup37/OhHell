@@ -30,6 +30,7 @@ public class AiKernel {
     private List<String> firstNames;
     private Random random = new Random();
     private List<AiPlayer> aiPlayers = new ArrayList<>();
+    private GameOptions options;
     
     public AiKernel(OhHellCore core) {
         this.core = core;
@@ -56,31 +57,39 @@ public class AiKernel {
         return !aiPlayers.isEmpty();
     }
     
-    public List<AiPlayer> createAiPlayers(int N, int robotCount, List<AiStrategyModule> aiStrategyModules, int delay) {
+    public List<AiPlayer> createAiPlayers(int N, GameOptions options, List<AiStrategyModule> aiStrategyModules, 
+            List<Player> dummies, int delay) {
         aiPlayers.clear();
+        this.options = options;
         
         if (aiStrategyModules == null) {
-            aiStrategyModules = createDefaultAiStrategyModules(N, robotCount);
+            aiStrategyModules = createDefaultAiStrategyModules(N);
         }
-        for (int i = 0; i < robotCount; i++) {
-            aiPlayers.add(new AiPlayer(
-                    firstNames.get(random.nextInt(firstNames.size())) + " Bot", 
-                    this,
-                    aiStrategyModules.get(i),
-                    delay
-                    ));
+        for (int i = 0; i < options.getNumRobots(); i++) {
+            AiPlayer player = new AiPlayer(
+                        firstNames.get(random.nextInt(firstNames.size())) + " Bot", 
+                        this,
+                        aiStrategyModules.get(i),
+                        delay
+                    );
+            if (i < dummies.size()) {
+                player.setTeam(dummies.get(i).getTeam());
+            }
+            aiPlayers.add(player);
         }
         
         return aiPlayers;
     }
     
-    public List<AiStrategyModule> createDefaultAiStrategyModules(int N, int robotCount) {
+    public List<AiStrategyModule> createDefaultAiStrategyModules(int N) {
         int D = core.getDeck().getD();
         OverallValueLearner ovl = new OverallValueLearner("resources/models/" + "ovlN" + N + "D" + D + ".txt");
         ImmediateValueLearner ivl = new ImmediateValueLearner("resources/models/" + "ivlN" + N + "D" + D + ".txt");
-        List<AiStrategyModule> aiStrategyModules = new ArrayList<>(robotCount);
-        for (int i = 0; i < robotCount; i++) {
-            aiStrategyModules.add(new AiStrategyModuleOI(core, N, ovl, ivl));
+        List<AiStrategyModule> aiStrategyModules = new ArrayList<>(options.getNumRobots());
+        for (int i = 0; i < options.getNumRobots(); i++) {
+            AiStrategyModule aiStrategyModule = new AiStrategyModuleOI(core, N, ovl, ivl);
+            aiStrategyModule.setOptions(options);
+            aiStrategyModules.add(aiStrategyModule);
         }
         return aiStrategyModules;
     }
@@ -88,7 +97,7 @@ public class AiKernel {
     public void reloadAiStrategyModules(int N, List<AiStrategyModule> aiStrategyModules) {
         aiPlayers.removeIf(Player::isKicked);
         if (aiStrategyModules == null) {
-            aiStrategyModules = createDefaultAiStrategyModules(N, aiPlayers.size());
+            aiStrategyModules = createDefaultAiStrategyModules(N);
         }
         for (int i = 0; i < aiPlayers.size(); i++) {
             aiPlayers.get(i).setAiStrategyModule(aiStrategyModules.get(i));

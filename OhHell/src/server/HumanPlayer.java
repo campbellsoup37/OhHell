@@ -5,6 +5,7 @@ import core.Card;
 import core.GameOptions;
 import core.Player;
 import core.RoundDetails;
+import core.Team;
 
 public class HumanPlayer extends Player {
     private PlayerThread thread;
@@ -68,37 +69,15 @@ public class HumanPlayer extends Player {
     }
     
     @Override
+    public void commandUpdateTeams(List<Team> teams) {
+        thread.sendCommand("UPDATETEAMS:"
+                + (teams != null ? teams.stream().map(t -> teamInfoString(t)).reduce("", (a, b) -> a + b) : ""));
+    }
+    
+    @Override
     public void commandUpdateOptions(GameOptions options) {
         thread.sendCommand("OPTIONS:" + options);
     }
-
-    /*@Override
-    public void commandPlayersInfo(List<Player> players, List<Player> kibitzers, Player player) {
-        thread.sendCommand(playerInfoCommand(players, kibitzers, player));
-    }
-
-    public String playerInfoCommand(List<Player> players, List<Player> kibitzers, Player player) {
-        return players.stream()
-                .map(p -> 
-                    "STRING " + p.getName().length() + ":" + p.getName() + ":"
-                        + p.isHuman() + ":"
-                        + p.isHost() + ":"
-                        + p.isDisconnected() + ":"
-                        + p.isKicked() + ":"
-                        + p.isKibitzer() + ":"
-                        + p.equals(player) + ":")
-                .reduce("UPDATEPLAYERS:", (sofar, pString) -> sofar + pString)
-            + kibitzers.stream()
-                .map(p -> 
-                    "STRING " + p.getName().length() + ":" + p.getName() + ":"
-                        + p.isHuman() + ":"
-                        + p.isHost() + ":"
-                        + p.isDisconnected() + ":"
-                        + p.isKicked() + ":"
-                        + p.isKibitzer() + ":"
-                        + p.equals(player) + ":")
-                .reduce("", (sofar, pString) -> sofar + pString);
-    }*/
     
     public String playerInfoString(Player player) {
         return "STRING " + player.getName().length() + ":" + player.getName() + ":"
@@ -111,6 +90,11 @@ public class HumanPlayer extends Player {
                 + player.isKibitzer() + ":"
                 + player.equals(player) + ":"
                 + player.getTeam() + ":";
+    }
+    
+    public String teamInfoString(Team team) {
+        return "STRING " + team.getName().length() + ":" + team.getName() + ":"
+                + team.getIndex() + ":";
     }
 
     @Override

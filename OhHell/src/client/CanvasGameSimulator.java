@@ -88,7 +88,7 @@ public class CanvasGameSimulator {
                         double[] ps = getOvlPs();
                         double[] qs = AiStrategyModuleOI.subsetProb(ps, ps.length);
                         clientPlayer().addBidQs(qs);
-                        clientPlayer().addAiBid(AiStrategyModuleOI.optimalBid(ps)[0]);
+                        clientPlayer().addAiBid(AiStrategyModuleOI.orderBids(ps)[0]);
                         clientPlayer().addDiff(difficulty(qs));
                         
                         core.incomingBid(player, clientPlayer().getBids().get(core.getRoundNumber()));

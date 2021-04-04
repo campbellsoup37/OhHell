@@ -68,10 +68,6 @@ public class GameCanvas extends OhcCanvas {
     public static final int finalScoreListWidth = 200;
     public static final int finalScoreBottomMargin = 150;
 
-    public static final double pointSize = 4;
-    public static final Color[] colors = { Color.BLUE, Color.RED, Color.GREEN, Color.MAGENTA, Color.CYAN, Color.ORANGE,
-            Color.PINK, Color.YELLOW, Color.GRAY, Color.BLACK };
-
     public static final int pokeWaitTime = 25000;
 
     public static final int chatAreaHeight = 250;
@@ -92,7 +88,8 @@ public class GameCanvas extends OhcCanvas {
     private List<ClientPlayer> playersScoreSorted;
     private ClientPlayer myPlayer;
     
-    private List<ClientTeam> teams;
+    private HashMap<Integer, ClientTeam> teams;
+    private List<ClientTeam> teamsIndexSorted;
     private List<ClientTeam> teamsScoreSorted;
 
     private double maxWid;
@@ -150,7 +147,8 @@ public class GameCanvas extends OhcCanvas {
     private PostGamePage postGamePage;
     private List<ClientPlayer> postGamePlayers;
     private List<ClientPlayer> postGamePlayersScoreSorted;
-    private List<ClientTeam> postGameTeams;
+    private HashMap<Integer, ClientTeam> postGameTeams;
+    private List<ClientTeam> postGameTeamsIndexSorted;
     private List<ClientTeam> postGameTeamsScoreSorted;
     private List<int[]> postGameRounds;
     private GameOptions postGameOptions;
@@ -220,7 +218,8 @@ public class GameCanvas extends OhcCanvas {
 
         players = new ArrayList<>();
         playersScoreSorted = new ArrayList<>();
-        teams = new ArrayList<>();
+        teams = new HashMap<>();
+        teamsIndexSorted = new ArrayList<>();
         teamsScoreSorted = new ArrayList<>();
     }
 
@@ -779,7 +778,7 @@ public class GameCanvas extends OhcCanvas {
     
     public int scoreHeight() {
         int numRounds = getRoundsForScoreSheet().size();
-        return scoreVSpacing * (numRounds + 1)
+        return scoreVSpacing * (numRounds + 1 + (client.getGameOptions().isTeams() ? 1 : 0))
                 + CanvasScoreSheet.lineV
                 + 3 * CanvasScoreSheet.margin
                 + CanvasScoreSheet.sortByHeight 
@@ -850,17 +849,21 @@ public class GameCanvas extends OhcCanvas {
         PreGameMenu preGameMenu = new PreGameMenu(client, this) {
             @Override
             public int x() {
-                return (getWidth() - scoreWidth) / 2 - PreGameMenu.menuWidth / 2;
+                return (getWidth() - scoreWidth) / 2
+                        - PreGameMenu.menuWidth / 2
+                        - (client.getGameOptions().isTeams() ? 
+                                PreGameMenu.menuTeamGap 
+                                + PreGameTeamPanel.teamWidth : 0) / 2;
             }
 
             @Override
             public int y() {
-                return getHeight() / 2 - PreGameMenu.menuWidth / 2;
+                return getHeight() / 2 - height() / 2;
             }
 
             @Override
             public int width() {
-                return PreGameMenu.menuWidth + PreGameMenu.menuTeamGap + PreGameMenu.teamWidth;
+                return PreGameMenu.menuWidth;
             }
 
             @Override
@@ -871,6 +874,30 @@ public class GameCanvas extends OhcCanvas {
             @Override
             public boolean isShown() {
                 return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
+            }
+        };
+        
+        PreGameTeamPanel preGameTeamPanel = new PreGameTeamPanel(client, this) {
+            @Override
+            public int x() {
+                return preGameMenu.x() + preGameMenu.width() + PreGameMenu.menuTeamGap;
+            }
+
+            @Override
+            public int y() {
+                return getHeight() / 2 - height() / 2;
+            }
+
+            @Override
+            public int width() {
+                return PreGameTeamPanel.teamWidth;
+            }
+
+            @Override
+            public boolean isShown() {
+                return state == GameState.PREGAME 
+                        && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME
+                        && client.getGameOptions().isTeams();
             }
         };
 
@@ -1338,11 +1365,13 @@ public class GameCanvas extends OhcCanvas {
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_UP) {
                     myChatMemoPointer = Math.max(0, myChatMemoPointer - 1);
-                    SwingUtilities.invokeLater(new Runnable() {
-                        public void run() {
-                            chatJField.setText(myChatMemo.get(myChatMemoPointer));
-                        }
-                    });
+                    if (!myChatMemo.isEmpty()) {
+                        SwingUtilities.invokeLater(new Runnable() {
+                            public void run() {
+                                chatJField.setText(myChatMemo.get(myChatMemoPointer));
+                            }
+                        });
+                    }
                 } else if (e.getKeyCode() == KeyEvent.VK_DOWN) {
                     myChatMemoPointer = Math.min(myChatMemo.size(), myChatMemoPointer + 1);
                     SwingUtilities.invokeLater(new Runnable() {
@@ -1362,6 +1391,24 @@ public class GameCanvas extends OhcCanvas {
                         if (fieldText.charAt(0) == '/') {
                             String[] commandContent = fieldText.substring(1).split(" ", 2);
                             String command = commandContent[0];
+                            String content = commandContent[1].trim();
+                            
+                            // Break into args
+                            List<String> args = new ArrayList<>();
+                            StringBuilder currentWord = new StringBuilder();
+                            boolean inQuotes = false;
+                            for (int i = 0; i <= content.length(); i++) {
+                                if (i == content.length() 
+                                        || content.charAt(i) == ' ' && !inQuotes) {
+                                    args.add(currentWord.toString());
+                                    currentWord = new StringBuilder();
+                                } else if (content.charAt(i) == '"') {
+                                    inQuotes = !inQuotes;
+                                } else {
+                                    currentWord.append(content.charAt(i));
+                                }
+                            }
+                            
                             if (command.equals("bitcoin")) {
                                 addChatLine("<b style=\"color:green\">BITCOIN MODE ENABLED $$</b>");
                                 refreshChat();
@@ -1382,20 +1429,15 @@ public class GameCanvas extends OhcCanvas {
                                 }
                                 refreshChat();
                             } else if (command.equals("w") && commandContent.length == 2) {
-                                String content = commandContent[1].trim();
-                                String name;
-                                String message;
-                                if (content.charAt(0) == '\"') {
-                                    String[] nameMessage = content.split("\"", 3);
-                                    name = nameMessage[1];
-                                    message = nameMessage.length == 3 ? nameMessage[2].trim() : "";
-                                } else {
-                                    String[] nameMessage = content.split(" ", 2);
-                                    name = nameMessage[0];
-                                    message = nameMessage.length == 2 ? nameMessage[1].trim() : "";
-                                }
-                                if (!message.isEmpty()) {
+                                if (args.size() >= 2) {
+                                    String name = args.get(0);
+                                    String message = args.subList(1, args.size()).stream()
+                                            .reduce("", (a, b) -> a + " " + b);
                                     client.sendChat(name, message);
+                                }
+                            } else if (command.equals("renameteam")) { 
+                                if (args.size() >= 1) {
+                                    client.renameTeam(args.get(0));
                                 }
                             } else if (!command.isEmpty()) {
                                 addChatLine("<b style=\"color:red\">Invalid command</b>");
@@ -1570,7 +1612,7 @@ public class GameCanvas extends OhcCanvas {
 
         setInteractables(Arrays.asList(
                 embeddedSwings, 
-                Arrays.asList(preGameMenu),
+                Arrays.asList(preGameMenu, preGameTeamPanel),
                 Arrays.asList(scoreSheet), 
                 bidButtons, 
                 cardInteractables,
@@ -1734,7 +1776,7 @@ public class GameCanvas extends OhcCanvas {
                 if (sortBy.equals("Score")) {
                     return postGameTeamsScoreSorted;
                 } else {
-                    return postGameTeams;
+                    return postGameTeamsIndexSorted;
                 }
             } else {
                 if (sortBy.equals("Score")) {
@@ -1748,7 +1790,7 @@ public class GameCanvas extends OhcCanvas {
                 if (sortBy.equals("Score")) {
                     return teamsScoreSorted;
                 } else {
-                    return teams;
+                    return teamsIndexSorted;
                 }
             } else {
                 if (sortBy.equals("Score")) {
@@ -1911,23 +1953,14 @@ public class GameCanvas extends OhcCanvas {
     }
     
     public void updateTeams() {
-        HashMap<Integer, List<ClientPlayer>> teamMap = new HashMap<>();
-        for (ClientPlayer player : players) {
-            if (!teamMap.containsKey(player.getTeam())) {
-                teamMap.put(player.getTeam(), new LinkedList<>(Arrays.asList(player)));
-            } else {
-                teamMap.get(player.getTeam()).add(player);
-            }
-        }
-        
         teams.clear();
-        for (Integer teamNumber : teamMap.keySet()) {
-            ClientTeam team = new ClientTeam(teamNumber, teamMap.get(teamNumber));
-            teams.add(team);
-        }
-        teams.sort((t1, t2) -> (int) Math.signum(t1.getNumber() - t2.getNumber()));
+        teams.putAll(client.getTeams());
+        teamsIndexSorted.clear();
+        teamsIndexSorted.addAll(teams.values());
+        teamsIndexSorted.sort((t1, t2) -> (int) Math.signum(t1.getIndex() - t2.getIndex()));
         teamsScoreSorted.clear();
-        teamsScoreSorted.addAll(teams);
+        teamsScoreSorted.addAll(teamsIndexSorted);
+        teamsScoreSorted.sort((t1, t2) -> (int) Math.signum(t2.getScore() - t1.getScore()));
     }
 
     public void pregameOnTimer(boolean immediate) {
@@ -2390,7 +2423,7 @@ public class GameCanvas extends OhcCanvas {
 
                 trumps = new ArrayList<>();
                 postGamePlayers = new ArrayList<>();
-                postGameTeams = new ArrayList<>();
+                postGameTeams = new HashMap<>();
                 postGameRounds = new ArrayList<>();
                 postGameOptions = new GameOptions();
                 try {
@@ -2407,15 +2440,18 @@ public class GameCanvas extends OhcCanvas {
                 postGamePlayersScoreSorted = new ArrayList<>(postGamePlayers.size());
                 postGamePlayersScoreSorted.addAll(postGamePlayers);
                 postGamePlayersScoreSorted.sort((p1, p2) -> (int) Math.signum(p2.getScore() - p1.getScore()));
+                postGameTeamsIndexSorted = new ArrayList<>(postGameTeams.size());
+                postGameTeamsIndexSorted.addAll(postGameTeams.values());
+                postGameTeamsIndexSorted.sort((t1, t2) -> (int) Math.signum(t1.getIndex() - t2.getIndex()));
                 postGameTeamsScoreSorted = new ArrayList<>(postGameTeams.size());
-                postGameTeamsScoreSorted.addAll(postGameTeams);
+                postGameTeamsScoreSorted.addAll(postGameTeamsIndexSorted);
                 postGameTeamsScoreSorted.sort((t1, t2) -> (int) Math.signum(t2.getScore() - t1.getScore()));
             }
         };
     }
 
     public static void loadPostGameFromFile(List<String> lines, List<Card> trumps, List<ClientPlayer> players,
-            List<int[]> rounds, GameOptions options, List<ClientTeam> teams) {
+            List<int[]> rounds, GameOptions options, HashMap<Integer, ClientTeam> teams) {
         trumps.clear();
         players.clear();
         rounds.clear();
@@ -2457,7 +2493,11 @@ public class GameCanvas extends OhcCanvas {
                 }
                 
                 for (Integer teamNumber : teamMap.keySet()) {
-                    teams.add(new ClientTeam(teamNumber, teamMap.get(teamNumber)));
+                    ClientTeam team = new ClientTeam();
+                    team.setName("Team " + (teamNumber + 1));
+                    team.setIndex(teamNumber);
+                    team.setMembers(teamMap.get(teamNumber));
+                    teams.put(teamNumber, team);
                 }
             } else if (type.equals("round")) {
                 rounds.add(new int[] { Integer.parseInt(content[0]), Integer.parseInt(content[1]), 0 });

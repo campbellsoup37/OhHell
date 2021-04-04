@@ -91,7 +91,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
             for (int j = 0; j < M; j++) {
                 Player iterPlayer = players.get((turn + j) % M);
                 if (!iterPlayer.isKicked()) {
-                    in.addOneHot(Math.max(iterPlayer.getBid() - iterPlayer.getTaken(), 0) + 1, maxH + 1);
+                    in.addOneHot(core.wants(iterPlayer, player.getHand().size()) + 1, maxH + 1);
                 }
             }
         }
@@ -117,7 +117,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
             Player iterPlayer = players.get((turn + k) % M);
             if (!iterPlayer.isKicked()) {
                 if ((turn - core.getLeader() + M) % M + k < M) {
-                    in.addOneHot(Math.max(iterPlayer.getBid() - iterPlayer.getTaken(), 0) + 1, maxH + 1);
+                    in.addOneHot(core.wants(iterPlayer, player.getHand().size()) + 1, maxH + 1);
                 } else {
                     in.addZeros(maxH + 1);
                 }
@@ -194,8 +194,32 @@ public class AiStrategyModuleOI extends AiStrategyModule {
     }
     
     public int getMyBid(double[] ps) {
-        int[] bestBids = optimalBid(ps);
-        return bestBids[0] != core.whatCanINotBid() ? bestBids[0] : bestBids[1];
+        int[] bids = orderBids(ps);
+        
+        // Find the top choice bid that will not make the team overbid or force the dealer to 
+        // overbid if the dealer is on the team (note to self (TODO) -- this dealer thing may not
+        // be necessary in all cases. Maybe we could want to bid to the max even if the dealer is
+        // on our team because we know the other team will bid in between?).
+        int maxBid = core.highestMakeableBid(player, true);
+        
+        int choice = 0;
+        while (bids[choice] > maxBid) {
+            choice++;
+        }
+        
+        // If we can't bid that, then move one further
+        if (bids[choice] == core.whatCanINotBid()) {
+            choice++;
+        }
+        
+        if (choice < bids.length) {
+            return bids[choice];
+        } else {
+            // I think this can happen only when (1) bidding 0 was our last choice, (2) we 
+            // couldn't bid it because we're the dealer, and (3) all other teams bid 0, and (4)
+            // someone on our team fucked us. Extremely unlikely scenario. Bid 1.
+            return 1;
+        }
     }
     
     public Card getMyPlay() {
@@ -266,7 +290,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
                 pps[ll] = v;
                 ll++;
             }
-            int l = Math.max(player.getBid() - player.getTaken(), 0);
+            int l = core.wants(player, player.getHand().size());
             double value = subsetProb(pps, l)[l];
             ovlVals.put(card, temp);
             
@@ -372,44 +396,37 @@ public class AiStrategyModuleOI extends AiStrategyModule {
      * where [5] is the vector of all 5s and t_k is a vector with exactly three nonzero entries, 
      * namely at k-2, k-1, and k. This explains the strange recursive algorithm here.
      */
-    public static int[] optimalBid(double[] ps) {
+    public static int[] orderBids(double[] ps) {
         int n = ps.length;
         double[] qs = subsetProb(ps, n);
+
+        double[][] bidEPairs = new double[n + 1][2];
         
-        double[] E = {0, 0};
         for (int k = 0; k <= 1; k++) {
             for (int l = 0; l <= n; l++) {
-                E[k] += qs[l] * points(k, l);
+                bidEPairs[k][0] = k;
+                bidEPairs[k][1] += qs[l] * points(k, l);
             }
         }
-
-        int[] ans;
-        if (E[0] < E[1]) {
-            ans = new int[] {1, 0};
-        } else {
-            ans = new int[] {0, 1};
-        }
-        double[] bestEs = {E[ans[0]], E[ans[1]]};
         
         for (int k = 2; k <= n; k++) {
-            double newE = 
-                    E[1] * 2
-                    - E[0]
+            bidEPairs[k][0] = k;
+            bidEPairs[k][1] = 
+                    bidEPairs[k - 1][1] * 2
+                    - bidEPairs[k - 2][1]
                     - 5
                     + qs[k - 2] * (14 - 4 * k + k * k)
                     + qs[k - 1] * (-27 + 4 * k - 2 * k * k)
                     + qs[k] * (10 + k * k);
-            if (newE > bestEs[0]) {
-                ans[1] = ans[0];
-                ans[0] = k;
-                bestEs[1] = bestEs[0];
-                bestEs[0] = newE;
-            } else if (newE > bestEs[1]) {
-                ans[1] = k;
-                bestEs[1] = newE;
-            }
-            E = new double[] {E[1], newE};
         }
+        
+        Arrays.sort(bidEPairs, (pair1, pair2) -> (int) Math.signum(pair2[1] - pair1[1]));
+        
+        int[] ans = new int[n + 1];
+        for (int k = 0; k <= n; k++) {
+            ans[k] = (int) bidEPairs[k][0];
+        }
+        
         return ans;
     }
     

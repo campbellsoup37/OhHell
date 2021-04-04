@@ -34,6 +34,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -139,6 +140,7 @@ public class GameClient extends JFrame {
     
     private volatile List<ClientPlayer> players = new ArrayList<>();
     private volatile List<ClientPlayer> kibitzers = new ArrayList<>();
+    private volatile HashMap<Integer, ClientTeam> teams = new HashMap<>();
     private volatile ClientPlayer myPlayer;
     private volatile GameOptions options = new GameOptions();
     private volatile List<int[]> rounds = new ArrayList<>();
@@ -273,6 +275,8 @@ public class GameClient extends JFrame {
                 }
             }
         }
+        
+        adjustTeamMembers();
 
         final boolean anyDcF = anyDc;
         canvas.updatePlayersOnTimer();
@@ -301,6 +305,8 @@ public class GameClient extends JFrame {
             kibitzers.remove(toRemove);
         }
         
+        adjustTeamMembers();
+        
         canvas.updatePlayersOnTimer();
     }
     
@@ -319,11 +325,14 @@ public class GameClient extends JFrame {
                     oldPlayer.setKibitzer(newPlayer.isKibitzer());
                     oldPlayer.setTeam(newPlayer.getTeam());
                     anyDc = anyDc || newPlayer.isDisconnected() && !newPlayer.isKicked();
+                    break;
                 }
             }
         }
         
         players.sort((p1, p2) -> (int) Math.signum(p1.getIndex() - p2.getIndex()));
+        
+        adjustTeamMembers();
 
         final boolean anyDcF = anyDc;
         canvas.updatePlayersOnTimer();
@@ -334,6 +343,34 @@ public class GameClient extends JFrame {
         
         if (state == ClientState.IN_MULTIPLAYER_GAME) {
             canvas.setConnectionStatusOnTimer(!anyDc);
+        }
+    }
+    
+    public void updateTeams(List<ClientTeam> newTeams) {
+        teams.clear();
+        for (ClientTeam newTeam : newTeams) {
+            teams.put(newTeam.getIndex(), newTeam);
+        }
+        
+        adjustTeamMembers();
+    }
+    
+    public void adjustTeamMembers() {
+        HashMap<Integer, List<ClientPlayer>> teamMap = new HashMap<>();
+        for (ClientPlayer player : players) {
+            if (!teamMap.containsKey(player.getTeam())) {
+                teamMap.put(player.getTeam(), new LinkedList<>(Arrays.asList(player)));
+            } else {
+                teamMap.get(player.getTeam()).add(player);
+            }
+        }
+        
+        for (ClientTeam oldTeam : teams.values()) {
+            ClientTeam newTeam = new ClientTeam();
+            newTeam.setIndex(oldTeam.getIndex());
+            newTeam.setName(oldTeam.getName());
+            newTeam.setMembers(teamMap.get(oldTeam.getIndex()));
+            teams.put(oldTeam.getIndex(), newTeam);
         }
     }
     
@@ -435,7 +472,14 @@ public class GameClient extends JFrame {
     }
     
     public void reportGameOptions(GameOptions options) {
-        sendCommandToServer("OPTIONS:" + options);
+        switch (state) {
+        case IN_MULTIPLAYER_GAME:
+        case MULTIPLAYER_POST_GAME:
+            sendCommandToServer("OPTIONS:" + options);
+            break;
+        default:
+            break;
+        }
     }
     
     public void updateGameOptions(GameOptions options) {
@@ -452,6 +496,10 @@ public class GameClient extends JFrame {
     
     public ClientPlayer getMyPlayer() {
         return myPlayer;
+    }
+    
+    public HashMap<Integer, ClientTeam> getTeams() {
+        return teams;
     }
     
     public void restartRound() {
@@ -1392,8 +1440,20 @@ public class GameClient extends JFrame {
         }
     }
     
-    public void reteam(int team) {
-        sendCommandToServer("RETEAM:" + team);
+    public void reteam(ClientPlayer player, int team) {
+        sendCommandToServer("RETEAM:" + player.getIndex() + ":" + team);
+    }
+    
+    public void renameTeam(String text) {
+        if (text.isEmpty()) {
+            notify("Name cannot be empty.");
+        } else if (options.isTeams()) {
+            sendCommandToServer("RENAMETEAM:STRING " + text.length() + ":" + text);
+        }
+    }
+    
+    public void scrambleTeams() {
+        sendCommandToServer("TEAMSCRAMBLE");
     }
     
     public void readyPressed() {

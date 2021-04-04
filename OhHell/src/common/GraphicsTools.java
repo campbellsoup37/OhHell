@@ -1,10 +1,12 @@
 package common;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.Stroke;
 
 public class GraphicsTools {
     public static final Font font = new Font("Arial", Font.PLAIN, 13);
@@ -12,6 +14,9 @@ public class GraphicsTools {
     public static final Font fontSmall = new Font("Arial", Font.BOLD, 9);
     public static final Font fontLargeBold = new Font("Arial", Font.BOLD, 40);
     public static final Font fontTitle = new Font("Arial", Font.BOLD, 52);
+    public static final double pointSize = 4;
+    public static final Color[] colors = { Color.BLUE, Color.RED, Color.GREEN, Color.MAGENTA, Color.CYAN, Color.ORANGE,
+            Color.PINK, Color.YELLOW, Color.GRAY, Color.BLACK };
     
     public static Graphics2D makeGraphics2D(Graphics graphics, boolean antialiasing, boolean smoothen) {
         Graphics2D graphics2 = (Graphics2D) graphics;
@@ -66,13 +71,29 @@ public class GraphicsTools {
                 (int) (y + m.getHeight() / 3));
     }
     
-    public static void drawBox(Graphics graphics, double x, double y, double width, double height, double roundness) {
+    public static void drawBox(Graphics graphics, double x, double y, double width, double height, 
+            double roundness, Color thickBorderColor) {
         Color color = graphics.getColor();
         graphics.fillRoundRect(
                 (int) x, (int) y, (int) width, (int) height, (int) roundness, (int) roundness);
         graphics.setColor(Color.BLACK);
-        graphics.drawRoundRect(
-                (int) x, (int) y, (int) width, (int) height, (int) roundness, (int) roundness);
+        
+        if (thickBorderColor != null) {
+            graphics.setColor(thickBorderColor);
+            Graphics2D graphics2d = (Graphics2D) graphics;
+            Stroke stroke = graphics2d.getStroke();
+            graphics2d.setStroke(new BasicStroke(2));
+            graphics2d.drawRoundRect(
+                    (int) x, (int) y, (int) width, (int) height, (int) roundness, (int) roundness);
+            graphics2d.setStroke(stroke);
+        } else {
+            graphics.drawRoundRect(
+                    (int) x, (int) y, (int) width, (int) height, (int) roundness, (int) roundness);
+        }
         graphics.setColor(color);
+    }
+    
+    public static void drawBox(Graphics graphics, double x, double y, double width, double height, double roundness) {
+        drawBox(graphics, x, y, width, height, roundness, null);
     }
 }

@@ -68,7 +68,8 @@ public class PlayerNamePlate extends CanvasInteractable {
                 graphics.setColor(new Color(210, 255, 255));
             }
         }
-        GraphicsTools.drawBox(graphics, x(), y(), width(), height(), 20);
+        GraphicsTools.drawBox(graphics, x(), y(), width(), height(), 20, 
+                canvas.getGameOptions().isTeams() ? GraphicsTools.colors[player.getTeam()] : null);
         
         // Name
         if (player.isKicked()) {

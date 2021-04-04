@@ -1,11 +1,16 @@
 package core;
 import java.util.List;
 
-public class AiStrategyModule {
+public abstract class AiStrategyModule {
     protected Player player;
+    protected GameOptions options;
     
     public void setPlayer(Player player) {
         this.player = player;
+    }
+    
+    public void setOptions(GameOptions options) {
+        this.options = options;
     }
     
     public void newHand() {}

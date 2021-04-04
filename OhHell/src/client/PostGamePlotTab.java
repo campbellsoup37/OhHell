@@ -75,12 +75,12 @@ public class PostGamePlotTab extends CanvasInteractable {
         graphics.setFont(GraphicsTools.font);
         for (int i = 0; i < sortedPlayers.size(); i++) {
             ClientPlayer player = sortedPlayers.get(i);
-            graphics.setColor(GameCanvas.colors[player.getIndex()]);
+            graphics.setColor(GraphicsTools.colors[player.getIndex()]);
             graphics.fillOval(
-                    (int) (x() + GameCanvas.finalScoreInnerMargin - GameCanvas.pointSize / 2), 
-                    (int) (y() + 30 + 15 * (i + 1) - GameCanvas.pointSize / 2), 
-                    (int) (GameCanvas.pointSize),
-                    (int) (GameCanvas.pointSize));
+                    (int) (x() + GameCanvas.finalScoreInnerMargin - GraphicsTools.pointSize / 2), 
+                    (int) (y() + 30 + 15 * (i + 1) - GraphicsTools.pointSize / 2), 
+                    (int) (GraphicsTools.pointSize),
+                    (int) (GraphicsTools.pointSize));
             graphics.setColor(Color.BLACK);
             GraphicsTools.drawStringJustified(graphics, 
                     GraphicsTools.fitString(

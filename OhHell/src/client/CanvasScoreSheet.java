@@ -194,17 +194,19 @@ public class CanvasScoreSheet extends CanvasInteractable {
 
                         // bid chips
                         int b = graphics.getFont().getSize() + 3;
+                        double chipStart = j < player.getScores().size() ? 0 : margin + b - wid;
+                        double chipSpacing = j < player.getScores().size() ? margin + b : wid;
                         for (ClientPlayer p : members) {
                             if (j < p.getBids().size()) {
                                 graphics.setColor(new Color(200, 200, 200, 180));
                                 graphics.fillOval(
-                                        (int) (currentX + 1 + fullWid - (margin + b) * k) - px, 
+                                        (int) (currentX + 1 + fullWid - chipSpacing * k - chipStart) - px, 
                                         (int) (scoreVSpacing * (j + 0.5) - b / 2) - py, 
                                         b, b);
                                 graphics.setColor(Color.BLACK);
                                 GraphicsTools.drawStringJustified(graphics, 
                                         p.getBids().get(j) + "", 
-                                        (int) (currentX + 1 + fullWid - (margin + b) * k + b / 2) - px, 
+                                        (int) (currentX + 1 + fullWid - chipSpacing * k - chipStart + b / 2) - px, 
                                         scoreVSpacing * (j + 0.5) - py, 
                                         1, 1);
                             }
@@ -334,17 +336,11 @@ public class CanvasScoreSheet extends CanvasInteractable {
                 graphics.setColor(Color.RED);
             }
             
-            if (player.equals(myPlayer)) {
-                graphics.setFont(GraphicsTools.fontBold);
-            } else {
-                graphics.setFont(GraphicsTools.font);
-            }
-            GraphicsTools.drawStringJustified(graphics, 
-                    GraphicsTools.fitString(graphics, player.getName(), wid - 2), 
-                    (int) (currentX + fullWid / 2), 
-                    y() + margin + scoreVSpacing / 2, 
-                    1, 1);
             if (player.isTeam()) {
+//                if (((ClientTeam) player).getMembers().isEmpty()) {
+//                    continue;
+//                }
+                
                 int j = 0;
                 for (ClientPlayer p : ((ClientTeam) player).getMembers()) {
                     if (p.equals(myPlayer)) {
@@ -368,7 +364,24 @@ public class CanvasScoreSheet extends CanvasInteractable {
                     graphics.setColor(Color.BLACK);
                     j++;
                 }
+                
+                graphics.setColor(Color.WHITE);
+                GraphicsTools.drawBox(graphics, currentX + 2, y() + margin, fullWid - 4, scoreVSpacing, 20, GraphicsTools.colors[player.getIndex()]);
+                graphics.setColor(Color.BLACK);
             }
+            if (player.equals(myPlayer) || player.isTeam()) {
+                graphics.setFont(GraphicsTools.fontBold);
+            } else {
+                graphics.setFont(GraphicsTools.font);
+            }
+            if (player.isTeam()) {
+                graphics.setColor(GraphicsTools.colors[player.getIndex()]);
+            }
+            GraphicsTools.drawStringJustified(graphics, 
+                    GraphicsTools.fitString(graphics, player.getName(), fullWid - 6), 
+                    (int) (currentX + fullWid / 2), 
+                    y() + margin + scoreVSpacing / 2, 
+                    1, 1);
             graphics.setFont(GraphicsTools.font);
             
             // vertical line
@@ -376,7 +389,7 @@ public class CanvasScoreSheet extends CanvasInteractable {
             if (i > 0) {
                 graphics.drawLine(
                         (int) currentX, 
-                        y() + margin, 
+                        y() + margin + (player.isTeam() ? scoreVSpacing : 0), 
                         (int) currentX, 
                         y() + margin + columnHeadingHeight() + lineV / 2);
             }

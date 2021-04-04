@@ -73,6 +73,10 @@ public class Player {
         return index;
     }
     
+    public boolean isTeam() {
+        return false;
+    }
+    
     public int getTeam() {
         return team;
     }
@@ -325,6 +329,8 @@ public class Player {
     public void commandUpdatePlayers(List<? extends Player> player) {}
     
     public void commandUpdateOptions(GameOptions options) {}
+    
+    public void commandUpdateTeams(List<Team> teams) {}
     
     //public void commandPlayersInfo(List<Player> players, List<Player> kibitzers, Player player) {}
     

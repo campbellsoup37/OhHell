@@ -1,20 +1,12 @@
 package client;
 
+import java.util.LinkedList;
 import java.util.List;
 
 public class ClientTeam extends ClientPlayer {
-    private int number;
-    private List<ClientPlayer> members;
+    private List<ClientPlayer> members = new LinkedList<>();
     
-    public ClientTeam(int number, List<ClientPlayer> members) {
-        this.setNumber(number);
-        this.setMembers(members);
-    }
-    
-    @Override
-    public String getName() {
-        return "Team " + number;
-    }
+    public ClientTeam() {}
     
     @Override
     public boolean isTeam() {
@@ -23,30 +15,22 @@ public class ClientTeam extends ClientPlayer {
     
     @Override
     public List<Integer> getScores() {
-        return members.get(0).getScores();
+        return members == null || members.isEmpty() ? new LinkedList<>() : members.get(0).getScores();
     }
     
     @Override
     public int getScore() {
-        return members.get(0).getScore();
+        return members == null || members.isEmpty() ? 0 : members.get(0).getScore();
     }
     
     @Override
     public int getBid() {
-        return members.stream().map(ClientPlayer::getBid).reduce(0, (a, b) -> a + b);
+        return members == null ? 0 : members.stream().map(ClientPlayer::getBid).reduce(0, (a, b) -> a + b);
     }
     
     @Override
     public int getTaken() {
-        return members.stream().map(ClientPlayer::getTaken).reduce(0, (a, b) -> a + b);
-    }
-
-    public int getNumber() {
-        return number;
-    }
-
-    public void setNumber(int number) {
-        this.number = number;
+        return members == null ? 0 : members.stream().map(ClientPlayer::getTaken).reduce(0, (a, b) -> a + b);
     }
 
     public List<ClientPlayer> getMembers() {

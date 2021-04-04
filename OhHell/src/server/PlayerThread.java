@@ -74,7 +74,15 @@ public class PlayerThread extends Thread {
                 } else if (command.equals("RENAME")) {
                     server.renamePlayer(player, parsedContent.get(0));
                 } else if (command.equals("RETEAM")) {
-                    server.reteamPlayer(player, Integer.parseInt(parsedContent.get(0)));
+                    server.reteamPlayer(
+                            Integer.parseInt(parsedContent.get(0)), 
+                            Integer.parseInt(parsedContent.get(1)));
+                } else if (command.equals("RENAMETEAM")) {
+                    if (!player.isKibitzer()) {
+                        server.renameTeam(player.getTeam(), parsedContent.get(0));
+                    }
+                } else if (command.equals("TEAMSCRAMBLE")) {
+                    server.scrambleTeams();
                 } else if (command.equals("OPTIONS")) {
                     if (player.isHost()) {
                         server.updateOptions(new GameOptions(parsedContent.get(0)));

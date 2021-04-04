@@ -8,9 +8,14 @@ import common.GraphicsTools;
 
 public class CanvasButton extends CanvasInteractable {
     private String text = "";
+    private Color thickBorderColor = null;
     
     public CanvasButton(String text) {
         this.text = text;
+    }
+    
+    public void setThickBorderColor(Color color) {
+        thickBorderColor = color;
     }
     
     public boolean isSelected() {
@@ -60,7 +65,7 @@ public class CanvasButton extends CanvasInteractable {
                     }
                 }
             }
-            GraphicsTools.drawBox(graphics, x(), y(), width(), height(), 15);
+            GraphicsTools.drawBox(graphics, x(), y(), width(), height(), 15, thickBorderColor);
             graphics.setFont(font());
             graphics.setColor(Color.BLACK);
             GraphicsTools.drawStringJustified(graphics, text(), x() + width() / 2, y() + height() / 2, 1, 1);

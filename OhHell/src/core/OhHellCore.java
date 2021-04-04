@@ -12,8 +12,9 @@ import java.util.stream.Collectors;
 public class OhHellCore {
     private final boolean verbose = false;
     
-    private List<Player> players = new ArrayList<Player>();
-    private List<Player> kibitzers = new ArrayList<Player>();
+    private List<Player> players = new ArrayList<>();
+    private List<Player> kibitzers = new ArrayList<>();
+    private HashMap<Integer, Team> teams = new HashMap<>();
     
     private AiKernel aiKernel;
     private AiTrainer aiTrainer;
@@ -61,6 +62,10 @@ public class OhHellCore {
         this.kibitzers = kibitzers;
     }
     
+    public void setTeams(HashMap<Integer, Team> teams) {
+        this.teams = teams;
+    }
+    
     public Deck getDeck() {
         return deck;
     }
@@ -72,17 +77,6 @@ public class OhHellCore {
             players.add(player);
             player.setIndex(players.size() - i);
         }
-//        players.get(0).setTeam(1);
-//        players.get(1).setTeam(2);
-//        players.get(2).setTeam(3);
-//        players.get(3).setTeam(4);
-//        players.get(4).setTeam(5);
-//        players.get(5).setTeam(1);
-//        players.get(6).setTeam(2);
-//        players.get(7).setTeam(3);
-//        players.get(8).setTeam(4);
-//        players.get(9).setTeam(5);
-//        options.setTeams(true);
         for (Player player : players) {
             player.commandUpdatePlayers(players);
         }
@@ -122,20 +116,32 @@ public class OhHellCore {
     public void startGame(GameOptions options, List<AiStrategyModule> aiStrategyModules) {
         this.options = options;
         int robotCount = options.getNumRobots();
-        deck.setD(options.getD());
-        int defaultStartingH = GameOptions.defaultStartingH(players.size() + robotCount, deck.getD());
-        if (options.getStartingH() <= 0 || options.getStartingH() > defaultStartingH) {
-            options.setStartingH(defaultStartingH);
-        }
 
         if (verbose) {
             System.out.println("Game started with options:");
             System.out.println(options.toVerboseString());
         }
         
+        List<Player> dummies = players.stream().filter(p -> !p.isHuman()).collect(Collectors.toList());
+        players.removeAll(dummies);
+        for (Player dummy : dummies) {
+            for (Player player : players) {
+                player.commandRemovePlayer(dummy);
+            }
+            for (Player kibitzer : kibitzers) {
+                kibitzer.commandRemovePlayer(dummy);
+            }
+        }
+        
+        deck.setD(options.getD());
+        int defaultStartingH = GameOptions.defaultStartingH(players.size() + robotCount, deck.getD());
+        if (options.getStartingH() <= 0 || options.getStartingH() > defaultStartingH) {
+            options.setStartingH(defaultStartingH);
+        }
+        
         if (robotCount > 0) {
             List<AiPlayer> aiPlayers = aiKernel.createAiPlayers(
-                    players.size() + robotCount, robotCount, aiStrategyModules, 0);
+                    players.size() + robotCount, options, aiStrategyModules, dummies, 0);
             for (int i = 0; i < aiPlayers.size(); i++) {
                 aiPlayers.get(i).setId("@bot" + i);
             }
@@ -148,7 +154,8 @@ public class OhHellCore {
             players.addAll(aiPlayers);
             aiKernel.start();
         }
-        //deck.setSeed(-4258269598777096215L);
+        
+        // TODO Check teams are valid
         
         gameStarted = true;
         randomizePlayerOrder();
@@ -421,6 +428,32 @@ public class OhHellCore {
         }
     }
     
+    // Used in bidding. Returns the highest makeable bid (max 0) for the given player.
+    public int highestMakeableBid(Player player, boolean considerDealer) {
+        if (options.isTeams()) {
+            int totalBid = 0;
+            int teamBid = 0;
+            for (Player p : players) {
+                totalBid += p.getBid();
+                if (p.getTeam() == player.getTeam()) {
+                    teamBid += p.getBid();
+                }
+            }
+            
+            return Math.max(
+                    rounds.get(roundNumber).getHandSize()
+                    - teamBid
+                    - (considerDealer && totalBid == teamBid && isDealerOnMyTeam(player) ? 1 : 0),
+                    0);
+        } else {
+            return rounds.get(roundNumber).getHandSize();
+        }
+    }
+    
+    public boolean isDealerOnMyTeam(Player player) {
+        return players.get(getDealer()).getTeam() == player.getTeam();
+    }
+    
     public List<Card> whatCanIPlay(Player player) {
         List<Card> canPlay = player.getHand().stream()
                 .filter(c -> players.get(leader).getTrick() == null 
@@ -431,6 +464,25 @@ public class OhHellCore {
             canPlay = player.getHand();
         }
         return canPlay;
+    }
+    
+    // Returns how many tricks the given player wants
+    public int wants(Player player, int handSize) {
+        int myWants = player.getBid() - player.getTaken();
+        myWants = Math.max(Math.min(myWants, handSize), 0);
+        
+        if (options.isTeams()) {
+            int teamWants = players.stream()
+                    .map(p -> p.getTeam() == player.getTeam() ? p.getBid() - p.getTaken() : 0)
+                    .reduce(0, (a, b) -> a + b);
+            teamWants = Math.max(Math.min(teamWants, handSize), 0);
+            myWants = Math.max(Math.min(myWants, teamWants), 0);
+            if (teamWants == handSize) {
+                myWants = teamWants;
+            }
+        }
+        
+        return myWants;
     }
     
     // ---------------------------------------------------------------------------------------------

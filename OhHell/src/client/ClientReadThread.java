@@ -78,6 +78,8 @@ public class ClientReadThread extends Thread {
             client.removePlayer(parsedContent.get(0));
         } else if (command.equals("UPDATEPLAYERS")) {
             client.updatePlayers(contentToPlayers(parsedContent));
+        } else if (command.equals("UPDATETEAMS")) {
+            client.updateTeams(contentToTeams(parsedContent));
         } else if (command.equals("UPDATEROUNDS")) {
             List<int[]> rounds = new ArrayList<>();
             int roundNumber = Integer.parseInt(parsedContent.remove());
@@ -206,6 +208,22 @@ public class ClientReadThread extends Thread {
         }
         
         return players;
+    }
+    
+    public List<ClientTeam> contentToTeams(List<String> content) {
+        int numParams = 2;
+        
+        int numTeams = content.size() / numParams;
+        List<ClientTeam> teams = new ArrayList<>(numTeams);
+        
+        for (int i = 0; i < numTeams; i++) {
+            ClientTeam cTeam = new ClientTeam();
+            cTeam.setName(content.get(numParams * i + 0));
+            cTeam.setIndex(Integer.parseInt(content.get(numParams * i + 1)));
+            teams.add(cTeam);
+        }
+        
+        return teams;
     }
     
     public LinkedList<String> parseCommandContent(String content) {

@@ -12,6 +12,7 @@ import java.net.Socket;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -35,9 +36,11 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
 import core.Card;
+import core.DummyPlayer;
 import core.GameOptions;
 import core.OhHellCore;
 import core.Player;
+import core.Team;
 import common.OhcButton;
 import common.FileTools;
 import common.OhcScrollPane;
@@ -77,6 +80,7 @@ public class GameServer extends JFrame {
     
     private List<Player> players = new ArrayList<>();
     private List<Player> kibitzers = new ArrayList<>();
+    private HashMap<Integer, Team> teams = new HashMap<>();
     private GameOptions options = new GameOptions();
     
     private Random random = new Random();
@@ -197,6 +201,9 @@ public class GameServer extends JFrame {
             };
             core.setPlayers(players);
             core.setKibitzers(kibitzers);
+            if (options.isTeams()) {
+                core.setTeams(teams);
+            }
             
             port = Integer.parseInt(portField.getText());
             if (serverSocket != null) {
@@ -222,7 +229,7 @@ public class GameServer extends JFrame {
         if (dummiesToRemove < 0) {
             List<Player> newDummies = new LinkedList<>();
             for (int i = 0; i < -dummiesToRemove; i++) {
-                Player newDummy = new DummyPlayer();
+                Player newDummy = new DummyPlayer(random.nextLong());
                 newDummy.setIndex(players.size() + i);
                 newDummies.add(newDummy);
             }
@@ -233,8 +240,10 @@ public class GameServer extends JFrame {
                 player.commandAddPlayers(newDummies, null);
             }
             players.addAll(newDummies);
+            updateTeams();
         } else if (dummiesToRemove > 0) {
             kickDummies(dummiesToRemove);
+            updateTeams();
         }
         
         this.options = options;
@@ -268,7 +277,6 @@ public class GameServer extends JFrame {
     
     public void startGame(GameOptions options) {
         this.options = options;
-        kickDummies(options.getNumRobots());
         core.startGame(options, null);
     }
     
@@ -386,6 +394,7 @@ public class GameServer extends JFrame {
         }
         
         player.commandUpdateOptions(options);
+        updateTeams();
         
         updatePlayersList();
     }
@@ -400,30 +409,100 @@ public class GameServer extends JFrame {
         }
     }
     
-    public void reteamPlayer(Player player, int team) {
-        if (team == -1) {
-            Set<Integer> teams = new HashSet<>();
-            for (Player p : players) {
-                if (p != player) {
+    public void reteamPlayers(HashMap<Player, Integer> map) {
+        for (Player player : map.keySet()) {
+            int team = map.get(player);
+            if (team == -1) {
+                Set<Integer> teams = new HashSet<>();
+                for (Player p : players) {
+                    if (p != player) {
+                        teams.add(p.getTeam());
+                    }
+                }
+                for (Player p : kibitzers) {
                     teams.add(p.getTeam());
                 }
+                int i = 0;
+                while (teams.contains(i)) {
+                    i++;
+                }
+                team = i;
             }
-            for (Player p : kibitzers) {
-                teams.add(p.getTeam());
-            }
-            int i = 0;
-            while (teams.contains(i)) {
-                i++;
-            }
-            team = i;
+            player.setTeam(team);
         }
         
-        player.setTeam(team);
         for (Player p : players) {
-            p.commandUpdatePlayers(Arrays.asList(player));
+            p.commandUpdatePlayers(new LinkedList<>(map.keySet()));
         }
         for (Player p : kibitzers) {
-            p.commandUpdatePlayers(Arrays.asList(player));
+            p.commandUpdatePlayers(new LinkedList<>(map.keySet()));
+        }
+        
+        updateTeams();
+    }
+    
+    public void reteamPlayer(int index, int team) {
+        HashMap<Player, Integer> map = new HashMap<>();
+        map.put(players.get(index), team);
+        reteamPlayers(map);
+    }
+    
+    public void updateTeams() {
+        Set<Integer> teamSet = players.stream().map(Player::getTeam).collect(Collectors.toSet());
+        
+        List<Integer> staleTeams = new LinkedList<>();
+        for (int index : teams.keySet()) {
+            if (!teamSet.contains(index)) {
+                staleTeams.add(index);
+            } else {
+                teamSet.remove(index);
+            }
+        }
+        for (int index : staleTeams) {
+            teams.remove(index);
+        }
+        
+        for (int index : teamSet) {
+            Team team = new Team();
+            team.setIndex(index);
+            team.setName("Team " + (index + 1));
+            teams.put(index, team);
+        }
+        
+        for (Player p : players) {
+            p.commandUpdateTeams(new LinkedList<>(teams.values()));
+        }
+        for (Player p : kibitzers) {
+            p.commandUpdateTeams(new LinkedList<>(teams.values()));
+        }
+    }
+    
+    public void renameTeam(int teamNumber, String name) {
+        Team team = teams.get(teamNumber);
+        team.setName(name);
+        updateTeams();
+    }
+    
+    public void scrambleTeams() {
+        List<Integer> properDivisors = new LinkedList<>();
+        for (int i = 2; i < players.size(); i++) {
+            if (players.size() % i == 0) {
+                properDivisors.add(i);
+            }
+        }
+        if (!properDivisors.isEmpty()) {
+            int numTeams = properDivisors.get(random.nextInt(properDivisors.size()));
+            int playersPerTeam = players.size() / numTeams;
+            List<Player> playersToChoose = new ArrayList<>(players.size());
+            playersToChoose.addAll(players);
+            HashMap<Player, Integer> map = new HashMap<>();
+            for (int i = 0; i < numTeams; i++) {
+                for (int j = 0; j < playersPerTeam; j++) {
+                    Player player = playersToChoose.remove(random.nextInt(playersToChoose.size()));
+                    map.put(player, i);
+                }
+            }
+            reteamPlayers(map);
         }
     }
     
@@ -554,6 +633,8 @@ public class GameServer extends JFrame {
         if (kick && gameStarted() && !player.isKibitzer()) {
             core.reportKick(player.getIndex());
         }
+        
+        updateTeams();
         
         updatePlayersList();
     }
