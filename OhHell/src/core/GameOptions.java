@@ -5,7 +5,7 @@ public class GameOptions {
     private int D = 1;
     private boolean oregon = false;
     private int robotDelay = 0;
-    private int startingH;
+    private int startingH = -1;
     private boolean teams = false;
     
     public GameOptions() {}

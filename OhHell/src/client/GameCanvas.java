@@ -1391,7 +1391,7 @@ public class GameCanvas extends OhcCanvas {
                         if (fieldText.charAt(0) == '/') {
                             String[] commandContent = fieldText.substring(1).split(" ", 2);
                             String command = commandContent[0];
-                            String content = commandContent[1].trim();
+                            String content = commandContent.length > 1 ? commandContent[1].trim() : "";
                             
                             // Break into args
                             List<String> args = new ArrayList<>();

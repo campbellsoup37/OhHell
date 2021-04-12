@@ -232,6 +232,7 @@ public class PreGameMenu extends CanvasInteractable {
             @Override
             public void click() {
                 options.setD(3 - options.getD());
+                options.setStartingH(-1);
                 client.reportGameOptions(options);
             }
         });
