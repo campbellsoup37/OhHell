@@ -162,7 +162,7 @@ public class OhHellCore {
 
         if (record) {
             recorder.start();
-            recorder.recordInfo(options, players);
+            recorder.recordInfo(options, players, teams);
 //            recorder.recordPlayers(
 //                    players.stream()
 //                    .map(Player::realName)

@@ -65,13 +65,19 @@ public class OhcTextField extends JTextField {
     public boolean isEmpty() {
         return showingDefaultText;
     }
+    
+    public boolean isBoxed() {
+        return true;
+    }
 
     @Override
     public void paintComponent(Graphics graphics) {
         if (isVisible()) {
             Graphics2D graphics2 = GraphicsTools.makeGraphics2D(graphics, true, false);
-            graphics2.setColor(Color.WHITE);
-            GraphicsTools.drawBox(graphics2, 0, 0, getWidth() - 1, getHeight() - 1, 15);
+            if (isBoxed()) {
+                graphics2.setColor(Color.WHITE);
+                GraphicsTools.drawBox(graphics2, 0, 0, getWidth() - 1, getHeight() - 1, 15);
+            }
             
             if (showingDefaultText) {
                 setForeground(Color.GRAY);

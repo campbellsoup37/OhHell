@@ -13,6 +13,8 @@ public class CanvasEmbeddedSwing extends CanvasInteractable {
     private Component component;
     private OhcCanvas canvas;
     
+    private boolean grabbingFocus = false;
+    
     public CanvasEmbeddedSwing(Component component, OhcCanvas canvas) {
         this.component = component;
         this.canvas = canvas;
@@ -81,6 +83,10 @@ public class CanvasEmbeddedSwing extends CanvasInteractable {
                 public void run() {
                     component.setVisible(isShown());
                     component.repaint();
+                    if (grabbingFocus && component.isEnabled()) {
+                        focusGrabber();
+                        grabbingFocus = false;
+                    }
                 }
             });
         }
@@ -89,8 +95,22 @@ public class CanvasEmbeddedSwing extends CanvasInteractable {
                 public void run() {
                     component.setEnabled(isEnabled());
                     component.repaint();
+                    if (grabbingFocus && component.isVisible()) {
+                        focusGrabber();
+                        grabbingFocus = false;
+                    }
                 }
             });
+        }
+    }
+    
+    public void focusGrabber() {}
+    
+    public void grabFocus() {
+        if (component.isVisible() && component.isEnabled()) {
+            focusGrabber();
+        } else {
+            grabbingFocus = true;
         }
     }
 }

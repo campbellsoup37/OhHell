@@ -201,9 +201,7 @@ public class GameServer extends JFrame {
             };
             core.setPlayers(players);
             core.setKibitzers(kibitzers);
-            if (options.isTeams()) {
-                core.setTeams(teams);
-            }
+            core.setTeams(teams);
             
             port = Integer.parseInt(portField.getText());
             if (serverSocket != null) {

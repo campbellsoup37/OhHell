@@ -2499,6 +2499,11 @@ public class GameCanvas extends OhcCanvas {
                     team.setMembers(teamMap.get(teamNumber));
                     teams.put(teamNumber, team);
                 }
+            } else if (type.equals("teaminfo")) {
+                for (String teamInfo : content) {
+                    String[] info = teamInfo.split(Recorder.splitPreceder + Recorder.commandDelimiter2);
+                    teams.get(Integer.parseInt(info[0])).setName(Recorder.decodeString(info[1]));
+                }
             } else if (type.equals("round")) {
                 rounds.add(new int[] { Integer.parseInt(content[0]), Integer.parseInt(content[1]), 0 });
             } else if (type.equals("hands")) {

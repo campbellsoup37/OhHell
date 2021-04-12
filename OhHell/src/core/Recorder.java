@@ -1,4 +1,5 @@
 package core;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -37,7 +38,7 @@ public class Recorder {
                 .replace("\\" + commandDelimiter2, commandDelimiter2);
     }
     
-    public void recordInfo(GameOptions options, List<Player> players) {
+    public void recordInfo(GameOptions options, List<Player> players, HashMap<Integer, Team> teams) {
         file.add("decks" + commandDelimiter1 + options.getD());
         if (options.isOregon()) {
             file.add("oregon" + commandDelimiter1 + "true");
@@ -56,6 +57,14 @@ public class Recorder {
                 line2 += commandDelimiter1 + player.getTeam();
             }
             file.add(line2);
+            String line3 = "teaminfo";
+            for (int teamNumber : teams.keySet()) {
+                Team team = teams.get(teamNumber);
+                line3 += commandDelimiter1
+                        + teamNumber + commandDelimiter2
+                        + encodeString(team.getName());
+            }
+            file.add(line3);
         }
     }
     

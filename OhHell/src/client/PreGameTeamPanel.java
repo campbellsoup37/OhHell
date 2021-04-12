@@ -2,12 +2,19 @@ package client;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.swing.JTextField;
+
 import common.GraphicsTools;
+import common.OhcTextField;
 import core.GameOptions;
 
 public class PreGameTeamPanel extends CanvasInteractable {
@@ -30,6 +37,9 @@ public class PreGameTeamPanel extends CanvasInteractable {
     private class TeamButton extends CanvasButton {
         public int y;
         public ClientTeam team;
+        
+        public CanvasEmbeddedSwing nameInteractable;
+        private boolean renaming = false;
         
         public class MemberButton extends CanvasButton {
             public int y;
@@ -84,6 +94,68 @@ public class PreGameTeamPanel extends CanvasInteractable {
             this();
             this.team = team;
             setThickBorderColor(GraphicsTools.colors[team.getIndex()]);
+            
+            OhcTextField nameField = new OhcTextField("") {
+                private static final long serialVersionUID = 1L;
+
+                @Override
+                public boolean isBoxed() {
+                    return false;
+                }
+            };
+            nameField.setHorizontalAlignment(JTextField.CENTER);
+            nameField.setText(team.getName());
+            nameField.addFocusListener(new FocusListener() {
+                @Override
+                public void focusGained(FocusEvent arg0) {}
+
+                @Override
+                public void focusLost(FocusEvent arg0) {
+                    client.renameTeam(nameField.getText());
+                    renaming = false;
+                }
+            });
+            nameField.addKeyListener(new KeyAdapter() {
+                @Override
+                public void keyReleased(KeyEvent e) {
+                    if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                        client.renameTeam(nameField.getText());
+                        renaming = false;
+                    }
+                }
+            });
+            nameInteractable = new CanvasEmbeddedSwing(nameField, canvas) {
+                @Override
+                public int x() {
+                    return TeamButton.this.x() + 3;
+                }
+                
+                @Override
+                public int y() {
+                    return TeamButton.this.y() + 3;
+                }
+                
+                @Override
+                public int width() {
+                    return TeamButton.this.width() - 6;
+                }
+                
+                @Override
+                public int height() {
+                    return teamNameHeight;
+                }
+                
+                @Override
+                public boolean isShown() {
+                    return renaming;
+                }
+                
+                @Override
+                public void focusGrabber() {
+                    nameField.grabFocus();
+                    nameField.select(0, nameField.getText().length());
+                }
+            };
         }
         
         @Override
@@ -113,11 +185,13 @@ public class PreGameTeamPanel extends CanvasInteractable {
             super.paint(graphics);
             
             if (team != null) {
-                graphics.setFont(GraphicsTools.fontBold);
-                graphics.setColor(GraphicsTools.colors[team.getIndex()]);
-                GraphicsTools.drawStringJustified(graphics, 
-                        GraphicsTools.fitString(graphics, team.getName(), width() - 6), 
-                        x() + width() / 2, y() + 3 + teamNameHeight / 2, 1, 1);
+                if (!renaming) {
+                    graphics.setFont(GraphicsTools.fontBold);
+                    graphics.setColor(GraphicsTools.colors[team.getIndex()]);
+                    GraphicsTools.drawStringJustified(graphics, 
+                            GraphicsTools.fitString(graphics, team.getName(), width() - 6), 
+                            x() + width() / 2, y() + 3 + teamNameHeight / 2, 1, 1);
+                }
                 graphics.setFont(GraphicsTools.font);
                 graphics.setColor(Color.BLACK);
                 
@@ -132,6 +206,10 @@ public class PreGameTeamPanel extends CanvasInteractable {
                     memberButton.paint(graphics);
                     y1 += memberButton.height() + memberMargin;
                 }
+                
+                if (nameInteractable != null) {
+                    nameInteractable.paint(graphics);
+                }
             }
         }
         
@@ -141,6 +219,9 @@ public class PreGameTeamPanel extends CanvasInteractable {
                 ClientPlayer toMove = botSelected == null ? myPlayer : botSelected;
                 if (team.getIndex() != toMove.getTeam()) {
                     client.reteam(toMove, team.getIndex());
+                } else if (toMove == myPlayer) {
+                    renaming = true;
+                    nameInteractable.grabFocus();
                 }
                 botSelected = null;
             }
@@ -160,6 +241,12 @@ public class PreGameTeamPanel extends CanvasInteractable {
                 }
             }
             return ans;
+        }
+        
+        public void dispose() {
+            if (nameInteractable != null) {
+                nameInteractable.dispose();
+            }
         }
     }
     private HashMap<ClientTeam, TeamButton> teams = new HashMap<>();
@@ -248,6 +335,7 @@ public class PreGameTeamPanel extends CanvasInteractable {
             }
             
             for (ClientTeam team : staleTeamButtons) {
+                teams.get(team).dispose();
                 teams.remove(team);
             }
             
