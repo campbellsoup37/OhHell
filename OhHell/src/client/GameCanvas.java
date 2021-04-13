@@ -941,7 +941,9 @@ public class GameCanvas extends OhcCanvas {
             public void paint(Graphics graphics) {
                 super.paint(graphics);
                 if (isShown() && undoBidTimer != -1) {
-                    double progress = Math.min((double) (System.currentTimeMillis() - undoBidTimer) / 2000, 1);
+                    double progress = Math.min((double) 
+                            (System.currentTimeMillis() - undoBidTimer) / client.getGameOptions().getRobotDelay(), 
+                            1);
                     graphics.setColor(new Color(175, 175, 175));
                     graphics.fillRect((int) (x() + 0.05 * width()), y() - 20, (int) (0.9 * width()), 3);
                     graphics.setColor(new Color(255, 255, 255));

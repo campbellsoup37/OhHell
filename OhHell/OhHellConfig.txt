@@ -1,5 +1,5 @@
 windowlocationmenu = 475,303
-windowlocationingame = -1283,39
+windowlocationingame = -1303,38
 windowsizeingame = 1775,950
 windowmaximizedingame = false
 recentusername = soup

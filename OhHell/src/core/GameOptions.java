@@ -4,7 +4,7 @@ public class GameOptions {
     private int numRobots = 0;
     private int D = 1;
     private boolean oregon = false;
-    private int robotDelay = 0;
+    private int robotDelay = 2000;
     private int startingH = -1;
     private boolean teams = false;
     

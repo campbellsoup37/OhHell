@@ -1,7 +1,10 @@
 package client;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Stroke;
 
 import common.GraphicsTools;
 
@@ -113,9 +116,17 @@ public class PlayerNamePlate extends CanvasInteractable {
                 graphics.fillOval((int) (bidX - radius / 2), (int) (bidY - radius / 2), (int) radius, (int) radius);
                 graphics.setColor(Color.BLACK);
                 if (player.getBidTimer() == 0) {
+                    Graphics2D graphics2d = (Graphics2D) graphics;
+                    Stroke stroke = graphics2d.getStroke();
+                    if (canvas.getGameOptions().isTeams()) {
+                        graphics.setColor(GraphicsTools.colors[player.getTeam()]);
+                        graphics2d.setStroke(new BasicStroke(2));
+                    }
                     graphics.drawOval((int) (bidX - radius / 2), (int) (bidY - radius / 2), (int) radius, (int) radius);
                     graphics.setFont(GraphicsTools.fontLargeBold);
+                    graphics2d.setStroke(stroke);
                 }
+                graphics.setColor(Color.BLACK);
                 GraphicsTools.drawStringJustified(graphics, player.getBid() + "", 
                         bidX, 
                         bidY, 
