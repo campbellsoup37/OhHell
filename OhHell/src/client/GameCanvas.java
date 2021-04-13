@@ -2186,10 +2186,17 @@ public class GameCanvas extends OhcCanvas {
         new CanvasTimerEntry(client.devSpeedSelected() ? 1 : messageTime, this, actionQueue, false) {
             @Override
             public void onFirstAction() {
-                if (myPlayer.getBid() == myPlayer.getTaken()) {
-                    message = "You made your bid!";
+                String pronoun = "You";
+                ClientPlayer player = myPlayer;
+                if (client.getGameOptions().isTeams()) {
+                    pronoun = "Your team";
+                    player = client.getTeams().get(myPlayer.getTeam());
+                }
+                
+                if (player.getBid() == player.getTaken()) {
+                    message = pronoun + " made it!";
                 } else {
-                    message = "You went down " + Math.abs(myPlayer.getBid() - myPlayer.getTaken()) + ".";
+                    message = pronoun + " went down " + Math.abs(player.getBid() - player.getTaken()) + ".";
                 }
                 paintMessageMarker = true;
                 state = GameState.ENDOFROUND;
