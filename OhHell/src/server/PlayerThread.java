@@ -9,26 +9,26 @@ import java.util.LinkedList;
 import java.util.Random;
 
 import core.Card;
+import core.GameCoordinator;
 import core.GameOptions;
 import core.Player;
 
 public class PlayerThread extends Thread {
     private Socket socket;
     private GameServer server;
+    private GameCoordinator coordinator;
     private PrintWriter writer;
     private BufferedReader reader;
     private HumanPlayer player;
     
     private boolean running = true;
     
-    private volatile LinkedList<Command> commandQueue = new LinkedList<Command>();
-    private volatile ConfirmationThread confThread;
-    
     private Random random = new Random();
     
-    public PlayerThread(Socket socket, GameServer server) {
+    public PlayerThread(Socket socket, GameServer server, GameCoordinator coordinator) {
         this.socket = socket;
         this.server = server;
+        this.coordinator = coordinator;
     }
     
     @Override
@@ -61,53 +61,51 @@ public class PlayerThread extends Thread {
                 LinkedList<String> parsedContent = parseCommandContent(content);
                 
                 if (command.equals("ID")) {
-                    server.joinPlayer(player, parsedContent.get(0));
+                    coordinator.joinPlayer(player, parsedContent.get(0));
                 } else if (command.equals("CLOSE")) {
                     handleDisconnect();
                     break;
                 } else if (command.equals("STOP")) {
-                    server.requestEndGame(player);
+                    coordinator.requestEndGame(player);
                 } else if (command.equals("KIBITZER")) {
-                    server.setKibitzer(player, parsedContent.get(0).equals("true"));
-                } else if (command.equals("UPDATEPLAYERS")) {
-                    server.updatePlayersList();
+                    coordinator.setKibitzer(player, parsedContent.get(0).equals("true"));
                 } else if (command.equals("RENAME")) {
-                    server.renamePlayer(player, parsedContent.get(0));
+                    coordinator.renamePlayer(player, parsedContent.get(0));
                 } else if (command.equals("RETEAM")) {
-                    server.reteamPlayer(
+                    coordinator.reteamPlayer(
                             Integer.parseInt(parsedContent.get(0)), 
                             Integer.parseInt(parsedContent.get(1)));
                 } else if (command.equals("RENAMETEAM")) {
                     if (!player.isKibitzer()) {
-                        server.renameTeam(player.getTeam(), parsedContent.get(0));
+                        coordinator.renameTeam(player.getTeam(), parsedContent.get(0));
                     }
                 } else if (command.equals("TEAMSCRAMBLE")) {
-                    server.scrambleTeams();
+                    coordinator.scrambleTeams();
                 } else if (command.equals("OPTIONS")) {
                     if (player.isHost()) {
-                        server.updateOptions(new GameOptions(parsedContent.get(0)));
+                        coordinator.updateOptions(new GameOptions(parsedContent.get(0)));
                     }
                 } else if (command.equals("START")) {
                     if (player.isHost()) {
                         GameOptions options = new GameOptions(parsedContent.get(0));
-                        server.startGame(options);
+                        coordinator.startGame(options);
                     }
                 } else if (command.equals("BID")) {
-                    server.makeBid(player, Integer.parseInt(parsedContent.get(0)));
+                    coordinator.makeBid(player, Integer.parseInt(parsedContent.get(0)));
                 } else if (command.equals("PLAY")) {
-                    server.makePlay(player, new Card(parsedContent.get(0)));
+                    coordinator.makePlay(player, new Card(parsedContent.get(0)));
                 } else if (command.equals("UNDOBID")) {
-                    server.processUndoBid(player);
+                    coordinator.processUndoBid(player);
                 } else if (command.equals("CLAIM")) {
-                    server.processClaim(player);
+                    coordinator.processClaim(player);
                 } else if (command.equals("CLAIMRESPONSE")) {
-                    server.processClaimResponse(player, parsedContent.get(0).equals("ACCEPT"));
+                    coordinator.processClaimResponse(player, parsedContent.get(0).equals("true"));
                 } else if (command.equals("VOTEKICK")) {
-                    server.addKickVote(Integer.parseInt(parsedContent.get(0)), player);
+                    coordinator.addKickVote(Integer.parseInt(parsedContent.get(0)), player);
                 } else if (command.equals("CHAT")) {
-                    server.sendChat(player, parsedContent.get(0), parsedContent.get(1));
+                    coordinator.sendChat(player, parsedContent.get(0), parsedContent.get(1));
                 } else if (command.equals("POKE")) {
-                    server.pokePlayer();
+                    coordinator.pokePlayer();
                 } else if (command.equals("PING")) {
                     player.ping();
                 }
@@ -148,10 +146,6 @@ public class PlayerThread extends Thread {
         return socket;
     }
     
-    public ConfirmationThread getConfThread() {
-        return confThread;
-    }
-    
     public void setPlayer(HumanPlayer player) {
         this.player = player;
     }
@@ -176,24 +170,14 @@ public class PlayerThread extends Thread {
     }
     
     public void handleDisconnect() {
-        if (server.gameStarted() && player.isJoined() && !player.isKibitzer()) {
-            server.removePlayer(player, false);
-        } else {
-            server.removePlayer(player, true);
-        }
-        commandQueue.clear();
+        coordinator.disconnectPlayer(player);
         endThread();
     }
     
     public void endThread() {
         try {
-            if (confThread != null) {
-                confThread.disconnect();
-            }
             running = false;
             socket.close();
-        } catch (IOException e) {
-            
-        }
+        } catch (IOException e) {}
     }
 }

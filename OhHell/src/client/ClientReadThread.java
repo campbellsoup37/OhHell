@@ -156,8 +156,6 @@ public class ClientReadThread extends Thread {
             client.receivePostGameFile(parsedContent.get(0));
         } else if (command.equals("POSTGAMEFILEPIECE")) {
             client.receivePostGameFilePiece(parsedContent.get(0));
-        } else if (command.equals("RECONNECT")) {
-            client.reconnect(parsedContent);
         } else if (command.equals("STATEDEALERLEADER")) {
             client.setDealerLeader(Integer.parseInt(parsedContent.get(0)), 
                     Integer.parseInt(parsedContent.get(1)));

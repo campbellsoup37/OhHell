@@ -5,7 +5,7 @@ public class RoundDetails {
     private boolean roundOver;
     
     public RoundDetails(int handSize) {
-        dealer = new Player("");
+        dealer = new DummyPlayer(0);
         this.handSize = handSize;
         roundOver = false;
     }

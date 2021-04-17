@@ -5,26 +5,16 @@ import java.util.stream.Collectors;
 
 import core.Card;
 import core.GameOptions;
-import core.OhHellCore;
 import core.Player;
 import core.RoundDetails;
+import core.Team;
 
 public class SinglePlayerPlayer extends Player {
     private GameClient client;
     
-    OhHellCore core;
-    
-    double[] ovlProbs;
-    int aiBid;
-    Card aiPlay;
-    
     public SinglePlayerPlayer(GameClient client) {
         setName("Player");
         this.client = client;
-    }
-    
-    public void setCore(OhHellCore core) {
-        this.core = core;
     }
     
     @Override
@@ -49,25 +39,25 @@ public class SinglePlayerPlayer extends Player {
                 + (kibitzers != null ? kibitzers.size() : 0));
         if (players != null) {
             for (Player player : players) {
-                cPlayers.add(convert(player));
+                cPlayers.add(convertPlayer(player));
             }
         }
         if (kibitzers != null) {
             for (Player kibitzer : kibitzers) {
-                cPlayers.add(convert(kibitzer));
+                cPlayers.add(convertPlayer(kibitzer));
             }
         }
         
         client.addPlayers(cPlayers);
     }
     
-    public ClientPlayer convert(Player player) {
+    public ClientPlayer convertPlayer(Player player) {
         ClientPlayer cPlayer = new ClientPlayer();
         cPlayer.setName(player.getName());
         cPlayer.setId(player.getId());
         cPlayer.setIndex(player.getIndex());
         cPlayer.setHuman(player.isHuman());
-        cPlayer.setHost(player.isHost());
+        cPlayer.setHost(player.isHost() || player.isHuman());
         cPlayer.setDisconnected(player.isDisconnected());
         cPlayer.setKicked(player.isKicked());
         cPlayer.setKibitzer(player.isKibitzer());
@@ -86,82 +76,31 @@ public class SinglePlayerPlayer extends Player {
                 (players != null ? players.size() : 0));
         if (players != null) {
             for (Player player : players) {
-                cPlayers.add(convert(player));
+                cPlayers.add(convertPlayer(player));
             }
         }
         
         client.updatePlayers(cPlayers);
     }
-
-    /*@Override
-    public void commandPlayersInfo(List<Player> players, List<Player> kibitzers, Player myPlayer) {
-        List<ClientPlayer> newPlayers = new ArrayList<>();
-        int myIndex = 0;
-        
-        for (int i = 0; i < players.size(); i++) {
-            Player player = players.get(i);
-            
-            ClientPlayer clientPlayer = new ClientPlayer();
-            newPlayers.add(clientPlayer);
-            clientPlayer.setIndex(i);
-            clientPlayer.setName(player.getName());
-            clientPlayer.setHuman(player.isHuman());
-            clientPlayer.setHost(true);
-            clientPlayer.setDisconnected(false);
-            clientPlayer.setKicked(false);
-            clientPlayer.setKibitzer(false);
-            if (player == myPlayer) {
-                myIndex = i;
-            }
-        }
-        for (int i = 0; i < kibitzers.size(); i++) {
-            Player player = kibitzers.get(i);
-            
-            ClientPlayer clientPlayer = new ClientPlayer();
-            newPlayers.add(clientPlayer);
-            clientPlayer.setIndex(i);
-            clientPlayer.setName(player.getName());
-            clientPlayer.setHuman(player.isHuman());
-            clientPlayer.setHost(true);
-            clientPlayer.setDisconnected(false);
-            clientPlayer.setKicked(false);
-            clientPlayer.setKibitzer(true);
-            if (player == myPlayer) {
-                myIndex = i + players.size();
-            }
-        }
-        
-        client.updatePlayersList(newPlayers, myIndex);
-    }*/
     
-    public double getOvlProb(int index) {
-        if (index >= ovlProbs.length) {
-            return 0;
-        } else {
-            return ovlProbs[index];
-        }
+    @Override
+    public void commandUpdateTeams(List<Team> teams) {
+        client.updateTeams(
+                teams.stream()
+                .map(team -> convertTeam(team))
+                .collect(Collectors.toList()));
     }
     
-    public void calculateOvls(boolean withBid) {
-        /*ovlProbs = core.getAiKernel().getOvlPs(this);
-        
-        if (withBid) {
-            aiBid = core.getAiKernel().getMyBid(ovlProbs);
-        } else {
-            aiBid = -1;
-        }*/
+    public ClientTeam convertTeam(Team team) {
+        ClientTeam cTeam = new ClientTeam();
+        cTeam.setIndex(team.getIndex());
+        cTeam.setName(team.getName());
+        return cTeam;
     }
     
-    public void calculateIvls() {
-        //aiPlay = core.getAiKernel().getMyPlay(this);
-    }
-    
-    public int getAiBid() {
-        return aiBid;
-    }
-    
-    public Card getAiPlay() {
-        return aiPlay;
+    @Override
+    public void commandUpdateOptions(GameOptions options) {
+        client.updateGameOptions(options);
     }
 
     @Override
@@ -197,8 +136,6 @@ public class SinglePlayerPlayer extends Player {
             }
         }
         client.setTrump(trump);
-        
-        calculateOvls(true);
     }
 
     @Override
@@ -207,20 +144,11 @@ public class SinglePlayerPlayer extends Player {
     @Override
     public void commandBid(int index) {
         client.bid(index);
-        
-        if (index == getIndex()) {
-            calculateOvls(true);
-        }
     }
 
     @Override
     public void commandPlay(int index) {
         client.play(index);
-        
-        if (index == getIndex()) {
-            calculateOvls(false);
-            calculateIvls();
-        }
     }
 
     @Override

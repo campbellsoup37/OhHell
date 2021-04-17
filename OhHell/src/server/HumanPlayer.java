@@ -15,6 +15,12 @@ public class HumanPlayer extends Player {
     }
     
     @Override
+    public void setId(String id) {
+        super.setId(id);
+        thread.setName("Player thread: " + id);
+    }
+    
+    @Override
     public String realName() {
         return thread.getSocket().getInetAddress().toString();
     }
@@ -249,6 +255,7 @@ public class HumanPlayer extends Player {
     @Override
     public void commandKick() {
         thread.sendCommand("KICK");
+        thread.endThread();
     }
     
     @Override

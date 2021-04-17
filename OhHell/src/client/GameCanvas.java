@@ -33,6 +33,7 @@ import javax.swing.text.DefaultCaret;
 import core.Card;
 import core.GameOptions;
 import core.Recorder;
+import common.Constants;
 import common.FileTools;
 import common.GraphicsTools;
 import common.OhcScrollPane;
@@ -73,14 +74,6 @@ public class GameCanvas extends OhcCanvas {
     public static final int chatAreaHeight = 250;
     public static final int maxChatLines = 200;
     ///////////////////////////////////
-
-    public static final String urlRegex = "((http:\\/\\/|https:\\/\\/)?(www.)?(([a-zA-Z0-9-]){2,}\\.){1,4}([a-zA-Z]){2,6}(\\/([a-zA-Z-_\\/\\.0-9#:?=&;,]*)?)?)";
-    public static final String[][] htmlReservedChars = 
-               {{"&", "&amp;"}, 
-                {"<", "&lt;"}, 
-                {">", "&gt;"}, 
-                {"\"", "&quot;"}, 
-                {"'", "&#39;"}};
 
     private volatile GameClient client;
 
@@ -464,7 +457,7 @@ public class GameCanvas extends OhcCanvas {
 
         StringBuilder ans = new StringBuilder();
         for (String word : words) {
-            if (Pattern.matches(urlRegex, word)) {
+            if (Pattern.matches(Constants.urlRegex, word)) {
                 ans.append(" <a href='" + word + "'>" + escapeHtml(word) + "</a>");
             } else {
                 ans.append(" " + escapeHtml(word));
@@ -479,7 +472,7 @@ public class GameCanvas extends OhcCanvas {
 
     public static String escapeHtml(String text) {
         String ans = text;
-        for (String[] rep : htmlReservedChars) {
+        for (String[] rep : Constants.htmlReservedChars) {
             ans = ans.replace(rep[0], rep[1]);
         }
         return ans;
@@ -705,6 +698,7 @@ public class GameCanvas extends OhcCanvas {
         }
     }
 
+    
     public void resetNamePlates() {
         namePlates.clear();
         for (ClientPlayer player : players) {
@@ -733,6 +727,7 @@ public class GameCanvas extends OhcCanvas {
     public double getMaxWid() {
         return maxWid;
     }
+    
 
     public void resetKickButtons() {
         kickButtons.clear();
@@ -873,7 +868,7 @@ public class GameCanvas extends OhcCanvas {
 
             @Override
             public boolean isShown() {
-                return state == GameState.PREGAME && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME;
+                return state == GameState.PREGAME;
             }
         };
         
@@ -896,7 +891,6 @@ public class GameCanvas extends OhcCanvas {
             @Override
             public boolean isShown() {
                 return state == GameState.PREGAME 
-                        && client.getClientState() == ClientState.IN_MULTIPLAYER_GAME
                         && client.getGameOptions().isTeams();
             }
         };
@@ -1096,7 +1090,9 @@ public class GameCanvas extends OhcCanvas {
             @Override
             public void click() {
                 if (client.getClientState() == ClientState.SINGLE_PLAYER_POST_GAME) {
-                    client.changeState(ClientState.SINGLE_PLAYER_MENU);
+                    client.changeState(ClientState.IN_SINGLE_PLAYER_GAME);
+                    pregameOnTimer(false);
+                    updatePlayersOnTimer();
                 } else if (client.getClientState() == ClientState.MULTIPLAYER_POST_GAME) {
                     client.changeState(ClientState.IN_MULTIPLAYER_GAME);
                     pregameOnTimer(false);
@@ -2033,7 +2029,7 @@ public class GameCanvas extends OhcCanvas {
             public void onFirstAction() {
                 actionQueue.clear();
                 if (client.getClientState() == ClientState.IN_SINGLE_PLAYER_GAME) {
-                    client.changeState(ClientState.SINGLE_PLAYER_MENU);
+                    client.changeState(ClientState.IN_SINGLE_PLAYER_GAME);
                 } else {
                     client.changeState(ClientState.IN_MULTIPLAYER_GAME);
                     updatePlayers();

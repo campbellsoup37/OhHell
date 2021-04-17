@@ -215,7 +215,7 @@ public class ClientPlayer {
     }
     
     public int getBid() {
-        return bid;
+        return hasBid ? bid : 0;
     }
     
     public void setBid(int bid) {

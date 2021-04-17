@@ -3,7 +3,6 @@ package client;
 public enum ClientState {
     MAIN_MENU,
     UPDATING,
-    SINGLE_PLAYER_MENU,
     IN_SINGLE_PLAYER_GAME,
     SINGLE_PLAYER_POST_GAME,
     LOGIN_MENU,

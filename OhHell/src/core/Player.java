@@ -2,7 +2,7 @@ package core;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Player {
+public abstract class Player {
     private String name;
     private String id;
     private int index = 0;
