@@ -10,10 +10,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import common.TcpTools;
-
 public abstract class GameCoordinator {
-    public static String commandDelimiter1 = ":";
+    /*public static String commandDelimiter1 = ":";
     
     public abstract class Command {
         public class JoinPlayer extends Command {
@@ -37,7 +35,7 @@ public abstract class GameCoordinator {
             }
             
             @Override
-            public void action() {
+            public void execute() {
                 
             }
         }
@@ -45,7 +43,9 @@ public abstract class GameCoordinator {
         protected String type;
         protected long timestamp = System.nanoTime();
         
-        public Command() {}
+        public static Command decode(String code) {
+            
+        }
         
         @Override
         public String toString() {
@@ -58,8 +58,8 @@ public abstract class GameCoordinator {
             return "";
         }
         
-        public void action() {}
-    }
+        public void execute() {}
+    }*/
     
     private OhHellCore core;
     

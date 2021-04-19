@@ -1610,7 +1610,6 @@ public class GameCanvas extends OhcCanvas {
 
         setInteractables(Arrays.asList(
                 embeddedSwings, 
-                Arrays.asList(preGameMenu, preGameTeamPanel),
                 Arrays.asList(scoreSheet), 
                 bidButtons, 
                 cardInteractables,
@@ -1618,6 +1617,7 @@ public class GameCanvas extends OhcCanvas {
                 Arrays.asList(lastTrick), 
                 kickButtons, 
                 miscInteractables, 
+                Arrays.asList(preGameMenu, preGameTeamPanel),
                 Arrays.asList(postGamePage)));
     }
 
@@ -2032,8 +2032,8 @@ public class GameCanvas extends OhcCanvas {
                     client.changeState(ClientState.IN_SINGLE_PLAYER_GAME);
                 } else {
                     client.changeState(ClientState.IN_MULTIPLAYER_GAME);
-                    updatePlayers();
                 }
+                updatePlayers();
                 pregame();
             }
         };

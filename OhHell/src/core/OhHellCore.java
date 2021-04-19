@@ -234,8 +234,10 @@ public class OhHellCore {
     
     public void stopGame() {
         gameStarted = false;
+        
+        HashMap<Player, Player> dummyMap = new HashMap<>();
         for (Player player : players) {
-            if (player.isKicked() || player.isDisconnected() || !player.isHuman()) {
+            if (player.isKicked() || player.isDisconnected()) {
                 for (Player p : players) {
                     p.commandRemovePlayer(player);
                 }
@@ -243,10 +245,32 @@ public class OhHellCore {
                     p.commandRemovePlayer(player);
                 }
             }
+            if (player.isHuman()) {
+                dummyMap.put(player, player);
+            } else {
+                DummyPlayer dummy = new DummyPlayer(random.nextLong());
+                dummy.setTeam(player.getTeam());
+                for (Player p : players) {
+                    p.commandRemovePlayer(player);
+                    p.commandAddPlayers(Arrays.asList(dummy), null);
+                }
+                for (Player p : kibitzers) {
+                    p.commandRemovePlayer(player);
+                    p.commandAddPlayers(Arrays.asList(dummy), null);
+                }
+                dummyMap.put(player, dummy);
+            }
         }
-        players.removeIf(p -> p.isKicked() || p.isDisconnected() || !p.isHuman());
+        players.replaceAll(p -> dummyMap.get(p));
+        players.removeIf(p -> p.isKicked() || p.isDisconnected());
         for (int i = 0; i < players.size(); i++) {
             players.get(i).setIndex(i);
+        }
+        for (Player p : players) {
+            p.commandUpdatePlayers(players);
+        }
+        for (Player p : kibitzers) {
+            p.commandUpdatePlayers(players);
         }
         stopKernel();
     }
@@ -256,15 +280,13 @@ public class OhHellCore {
     }
     
     public void requestEndGame(Player player) {
-//        if (player.isHost()) {
-            for (Player p : players) {
-                p.commandEndGame(player);
-            }
-            for (Player p : kibitzers) {
-                p.commandEndGame(player);
-            }
-            stopGame();
-//        }
+        for (Player p : players) {
+            p.commandEndGame(player);
+        }
+        for (Player p : kibitzers) {
+            p.commandEndGame(player);
+        }
+        stopGame();
     }
     
     public int getRoundNumber() {
