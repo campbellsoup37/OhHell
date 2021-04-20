@@ -64,14 +64,11 @@ public class GameClient extends JFrame {
     
     //////Dev Options //////////////////
     private final boolean stopperOptionEnabled = false;
-    private final boolean botsOnlyOptionEnabled = true;
     private final boolean devSpeedOptionEnabled = true;
     private final boolean pingOptionEnabled = true;
     private final boolean fpsOptionEnabled = true;
     private final boolean lowGraphicsOptionEnabled = true;
     private final boolean antialiasingOptionEnabled = true;
-    
-    public static final int robotDelay = 2000;
     ///////////////////////////////////
     
     private String version;
@@ -106,7 +103,6 @@ public class GameClient extends JFrame {
     private JCheckBox fpsOption = new JCheckBox("Show FPS");
     private JMenu devOptionsItem = new JMenu("Dev options");
     private JCheckBox stopperOption = new JCheckBox("Stoppers");
-    private JCheckBox botsOnlyOption = new JCheckBox("Bots only");
     private JCheckBox devSpeedOption = new JCheckBox("Fast animation");
     private JCheckBox lowGraphicsOption = new JCheckBox("Low graphics");
     private JCheckBox antialiasingOption = new JCheckBox("Anti-aliasing");
@@ -601,9 +597,6 @@ public class GameClient extends JFrame {
                 }
             });
             devOptionsItem.add(stopperOption);
-            
-            botsOnlyOption.setEnabled(botsOnlyOptionEnabled);
-            devOptionsItem.add(botsOnlyOption);
             
             devSpeedOption.setEnabled(devSpeedOptionEnabled);
             devOptionsItem.add(devSpeedOption);
@@ -1279,7 +1272,6 @@ public class GameClient extends JFrame {
         
         player = new SinglePlayerPlayer(GameClient.this);
         coordinator.joinPlayer(player, username);
-        coordinator.setKibitzer(player, botsOnlyOption.isSelected());
         
         canvas.pregameOnTimer(false);
         changeState(ClientState.IN_SINGLE_PLAYER_GAME);

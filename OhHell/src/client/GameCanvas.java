@@ -1,10 +1,13 @@
 package client;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.Stroke;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
@@ -344,7 +347,8 @@ public class GameCanvas extends OhcCanvas {
                     int x = (int) (player.getTrickTimer() * endx + (1 - player.getTrickTimer()) * startx);
                     int y = (int) (player.getTrickTimer() * endy + (1 - player.getTrickTimer()) * starty);
                     if (player.timerStarted()) {
-                        drawCard(graphics, player.getTrick(), x, y, trickCardScale, true, false);
+                        drawCard(graphics, player.getTrick(), x, y, trickCardScale, true, false, 
+                                client.getGameOptions().isTeams() ? GraphicsTools.colors[player.getTeam()] : null);
                     }
                 }
             }
@@ -479,11 +483,20 @@ public class GameCanvas extends OhcCanvas {
     }
 
     public void drawCard(Graphics graphics, Card card, double x, double y, double scale, boolean small, boolean dark) {
-        drawCard(graphics, card, x, y, scale, small, dark, -1);
+        drawCard(graphics, card, x, y, scale, small, dark, -1, null);
+    }
+    
+    public void drawCard(Graphics graphics, Card card, double x, double y, double scale, boolean small, boolean dark, Color thickBorderColor) {
+        drawCard(graphics, card, x, y, scale, small, dark, -1, thickBorderColor);
+    }
+    
+    public void drawCard(Graphics graphics, Card card, double x, double y, double scale, boolean small, boolean dark,
+            double maxY) {
+        drawCard(graphics, card, x, y, scale, small, dark, maxY, null);
     }
 
     public void drawCard(Graphics graphics, Card card, double x, double y, double scale, boolean small, boolean dark,
-            double maxY) {
+            double maxY, Color thickBorderColor) {
         int cardNumber = card.toNumber();
         int col = cardNumber % 9;
         int row = (cardNumber - col) / 9;
@@ -510,9 +523,27 @@ public class GameCanvas extends OhcCanvas {
         maxY = Math.min(maxY, y + ch1 * scale / 2);
         double diff = maxY - (y - ch1 * scale / 2);
 
-        GraphicsTools.makeGraphics2D(graphics, client.antialiasingSelected(), !client.lowGraphicsSelected()).drawImage(
-                img, (int) (x - cw1 * scale / 2), (int) (y - ch1 * scale / 2), (int) (x + cw1 * scale / 2), (int) maxY,
-                (int) (col * cw1), (int) (row * ch1), (int) ((col + 1) * cw1), (int) (row * ch1 + diff / scale), null);
+        Graphics2D graphics2d = GraphicsTools.makeGraphics2D(graphics, client.antialiasingSelected(), !client.lowGraphicsSelected());
+        int x0 = (int) (x - cw1 * scale / 2);
+        int y0 = (int) (y - ch1 * scale / 2);
+        int x1 = (int) (x + cw1 * scale / 2);
+        int y1 = (int) maxY;
+        graphics2d.drawImage(
+                img, 
+                x0, y0, x1, y1,
+                (int) (col * cw1), 
+                (int) (row * ch1), 
+                (int) ((col + 1) * cw1), 
+                (int) (row * ch1 + diff / scale), 
+                null);
+        if (thickBorderColor != null) {
+            Stroke stroke = graphics2d.getStroke();
+            graphics2d.setStroke(new BasicStroke(2));
+            graphics2d.setColor(thickBorderColor);
+            graphics2d.drawRoundRect(x0, y0, x1 - x0, y1 - y0, 15, 15);
+            graphics2d.setStroke(stroke);
+            graphics2d.setColor(Color.BLACK);
+        }
     }
 
     public void doShowOneCard() {
