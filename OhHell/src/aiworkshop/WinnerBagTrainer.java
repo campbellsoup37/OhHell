@@ -8,9 +8,10 @@ import ml.Tree;
 
 public class WinnerBagTrainer {
     public static void main(String[] args) {
-        int N = 10;
+        int N = 2;
+        int D = 2;
         int size = 100;
-        int alpha = 18;
+        int alpha = 6;
         int totalDataLimit = 500000;
         int bootstrapSampleSize = 100000;
         int printEvery = 1;
@@ -21,10 +22,10 @@ public class WinnerBagTrainer {
         double aStep = 1;
         boolean crossValidation = true;
         
-        String folder = "C:/Users/campb/Desktop/AiData/Win/";
+        String folder = "E:/data/oh_hell/win/";
         
         if (examineAlpha) {
-            DataSet data = new DataSet(folder + N + ".txt", totalDataLimit);
+            DataSet data = new DataSet(folder + "N" + N + "D" + D + ".txt", totalDataLimit);
             
             if (crossValidation) {
                 Tree.errorVsAlphaCv(N + 1, N, data.bootstrapSample(bootstrapSampleSize), 10, a1, a2, aStep);
@@ -32,12 +33,12 @@ public class WinnerBagTrainer {
                 Tree.errorVsAlpha(N + 1, N, data.bootstrapSample(bootstrapSampleSize), bootstrapSampleSize / 10, a1, a2, aStep);
             }
         } else {
-            DataSet data = new DataSet(folder + N + ".txt", totalDataLimit);
+            DataSet data = new DataSet(folder + "N" + N + "D" + D + ".txt", totalDataLimit);
             
             BootstrapAggregator bag = new BootstrapAggregator(N + 1, N, size);
             bag.train(data, bootstrapSampleSize, alpha, printEvery);
             
-            bag.saveToFile(new File("resources/ai workshop/OtherModels/WinBag/wb" + N + "sz" + size + "B" + bootstrapSampleSize + "a" + alpha + ".txt"));
+            bag.saveToFile(new File("resources/ai workshop/OtherModels/WinBag/wb" + "N" + N + "D" + D + "sz" + size + "B" + bootstrapSampleSize + "a" + alpha + ".txt"));
         }
     }
 }

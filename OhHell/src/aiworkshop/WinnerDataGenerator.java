@@ -16,16 +16,17 @@ import ml.MLTools;
 
 public class WinnerDataGenerator extends AiTrainer {
     public void run() {
-        int N = 10;
+        int N = 2;
+        int D = 2;
         int reps = 100000;
         boolean verbose = true;
         boolean flush = true;
         
-        String folder = "C:/Users/campb/Desktop/AiData/Win/";
+        String folder = "E:/data/oh_hell/win/";
         new File(folder).mkdirs();
         
-        strategyOI.OverallValueLearner ovl = new strategyOI.OverallValueLearner("resources/ai workshop/OhHellAIModels/OI/ovlN10o80i30.txt");
-        strategyOI.ImmediateValueLearner ivl = new strategyOI.ImmediateValueLearner("resources/ai workshop/OhHellAIModels/OI/ivlN10o80i30.txt");
+        strategyOI.OverallValueLearner ovl = new strategyOI.OverallValueLearner("resources/models/ovlN" + N + "D" + D + ".txt");
+        strategyOI.ImmediateValueLearner ivl = new strategyOI.ImmediateValueLearner("resources/models/ivlN" + N + "D" + D + ".txt");
         
         OhHellCore core = new OhHellCore(false);
         List<Player> players = new ArrayList<>();
@@ -37,10 +38,14 @@ public class WinnerDataGenerator extends AiTrainer {
             aiStrategyModules.add(new strategyOI.AiStrategyModuleOI(core, N, ovl, ivl));
         }
         
+        GameOptions options = new GameOptions();
+        options.setNumRobots(N);
+        options.setD(D);
+        
         int R = 20;
         long[] times = new long[R];
         for (int g = 1; g <= reps; g++) {
-            core.startGame(new GameOptions(N), aiStrategyModules);
+            core.startGame(options, null);
             
             try {
                 while (true) {
@@ -51,7 +56,7 @@ public class WinnerDataGenerator extends AiTrainer {
                 int winner = getWinner();
                 
                 try {
-                    BufferedWriter bw = new BufferedWriter(new FileWriter(folder + N + ".txt", g > 1 || !flush));
+                    BufferedWriter bw = new BufferedWriter(new FileWriter(folder + "N" + N + "D" + D + ".txt", g > 1 || !flush));
                     for (int i = 0; i < scores[0].length; i++) {
                         double[] scoresVector = new double[N + 1];
                         for (int j = 0; j < N; j++) {

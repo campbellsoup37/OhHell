@@ -402,7 +402,7 @@ public class Tree {
         for (double alpha = alpha1; alpha < alpha2; alpha += alphaStep) {
             tree.prune(alpha);
             double averageError =  tree.testError(data.complement(), new MeanSquaredError());
-            System.out.println("{" + alpha + ", " + averageError + ", " + tree.numLeaves() + "},");
+            System.out.println("[" + alpha + ", " + averageError + ", " + tree.numLeaves() + "],");
         }
     }
     
@@ -424,11 +424,11 @@ public class Tree {
                 trees.get(k).prune(alpha);
                 averageError += trees.get(k).testError(partition.get(k).complement(), new MeanSquaredError()) / foldsK;
             }
-            System.out.print("{" + alpha + ", " + averageError);
+            System.out.print("[" + alpha + ", " + averageError);
             for (int k = 0; k < foldsK; k++) {
                 System.out.print(", " + trees.get(k).numLeaves());
             }
-            System.out.println("},");
+            System.out.println("],");
         }
     }
 }

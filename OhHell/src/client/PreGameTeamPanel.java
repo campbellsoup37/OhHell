@@ -88,12 +88,6 @@ public class PreGameTeamPanel extends CanvasInteractable {
         
         public TeamButton() {
             super("");
-        }
-        
-        public TeamButton(ClientTeam team) {
-            this();
-            this.team = team;
-            setThickBorderColor(GraphicsTools.colors[team.getIndex()]);
             
             OhcTextField nameField = new OhcTextField("") {
                 private static final long serialVersionUID = 1L;
@@ -104,7 +98,6 @@ public class PreGameTeamPanel extends CanvasInteractable {
                 }
             };
             nameField.setHorizontalAlignment(JTextField.CENTER);
-            nameField.setText(team.getName());
             nameField.addFocusListener(new FocusListener() {
                 @Override
                 public void focusGained(FocusEvent arg0) {}
@@ -158,6 +151,14 @@ public class PreGameTeamPanel extends CanvasInteractable {
             };
         }
         
+        public void setTeam(ClientTeam team) {
+            this.team = team;
+            setThickBorderColor(GraphicsTools.colors[team.getIndex()]);
+            if (!renaming) {
+                ((OhcTextField) nameInteractable.getComponent()).setText(team.getName());
+            }
+        }
+        
         @Override
         public int x() {
             return PreGameTeamPanel.this.x() + teamMargin;
@@ -183,7 +184,7 @@ public class PreGameTeamPanel extends CanvasInteractable {
         @Override
         public void paint(Graphics graphics) {
             super.paint(graphics);
-            
+
             if (team != null) {
                 if (!renaming) {
                     graphics.setFont(GraphicsTools.fontBold);
@@ -215,7 +216,7 @@ public class PreGameTeamPanel extends CanvasInteractable {
         
         @Override
         public void click() {
-            if (botSelected != null || !myPlayer.isKibitzer()) {
+            if (team != null && (botSelected != null || !myPlayer.isKibitzer())) {
                 ClientPlayer toMove = botSelected == null ? myPlayer : botSelected;
                 if (team.getIndex() != toMove.getTeam()) {
                     client.reteam(toMove, team.getIndex());
@@ -249,7 +250,7 @@ public class PreGameTeamPanel extends CanvasInteractable {
             }
         }
     }
-    private HashMap<ClientTeam, TeamButton> teams = new HashMap<>();
+    private HashMap<Integer, TeamButton> teams = new HashMap<>();
     
     public ArrayList<TeamButton> teamButtons = new ArrayList<>();
     
@@ -316,27 +317,29 @@ public class PreGameTeamPanel extends CanvasInteractable {
             GraphicsTools.drawBox(graphics, x(), y(), width(), height(), 20);
             graphics.setColor(Color.BLACK);
 
-            Set<ClientTeam> staleTeamButtons = new HashSet<>();
+            Set<Integer> staleTeamButtons = new HashSet<>();
             staleTeamButtons.addAll(teams.keySet());
             
             int y = teamMargin;
             for (ClientTeam team : client.getTeams().values()) {
-                if (!teams.containsKey(team)) {
-                    TeamButton newTeam = new TeamButton(team);
-                    teams.put(team, newTeam);
+                int num = team.getIndex();
+                if (!teams.containsKey(num)) {
+                    TeamButton newTeam = new TeamButton();
+                    teams.put(num, newTeam);
                 }
-                TeamButton teamButton = teams.get(team);
+                TeamButton teamButton = teams.get(num);
+                teamButton.setTeam(team);
                 if (team.getMembers() != null && !team.getMembers().isEmpty()) {
                     teamButton.y = y;
                     teamButton.paint(graphics);
                     y += teamButton.height() + 5;
-                    staleTeamButtons.remove(team);
+                    staleTeamButtons.remove(num);
                 }
             }
             
-            for (ClientTeam team : staleTeamButtons) {
-                teams.get(team).dispose();
-                teams.remove(team);
+            for (int num : staleTeamButtons) {
+                teams.get(num).dispose();
+                teams.remove(num);
             }
             
             for (TeamButton teamButton : teamButtons) {

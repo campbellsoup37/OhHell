@@ -162,7 +162,7 @@ public class PostGamePage extends CanvasInteractable {
             probs.add(new ArrayList<>(players.get(0).getScores().size()));
             probs.get(k).add(100D / players.size());
         }
-        BootstrapAggregator winModel = new BootstrapAggregator("resources/models/wb" + players.size() + ".txt");
+        BootstrapAggregator winModel = new BootstrapAggregator("resources/models/wbN" + players.size() + "D" + canvas.getGameOptions().getD() + ".txt");
         for (int j = 0; j < players.get(0).getScores().size(); j++) {
             double[] in = new double[players.size() + 1];
             for (int k = 0; k < players.size(); k++) {

@@ -424,7 +424,9 @@ public class GameClient extends JFrame {
     }
     
     public void reportGameOptions(GameOptions options) {
-        coordinator.updateOptions(options);
+        if (coordinator != null) {
+            coordinator.updateOptions(options);
+        }
     }
     
     public void updateGameOptions(GameOptions options) {
