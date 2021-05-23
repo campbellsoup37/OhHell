@@ -1,10 +1,11 @@
-/client/
-/common/
-/core/
 /ml/
 /server/
 /strategyMI/
 /strategyOI/
 /strategyRBP/
 /updater/
+/core/
+/client/
 /aiworkshop/
+/strategyOITeam.class
+/strategyOITeam/

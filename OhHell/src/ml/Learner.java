@@ -18,21 +18,22 @@ public class Learner {
 	
 	private List<Feature> features;
 	
+	public Learner() {}
+	
 	public Learner(int[] ds, ActivationFunction af, String[] labels) {
-	    inputLayer = new Layer(ds[0], af);
-        for (int i = 1; i < ds.length; i++) {
-            Layer layer = new Layer(ds[i], af);
-            inputLayer.addLayer(layer);
-            if (i == ds.length - 1) {
-                outputLayer = layer;
-            }
-        }
-        depth = ds.length - 1;
-        this.labels = labels;
+	    ActivationFunction[] afList = new ActivationFunction[ds.length - 1];
+	    for (int i = 0; i < afList.length; i++) {
+	        afList[i] = af;
+	    }
+	    buildLayers(ds, afList);
     }
 	
 	public Learner(int[] ds, ActivationFunction[] afList, String[] labels) {
-        inputLayer = new Layer(ds[0], null);
+        buildLayers(ds, afList);
+    }
+	
+	public void buildLayers(int[] ds, ActivationFunction[] afList) {
+	    inputLayer = new Layer(ds[0], null);
         for (int i = 1; i < ds.length; i++) {
             Layer layer = new Layer(ds[i], afList[i - 1]);
             inputLayer.addLayer(layer);
@@ -41,8 +42,7 @@ public class Learner {
             }
         }
         depth = ds.length - 1;
-        this.labels = labels;
-    }
+	}
 	
 	public void setTrainer(Trainer trainer) {
 	    this.trainer = trainer;

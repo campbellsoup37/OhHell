@@ -17,7 +17,6 @@ import ml.SparseVector;
 import ml.Vector;
 
 public class AiStrategyModuleOI extends AiStrategyModule {
-    private OhHellCore core;
     private List<Player> players;
     private Deck deck;
     private int D;
@@ -37,7 +36,6 @@ public class AiStrategyModuleOI extends AiStrategyModule {
     
     public AiStrategyModuleOI(OhHellCore core, int N, int D,
             OverallValueLearner ovl, ImmediateValueLearner ivl) {
-        this.core = core;
         players = core.getPlayers();
         deck = core.getDeck();
         this.D = D;
@@ -49,24 +47,24 @@ public class AiStrategyModuleOI extends AiStrategyModule {
     }
     
     @Override
-    public void makeBid() {
+    public int makeBid() {
         double[] ps = getOvlPs();
         int myBid = getMyBid(ps);
-
-        core.incomingBid(player, myBid);
+        
+        return myBid;
     }
     
     @Override
-    public void makePlay() {
+    public Card makePlay() {
         Card cardToPlay = getMyPlay();
         
-        core.incomingPlay(player, cardToPlay);
+        return cardToPlay;
     }
     
     public void addOvlInput(SparseVector in, Card card, int hOffSet, int voidsOffset) {
         int turn = player.getIndex();
         int M = players.size();
-        Card trump = core.getTrump();
+        Card trump = coreData.getTrump();
         
         int numOfVoids = voids(player.getHand()) + voidsOffset;
         List<List<Card>> split = splitBySuit(player.getHand());
@@ -80,7 +78,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
             for (int j = 0; j < M; j++) {
                 Player iterPlayer = players.get((turn + j) % M);
                 if (!iterPlayer.isKicked()) {
-                    if ((turn - core.getLeader() + M) % M + j >= M) {
+                    if ((turn - coreData.getLeader() + M) % M + j >= M) {
                         in.addOneHot(iterPlayer.getBid() + 1, maxH + 1);
                     } else {
                         in.addZeros(maxH + 1);
@@ -91,14 +89,14 @@ public class AiStrategyModuleOI extends AiStrategyModule {
             for (int j = 0; j < M; j++) {
                 Player iterPlayer = players.get((turn + j) % M);
                 if (!iterPlayer.isKicked()) {
-                    in.addOneHot(core.wants(iterPlayer, player.getHand().size()) + 1, maxH + 1);
+                    in.addOneHot(coreData.wants((turn + j) % M) + 1, maxH + 1);
                 }
             }
         }
         in.addOneHot(numOfVoids + 1, 4);
         in.addOneHot(deck.cardsLeftOfSuit(trump, Arrays.asList(split.get(trump.getSuitNumber() - 1), trick)) + 1, 13 * D);
         
-        in.addOneHot(card.getSuit().equals(trump.getSuit()) ? 2 : 1, 2);
+        in.addOneHot(card.getSuit() == trump.getSuit() ? 2 : 1, 2);
         in.addOneHot(deck.cardsLeftOfSuit(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)) + 1, 13 * D);
 
         in.addOneHot(deck.adjustedCardValueSmall(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)), 13 * D);
@@ -108,7 +106,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
     public void addIvlInput(SparseVector in, Card card, int requiredCancels) {
         int turn = player.getIndex();
         int M = players.size();
-        Card trump = core.getTrump();
+        Card trump = coreData.getTrump();
 
         List<List<Card>> split = splitBySuit(players.get(turn).getHand());
         List<Card> trick = players.stream().map(Player::getTrick).filter(c -> !c.isEmpty()).collect(Collectors.toList());
@@ -116,8 +114,8 @@ public class AiStrategyModuleOI extends AiStrategyModule {
         for (int k = 1; k < players.size(); k++) {
             Player iterPlayer = players.get((turn + k) % M);
             if (!iterPlayer.isKicked()) {
-                if ((turn - core.getLeader() + M) % M + k < M) {
-                    in.addOneHot(core.wants(iterPlayer, player.getHand().size()) + 1, maxH + 1);
+                if ((turn - coreData.getLeader() + M) % M + k < M) {
+                    in.addOneHot(coreData.wants((turn + k) % M) + 1, maxH + 1);
                 } else {
                     in.addZeros(maxH + 1);
                 }
@@ -125,11 +123,11 @@ public class AiStrategyModuleOI extends AiStrategyModule {
         }
         in.addOneHot(deck.cardsLeftOfSuit(trump, Arrays.asList(split.get(trump.getSuitNumber() - 1), trick)) + 1, 13 * D);
 
-        Card led = players.get(core.getLeader()).getTrick().isEmpty() ? card : players.get(core.getLeader()).getTrick();
-        in.addOneHot(led.getSuit().equals(trump.getSuit()) ? 2 : 1, 2);
+        Card led = players.get(coreData.getLeader()).getTrick().isEmpty() ? card : players.get(coreData.getLeader()).getTrick();
+        in.addOneHot(led.getSuit() == trump.getSuit() ? 2 : 1, 2);
         in.addOneHot(deck.cardsLeftOfSuit(led, Arrays.asList(split.get(led.getSuitNumber() - 1), trick)) + 1, 13 * D);
         
-        in.addOneHot(card.getSuit().equals(trump.getSuit()) ? 2 : 1, 2);
+        in.addOneHot(card.getSuit() == trump.getSuit() ? 2 : 1, 2);
         in.addOneHot(deck.adjustedCardValueSmall(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)), 13 * D);
         in.addOneHot(deck.matchingCardsLeft(card, Arrays.asList(split.get(card.getSuitNumber() - 1), trick)), D - 1);
         
@@ -200,7 +198,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
         // overbid if the dealer is on the team (note to self (TODO) -- this dealer thing may not
         // be necessary in all cases. Maybe we could want to bid to the max even if the dealer is
         // on our team because we know the other team will bid in between?).
-        int maxBid = core.highestMakeableBid(player, true);
+        int maxBid = coreData.highestMakeableBid(player, true);
         
         int choice = 0;
         while (bids[choice] > maxBid) {
@@ -208,7 +206,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
         }
         
         // If we can't bid that, then move one further
-        if (bids[choice] == core.whatCanINotBid()) {
+        if (bids[choice] == coreData.whatCanINotBid(player)) {
             choice++;
         }
         
@@ -223,7 +221,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
     }
     
     public Card getMyPlay() {
-        List<Card> canPlay = core.whatCanIPlay(player);
+        List<Card> canPlay = coreData.whatCanIPlay(player);
         List<List<Card>> split = splitBySuit(player.getHand());
         
         boolean singleton = false;
@@ -269,7 +267,8 @@ public class AiStrategyModuleOI extends AiStrategyModule {
             double probOfWinning = 0;
             
             //System.out.println(card);
-            int requiredCancels = core.cardCanWin(card);
+            int requiredCancels = coreData.cancelsRequired(player, card)[player.getIndex()];
+            
             if (requiredCancels >= 0) {
                 in = new SparseVector();
                 addIvlInput(in, card, requiredCancels);
@@ -290,7 +289,7 @@ public class AiStrategyModuleOI extends AiStrategyModule {
                 pps[ll] = v;
                 ll++;
             }
-            int l = core.wants(player, player.getHand().size());
+            int l = coreData.wants(player.getIndex());
             double value = subsetProb(pps, l)[l];
             ovlVals.put(card, temp);
             

@@ -1,7 +1,7 @@
 package core;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 public class Recorder {
     public static final String lineDelimiter = "|";
@@ -38,7 +38,7 @@ public class Recorder {
                 .replace("\\" + commandDelimiter2, commandDelimiter2);
     }
     
-    public void recordInfo(GameOptions options, List<Player> players, HashMap<Integer, Team> teams) {
+    public void recordInfo(GameOptions options, List<Player> players, Map<Integer, Team> teams) {
         file.add("decks" + commandDelimiter1 + options.getD());
         if (options.isOregon()) {
             file.add("oregon" + commandDelimiter1 + "true");

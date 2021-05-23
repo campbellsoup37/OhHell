@@ -1,20 +1,22 @@
 package ml;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 public class SparseVector implements Vector {
     private int totalSize = 0;
     
     private List<SparseVectorEntry> entries = new LinkedList<>();
-    private List<Integer> sizes = new LinkedList<>();
+    private Map<String, SparseVectorChunk> chunks = new LinkedHashMap<>();
 
     public SparseVector() {}
 
     public SparseVector(List<SparseVectorEntry> entries, int totalSize) {
         this.totalSize = totalSize;
         this.entries = entries;
-        sizes.add(totalSize);
+        chunks.put("", new SparseVectorChunk("", 0, 0, 0, totalSize, false));
     }
     
     public int size() {
@@ -45,30 +47,65 @@ public class SparseVector implements Vector {
     }
     
     public void addOneHot(int j, int d) {
-        if (j < 0 || j > d) {
-            throw new MLException("Invalid index " + j + " for one-hot of size " + d + ".");
+        addOneHot("", j, 0, d);
+    }
+    
+    public void addOneHot(String feature, int val, int min, int max) {
+        if (val < min || val > max) {
+            throw new MLException("Invalid value " + val + " for one-hot in [" + min + ", " + max + "].");
         }
-        if (j != 0) {
-            entries.add(new SparseVectorEntry(totalSize + j - 1, 1));
+        if (val != min) {
+            entries.add(new SparseVectorEntry(totalSize + val - min - 1, 1));
         }
-        sizes.add(d);
-        totalSize += d;
+        chunks.put(feature, new SparseVectorChunk(feature, totalSize, val, min, max, true));
+        totalSize += max - min;
+    }
+    
+    public void modifyChunk(String feature, int newVal) {
+        SparseVectorChunk chunk = chunks.get(feature);
+        if (chunk == null) {
+            throw new MLException("Attempted to modify the nonexisting feature " + feature + ".");
+        }
+        if (chunk.isDiscrete) {
+            if (newVal < chunk.min || newVal > chunk.max) {
+                throw new MLException("Invalid value " + newVal + " for one-hot in [" + chunk.min + ", " + chunk.max + "].");
+            }
+            if (chunk.val > chunk.min) {
+                int index = chunk.offset + chunk.val - chunk.min - 1;
+                for (SparseVectorEntry sve : entries) {
+                    if (sve.key() == index) {
+                        sve.setKey(chunk.offset + newVal - chunk.min - 1);
+                        break;
+                    }
+                }
+            } else {
+                if (newVal > chunk.min) {
+                    entries.add(new SparseVectorEntry(chunk.offset + newVal - chunk.min - 1, 1));
+                }
+            }
+            chunk.val = newVal;
+        } else {
+            throw new MLException("Modifying nondiscrete chunks not yet supported.");
+        }
     }
     
     public void addBinaryVector(List<Integer> js, int d) {
+        addBinaryVector("", js, d);
+    }
+    
+    public void addBinaryVector(String feature, List<Integer> js, int d) {
         for (int j : js) {
             if (j <= 0 || j > d) {
                 throw new MLException("Invalid index " + j + " for sparse vector of size " + d + ".");
             }
             entries.add(new SparseVectorEntry(totalSize + j - 1, 1));
         }
-        sizes.add(d);
+        chunks.put(feature, new SparseVectorChunk(feature, totalSize, 0, 0, d, false));
         totalSize += d;
     }
     
     public void addZeros(int d) {
-        sizes.add(d);
-        totalSize += d;
+        addOneHot("", 0, 0, d);
     }
     
     @Override
@@ -155,14 +192,37 @@ public class SparseVector implements Vector {
     @Override
     public void print() {
         double[] vec = toArray();
-        int i = 0;
-        for (Integer size : sizes) {
-            for (int j = 0; j < size; j++) {
-                System.out.print((int) vec[i + j] + " ");
+        for (SparseVectorChunk chunk : chunks.values()) {
+            System.out.print(chunk.feature + ": ");
+            if (chunk.isDiscrete) {
+                System.out.print(chunk.val + " (min " + chunk.min + ", max " + chunk.max + ") ");
             }
-            i += size;
+            for (int j = 0; j < chunk.size; j++) {
+                System.out.print((int) vec[chunk.offset + j] + " ");
+            }
+            
             System.out.println();
         }
         System.out.println();
+    }
+    
+    private class SparseVectorChunk {
+        public String feature;
+        public int offset;
+        public int val;
+        public int min;
+        public int max;
+        public int size;
+        public boolean isDiscrete;
+        
+        public SparseVectorChunk(String feature, int offset, int val, int min, int max, boolean isDiscrete) {
+            this.feature = feature;
+            this.offset = offset;
+            this.val = val;
+            this.min = min;
+            this.max = max;
+            size = max - min;
+            this.isDiscrete = isDiscrete;
+        }
     }
 }

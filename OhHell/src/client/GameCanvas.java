@@ -560,7 +560,11 @@ public class GameCanvas extends OhcCanvas {
     
     @Override
     public void rightClick(int x, int y) {
-        preselectedCards.clear();
+        if (!myPlayer.isKibitzer()) {
+            preselectedCards.clear();
+        } else {
+            removeStopper();
+        }
     }
 
     public void setPlayerPositions() {
@@ -1888,9 +1892,9 @@ public class GameCanvas extends OhcCanvas {
     }
 
     public boolean canPlayThis(Card card) {
-        String ledSuit = players.get(leader).getTrick().getSuit();
-        return players.get(leader).getTrick().isEmpty() || card.getSuit().equals(ledSuit)
-                || myPlayer.getHand().stream().noneMatch(c -> c.getSuit().equals(ledSuit));
+        int ledSuit = players.get(leader).getTrick().getSuit();
+        return players.get(leader).getTrick().isEmpty() || card.getSuit() == ledSuit
+                || myPlayer.getHand().stream().noneMatch(c -> c.getSuit() == ledSuit);
     }
 
     public void setTrumps(List<Card> trumps) {

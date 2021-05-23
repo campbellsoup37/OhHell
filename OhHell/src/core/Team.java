@@ -37,4 +37,8 @@ public class Team extends Player {
     public void setMembers(List<Player> members) {
         this.members = members;
     }
+    
+    public void addMember(Player player) {
+        this.members.add(player);
+    }
 }

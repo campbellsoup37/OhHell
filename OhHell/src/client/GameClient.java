@@ -50,6 +50,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
 
+import core.AiStrategyModule;
 import core.Card;
 import core.GameCoordinator;
 import core.GameOptions;
@@ -652,7 +653,9 @@ public class GameClient extends JFrame {
                         
                         @Override
                         public void click() {
-                            spConnect();
+                            GameCoordinator coordinator = new GameCoordinator() {};
+                            coordinator.startNewCore(new OhHellCore(true));
+                            spConnect(coordinator);
                         }
                     };
                     
@@ -1265,12 +1268,11 @@ public class GameClient extends JFrame {
         coordinator.sendChat(player, recipient, text);
     }
     
-    public void spConnect() {
+    public void spConnect(GameCoordinator coordinator) {
         players.clear();
         kibitzers.clear();
         
-        coordinator = new GameCoordinator() {};
-        coordinator.startNewCore(new OhHellCore(true));
+        this.coordinator = coordinator;
         
         player = new SinglePlayerPlayer(GameClient.this);
         coordinator.joinPlayer(player, username);
@@ -1562,6 +1564,17 @@ public class GameClient extends JFrame {
     public String getFileName() throws URISyntaxException {
         return new File(GameClient.class.getProtectionDomain().getCodeSource()
                 .getLocation().toURI()).getPath();
+    }
+    
+    public void openGame(GameCoordinator coordinator, GameOptions options) {
+        spConnect(coordinator);
+        if (!myPlayer.isKibitzer()) {
+            toggleKibitzer();
+        }
+        stopperSelected = true;
+        devSpeedOption.setSelected(true);
+        updateGameOptions(options);
+        coordinator.startGame(options);
     }
     
     public static void main(String[] args) {

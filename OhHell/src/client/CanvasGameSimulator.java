@@ -73,17 +73,18 @@ public class CanvasGameSimulator {
         ImmediateValueLearner ivl = new ImmediateValueLearner("resources/models/" + "ivlN" + N + "D" + D + ".txt");
         List<AiStrategyModule> aiStrategyModules = new ArrayList<>(cPlayers.size());
         for (int i = 0; i < cPlayers.size(); i++) {
-            aiStrategyModules.add(new AiStrategyModuleOI(core, N, D, ovl, ivl) {
+            AiStrategyModule aiStrategyModule = new AiStrategyModuleOI(core, N, D, ovl, ivl) {
                 public ClientPlayer clientPlayer() {
                     return cPlayers.get(player.getIndex());
                 }
                 
                 @Override
-                public void makeBid() {
+                public int makeBid() {
                     if (clientPlayer().getKickedAtRound() == core.getRoundNumber()) {
                         player.setKicked(true);
                         core.updateRounds();
                         core.restartRound();
+                        return -1;
                     } else {
                         double[] ps = getOvlPs();
                         double[] qs = AiStrategyModuleOI.subsetProb(ps, ps.length);
@@ -91,12 +92,12 @@ public class CanvasGameSimulator {
                         clientPlayer().addAiBid(AiStrategyModuleOI.orderBids(ps)[0]);
                         clientPlayer().addDiff(difficulty(qs));
                         
-                        core.incomingBid(player, clientPlayer().getBids().get(core.getRoundNumber()));
+                        return clientPlayer().getBids().get(core.getRoundNumber());
                     }
                 }
                 
                 @Override
-                public void makePlay() {
+                public Card makePlay() {
                     ClientPlayer.Play play = clientPlayer().getPlays().get(core.getRoundNumber()).get(core.getPlayNumber());
                     if (play.isClaimed()) {
                         for (ClientPlayer p : cPlayers) {
@@ -105,13 +106,16 @@ public class CanvasGameSimulator {
                                 break;
                             }
                         }
+                        return null;
                     } else {
                         getMyPlay();
                         clientPlayer().addMakingProbs(getMakingProbs(), core.getRoundNumber());
-                        core.incomingPlay(player, play.getCard());
+                        return play.getCard();
                     }
                 }
-            });
+            };
+            aiStrategyModule.setCoreData(core.getCoreData());
+            aiStrategyModules.add(aiStrategyModule);
         }
         
         return aiStrategyModules;

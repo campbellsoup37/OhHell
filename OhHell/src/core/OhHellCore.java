@@ -3,10 +3,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class OhHellCore {
@@ -14,7 +17,7 @@ public class OhHellCore {
     
     private List<Player> players = new ArrayList<>();
     private List<Player> kibitzers = new ArrayList<>();
-    private HashMap<Integer, Team> teams = new HashMap<>();
+    private Map<Integer, Team> teams = new HashMap<>();
     
     private AiKernel aiKernel;
     private AiTrainer aiTrainer;
@@ -41,6 +44,10 @@ public class OhHellCore {
     
     private PendingAction pendingAction;
     
+    private CoreData data = new CoreData();
+    
+    private List<Player> trickOrder = new LinkedList<>();
+    
     public OhHellCore(boolean record) {
         aiKernel = new AiKernel(this);
         
@@ -62,7 +69,7 @@ public class OhHellCore {
         this.kibitzers = kibitzers;
     }
     
-    public void setTeams(HashMap<Integer, Team> teams) {
+    public void setTeams(Map<Integer, Team> teams) {
         this.teams = teams;
     }
     
@@ -113,7 +120,15 @@ public class OhHellCore {
         return gameStarted;
     }
     
-    public void startGame(GameOptions options, List<AiStrategyModule> aiStrategyModules) {
+    public void setOptions(GameOptions options) {
+        this.options = options;
+    }
+    
+    public void overrideAiKernel(AiKernel aiKernel) {
+        this.aiKernel = aiKernel;
+    }
+    
+    public void startGame(GameOptions options) {
         this.options = options;
         int robotCount = options.getNumRobots();
 
@@ -141,7 +156,7 @@ public class OhHellCore {
         
         if (robotCount > 0) {
             List<AiPlayer> aiPlayers = aiKernel.createAiPlayers(
-                    players.size() + robotCount, options, aiStrategyModules, dummies, 0);
+                    players.size() + robotCount, options, dummies, 0);
             for (int i = 0; i < aiPlayers.size(); i++) {
                 aiPlayers.get(i).setId("@bot" + i);
             }
@@ -155,7 +170,13 @@ public class OhHellCore {
             aiKernel.start();
         }
         
-        // TODO Check teams are valid
+        // Sort team members
+        for (Team team : teams.values()) {
+            team.setMembers(new ArrayList<>());
+        }
+        for (Player player : players) {
+            teams.get(player.getTeam()).addMember(player);
+        }
         
         gameStarted = true;
         randomizePlayerOrder();
@@ -235,7 +256,7 @@ public class OhHellCore {
     public void stopGame() {
         gameStarted = false;
         
-        HashMap<Player, Player> dummyMap = new HashMap<>();
+        Map<Player, Player> dummyMap = new HashMap<>();
         for (Player player : players) {
             if (player.isKicked() || player.isDisconnected()) {
                 for (Player p : players) {
@@ -341,7 +362,9 @@ public class OhHellCore {
             player.setHandRevealed(false);
             player.setClaiming(false);
             player.setAcceptedClaim(false);
+            player.clearPlayed();
         }
+        trickOrder.clear();
         
         for (Player player : players) {
             sendDealerLeader(player);
@@ -372,7 +395,7 @@ public class OhHellCore {
                     "ERROR: Player \"" + player.getName() + "\" attempted to bid " + bid
                     + " with a hand size of " + player.getHand().size() + ".");
             return;
-        } else if (turn == getDealer() && bid == whatCanINotBid()) {
+        } else if (turn == getDealer() && bid == data.whatCanINotBid(players.get(turn))) {
             System.out.println(
                     "ERROR: Player \"" + player.getName() + "\" attempted to bid what they cannot bid as dealer.");
             return;
@@ -425,86 +448,12 @@ public class OhHellCore {
         this.aiTrainer = aiTrainer;
     }
     
-    public int getLeader() {
-        return leader;
-    }
-    
-    public Card getTrump() {
-        return trump;
-    }
-    
     public int getDealer() {
         return rounds.get(roundNumber).getDealer().getIndex();
     }
     
     public List<Card> getTrick() {
         return players.stream().map(Player::getTrick).collect(Collectors.toList());
-    }
-    
-    public int whatCanINotBid() {
-        if (turn == getDealer()) {
-            return rounds.get(roundNumber).getHandSize()
-                    - players.stream().map(p -> p.hasBid() ? p.getBid() : 0).reduce(0, (a, b) -> a + b);
-        } else {
-            return -1;
-        }
-    }
-    
-    // Used in bidding. Returns the highest makeable bid (max 0) for the given player.
-    public int highestMakeableBid(Player player, boolean considerDealer) {
-        if (options.isTeams()) {
-            int totalBid = 0;
-            int teamBid = 0;
-            for (Player p : players) {
-                totalBid += p.getBid();
-                if (p.getTeam() == player.getTeam()) {
-                    teamBid += p.getBid();
-                }
-            }
-            
-            return Math.max(
-                    rounds.get(roundNumber).getHandSize()
-                    - teamBid
-                    - (considerDealer && totalBid == teamBid && isDealerOnMyTeam(player) ? 1 : 0),
-                    0);
-        } else {
-            return rounds.get(roundNumber).getHandSize();
-        }
-    }
-    
-    public boolean isDealerOnMyTeam(Player player) {
-        return players.get(getDealer()).getTeam() == player.getTeam();
-    }
-    
-    public List<Card> whatCanIPlay(Player player) {
-        List<Card> canPlay = player.getHand().stream()
-                .filter(c -> players.get(leader).getTrick() == null 
-                || players.get(leader).getTrick().isEmpty()
-                || c.getSuit().equals(players.get(leader).getTrick().getSuit()))
-                .collect(Collectors.toList());
-        if (canPlay.isEmpty()) {
-            canPlay = player.getHand();
-        }
-        return canPlay;
-    }
-    
-    // Returns how many tricks the given player wants
-    public int wants(Player player, int handSize) {
-        int myWants = player.getBid() - player.getTaken();
-        myWants = Math.max(Math.min(myWants, handSize), 0);
-        
-        if (options.isTeams()) {
-            int teamWants = players.stream()
-                    .map(p -> p.getTeam() == player.getTeam() ? p.getBid() - p.getTaken() : 0)
-                    .reduce(0, (a, b) -> a + b);
-            teamWants = Math.max(Math.min(teamWants, handSize), 0);
-            myWants = Math.max(Math.min(myWants, teamWants), 0);
-            if (teamWants == handSize) {
-                myWants = teamWants;
-            }
-        }
-        
-        return myWants;
     }
     
     // ---------------------------------------------------------------------------------------------
@@ -539,7 +488,7 @@ public class OhHellCore {
                     "ERROR: Player \"" + player.getName() + "\" attempted to play " + card
                     + ", but they do not have that card.");
             return;
-        } else if (whatCanIPlay(player).stream().noneMatch(c -> c.equals(card))) {
+        } else if (data.whatCanIPlay(player).stream().noneMatch(c -> c.equals(card))) {
             System.out.println(
                     "ERROR: Player \"" + player.getName() + "\" attempted to play " + card
                     + ", failing to follow suit.");
@@ -549,8 +498,37 @@ public class OhHellCore {
         if (verbose) {
             System.out.println(player.getId() + " played " + card);
         }
-        player.setTrick(card);
-        player.removeCard(card);
+        
+        int ledSuit = players.get(leader).getTrick().getSuit();
+        
+        player.recordCardPlay(card);
+        if (player.getIndex() != leader && card.getSuit() != ledSuit) {
+            player.recordShownOut(ledSuit);
+        }
+        
+        // Insert in trick order
+        if (turn == leader) {
+            trickOrder.add(player);
+        } else if (card.getSuit() == ledSuit || card.getSuit() == trump.getSuit()) {
+            ListIterator<Player> iter = trickOrder.listIterator();
+            boolean spotFound = false;
+            boolean canceled = false;
+            while (iter.hasNext() && !spotFound && !canceled) {
+                Card next = iter.next().getTrick();
+                if (next.equals(card)) {
+                    canceled = true;
+                    iter.remove();
+                } else {
+                    spotFound = !next.isGreaterThan(card, ledSuit, trump.getSuit());
+                }
+            }
+            if (!canceled) {
+                if (spotFound) {
+                    iter.previous();
+                }
+                iter.add(player);
+            }
+        }
         
         for (Player p : players) {
             p.commandPlayReport(player.getIndex(), card);
@@ -564,7 +542,7 @@ public class OhHellCore {
         if (players.stream().filter(p -> !p.isKicked()).anyMatch(p -> p.getTrick().isEmpty())) {
             communicateTurn();
         } else {
-            turn = trickWinner();
+            turn = trickOrder.isEmpty() ? leader : trickOrder.get(0).getIndex();
             
             for (Player p : players) {
                 deck.playCard(p.getTrick());
@@ -591,6 +569,7 @@ public class OhHellCore {
                         turn,
                         players.stream().map(Player::getTrick).collect(Collectors.toList()));
             }
+            trickOrder.clear();
             
             playNumber++;
             
@@ -604,9 +583,9 @@ public class OhHellCore {
     }
     
     public void doNextRound() {
-        HashMap<Integer, Integer> teamBids = new HashMap<>();
-        HashMap<Integer, Integer> teamTakens = new HashMap<>();
-        HashMap<Integer, Boolean> teamKickeds = new HashMap<>();
+        Map<Integer, Integer> teamBids = new HashMap<>();
+        Map<Integer, Integer> teamTakens = new HashMap<>();
+        Map<Integer, Boolean> teamKickeds = new HashMap<>();
         
         if (options.isTeams()) {
             for (Player p : players) {
@@ -730,7 +709,7 @@ public class OhHellCore {
             if (counts.get(trick.get(i).toString()) % 2 == 1 && 
                     (trick.get(i).isGreaterThan(trick.get(out), trump.getSuit())
                             || counts.get(trick.get(out).toString()) % 2 == 0
-                            && trick.get(out).getSuit().equals(trick.get(i).getSuit()))) {
+                            && trick.get(out).getSuit() == trick.get(i).getSuit())) {
                 out = i;
             }
         }
@@ -743,117 +722,6 @@ public class OhHellCore {
             trick.add(players.get((leader + i) % players.size()).getTrick());
         }
         return (leader + trickWinner(trick, trump)) % players.size();
-    }
-    
-    /**
-     * This function is used by the IVL as a first pass to determine if a card can win the current 
-     * trick. Given a card, a return value of -1 guarantees that the card will not win the trick if
-     * played by the current player. Otherwise, a nonnegative integer will be returned that will 
-     * convey information about the likelihood of winning.
-     * 
-     * - In standard single-deck, it returns 0 if the card will currently be winning the trick.
-     * 
-     * - In double-deck, it returns the number of cards already played that would need to be 
-     * canceled in order for the card to win. Note that this number will not exceed the number of
-     * cards currently in the trick or the number of cards to be played afterward. In particular, 
-     * this number will not exceed (N - 1) / 2, where N is the number of players.
-     * 
-     * Note that this function only uses information currently available to the current player. 
-     * Also note that it is imperfect; for example (TODO), it does not take into account suit 
-     * voids known to all players. Therefore, currently, the return value may not be -1 even if it 
-     * can be deduced with certainty that the card will not win the trick.
-     */
-    public int cardCanWin(Card card) {
-        final boolean debug = false;
-        
-        // If the player is leading, always return 0.
-        if (turn == leader) {
-            if (debug) {
-                System.out.println(card + " winnable = 0");
-                System.out.println("   card is led");
-            }
-            return 0;
-        }
-        
-        // If the card does not match the led suit or trump suit, return -1.
-        if (!card.getSuit().equals(players.get(leader).getTrick().getSuit())
-                && !card.getSuit().equals(trump.getSuit())) {
-            if (debug) {
-                System.out.println(card + " winnable = -1:");
-                System.out.println("   card is not led suit or trump");
-            }
-            return -1;
-        }
-        
-        Hashtable<String, Integer> counts = new Hashtable<>();
-        for (Player player : players) {
-            String cardName = player.getTrick().toString();
-            if (counts.get(cardName) == null) {
-                counts.put(cardName, 1);
-            } else {
-                counts.put(cardName, counts.get(cardName) + 1);
-            }
-        }
-        
-        // If the matching copy of this card is in the trick already, return -1.
-        if (counts.get(card.toString()) != null && counts.get(card.toString()) == 1) {
-            if (debug) {
-                System.out.println(card + " winnable = -1:");
-                System.out.println("   card is canceled");
-            }
-            return -1;
-        }
-        
-        int requiredCancels = 0;
-
-        for (int i = 0; i < players.size(); i++) {
-            Card c = players.get(i).getTrick();
-            
-            // If c is not canceled...
-            if (counts.get(c.toString()) == 1) {
-                // If c beats card...
-                if (c.isGreaterThan(card, trump.getSuit())) {
-                    // If c cannot be canceled, we can return -1 immediately. Otherwise, increment
-                    // requiredCancels.
-                    boolean uncancelableBecauseSeenAlready = 
-                            deck.matchingCardsLeft(c, new LinkedList<>()) == deck.getD() - 1;
-                    boolean uncancelableBecauseIHaveIt = 
-                            players.get(turn).getHand().stream().anyMatch(c1 -> c1.equals(c));
-                    if (uncancelableBecauseSeenAlready) {
-                        if (debug) {
-                            System.out.println(card + " winnable = -1:");
-                            System.out.println("   card is beat by " + c + ", which was seen already");
-                        }
-                        return -1;
-                    } else if (uncancelableBecauseIHaveIt) {
-                        if (debug) {
-                            System.out.println(card + " winnable = -1:");
-                            System.out.println("   card is beat by " + c + ", which is in my hand");
-                        }
-                        return -1;
-                    }
-                    
-                    requiredCancels++;
-                }
-            }
-        }
-        
-        int N = (int) players.stream().filter(p -> !p.isKicked()).count();
-        int playersLeft = (leader - turn - 1 + N) % N;
-        // If there are more cards to be canceled than there are players left to play in the trick,
-        // then return -1.
-        if (requiredCancels > playersLeft) {
-            if (debug) {
-                System.out.println(card + " winnable = -1:");
-                System.out.println("   " + playersLeft + " remaining players cannot cancel " + requiredCancels + " cards");
-            }
-            return -1;
-        } else {
-            if (debug) {
-                System.out.println(card + " winnable = " + requiredCancels);
-            }
-            return requiredCancels;
-        }
     }
     
     public void processUndoBid(Player player) {
@@ -897,15 +765,15 @@ public class OhHellCore {
                         p.getHand(), 
                         Arrays.asList(p.getTrick())
                         ), false);
-                if (mySplit.get(trump.getSuitNumber() - 1).size()
-                        < yourSplit.get(trump.getSuitNumber() - 1).size()) {
+                if (mySplit.get(trump.getSuit()).size()
+                        < yourSplit.get(trump.getSuit()).size()) {
                     return false;
                 }
                 for (int i = 0; i < 4; i++) {
                     ListIterator<Card> myli = mySplit.get(i).listIterator();
                     ListIterator<Card> yourli = yourSplit.get(i).listIterator();
                     while (myli.hasNext() && yourli.hasNext()) {
-                        if (yourli.next().isGreaterThan(myli.next(), "")) {
+                        if (yourli.next().isGreaterThan(myli.next(), -2)) {
                             return false;
                         }
                     }
@@ -1012,6 +880,385 @@ public class OhHellCore {
             }
             updateRounds();
             restartRound();
+        }
+    }
+    
+    public CoreData getCoreData() {
+        return data;
+    }
+    
+    public class CoreData {
+        public int getN(boolean includeKicks) {
+            return includeKicks ? 
+                    players.size() : 
+                    (int) players.stream().filter(p -> !p.isKicked()).count();
+        }
+        
+        public int getD() {
+            return options.getD();
+        }
+        
+        public boolean isTeams() {
+            return options.isTeams();
+        }
+        
+        public Random getRandom() {
+            return random;
+        }
+        
+        public Player.PlayerData getPlayerData(int index) {
+            return players.get(index).getPlayerData();
+        }
+        
+        public Player.PlayerData getTeamData(int index) {
+            return teams.get(index).getPlayerData();
+        }
+        
+        public List<Integer> getTeam(int teamNumber) {
+            return new ArrayList<>(teams.get(teamNumber).getMembers().stream()
+                    .map(Player::getTeam)
+                    .collect(Collectors.toList()));
+        }
+        
+        public int getLeader() {
+            return leader;
+        }
+        
+        public int getDealer() {
+            return OhHellCore.this.getDealer();
+        }
+        
+        public Card getTrump() {
+            return trump;
+        }
+        
+        public RoundDetails getRoundDetails() {
+            return rounds.get(roundNumber);
+        }
+        
+        public int whatCanINotBid(Player player) {
+            if (player.getIndex() == getDealer()) {
+                return rounds.get(roundNumber).getHandSize()
+                        - players.stream().map(p -> p.hasBid() ? p.getBid() : 0).reduce(0, (a, b) -> a + b);
+            } else {
+                return -1;
+            }
+        }
+        
+        public List<Card> getTrick() {
+            return players.stream()
+                    .map(Player::getTrick)
+                    .filter(c -> !c.isEmpty())
+                    .collect(Collectors.toList());
+        }
+        
+        public int adjustedCardValue(Card card, List<List<Card>> additionalPlayeds) {
+            return deck.adjustedCardValueSmall(card, additionalPlayeds);
+        }
+        
+        public int cardsLeftOfSuit(Card card, List<List<Card>> additionalPlayeds) {
+            return deck.cardsLeftOfSuit(card, additionalPlayeds);
+        }
+        
+        public int matchingCardsLeft(Card card, List<List<Card>> additionalPlayeds) {
+            return deck.matchingCardsLeft(card, additionalPlayeds);
+        }
+        
+        // Used in bidding. Returns the highest makeable bid (max 0) for the given player.
+        public int highestMakeableBid(Player player, boolean considerDealer) {
+            if (options.isTeams()) {
+                int totalBid = 0;
+                int teamBid = 0;
+                for (Player p : players) {
+                    totalBid += p.getBid();
+                    if (p.getTeam() == player.getTeam()) {
+                        teamBid += p.getBid();
+                    }
+                }
+                
+                return Math.max(
+                        rounds.get(roundNumber).getHandSize()
+                        - teamBid
+                        - (considerDealer && totalBid == teamBid && isDealerOnMyTeam(player) ? 1 : 0),
+                        0);
+            } else {
+                return rounds.get(roundNumber).getHandSize();
+            }
+        }
+        
+        public boolean isDealerOnMyTeam(Player player) {
+            return players.get(getDealer()).getTeam() == player.getTeam();
+        }
+        
+        // Returns how many tricks the given player wants
+        public int wants(int index) {
+            Player player = players.get(index);
+            int h = rounds.get(roundNumber).getHandSize();
+                    
+            int myWants = player.getBid() - player.getTaken();
+            myWants = Math.max(Math.min(myWants, h), 0);
+            
+            if (options.isTeams()) {
+                int teamWants = teamWants(player.getTeam());
+                myWants = Math.max(Math.min(myWants, teamWants), 0);
+                if (teamWants == h) {
+                    myWants = teamWants;
+                }
+            }
+            
+            return myWants;
+        }
+        
+        public int teamWants(int index) {
+            Team team = teams.get(index);
+            int h = rounds.get(roundNumber).getHandSize();
+            
+            int teamWants = team.getMembers().stream()
+                    .map(p -> p.getBid() - p.getTaken())
+                    .reduce(0, Integer::sum);
+            return Math.max(Math.min(teamWants, h), 0);
+        }
+        
+        public List<Card> whatCanIPlay(Player player) {
+            List<Card> canPlay = player.getHand().stream()
+                    .filter(c -> players.get(leader).getTrick() == null 
+                    || players.get(leader).getTrick().isEmpty()
+                    || c.getSuit() == players.get(leader).getTrick().getSuit())
+                    .collect(Collectors.toList());
+            if (canPlay.isEmpty()) {
+                canPlay = player.getHand();
+            }
+            return canPlay;
+        }
+        
+        /**
+         * This function is used by the IVL as a first pass to determine if a card can win the current 
+         * trick. Given a card, a return value of -1 guarantees that the card will not win the trick if
+         * played by the current player. Otherwise, a nonnegative integer will be returned that will 
+         * convey information about the likelihood of winning.
+         * 
+         * - In standard single-deck, it returns 0 if the card will currently be winning the trick.
+         * 
+         * - In double-deck, it returns the number of cards already played that would need to be 
+         * canceled in order for the card to win. Note that this number will not exceed the number of
+         * cards currently in the trick or the number of cards to be played afterward. In particular, 
+         * this number will not exceed (N - 1) / 2, where N is the number of players.
+         * 
+         * Note that this function only uses information currently available to the current player. 
+         * Also note that it is imperfect; for example (TODO), it does not take into account suit 
+         * voids known to all players. Therefore, currently, the return value may not be -1 even if it 
+         * can be deduced with certainty that the card will not win the trick.
+         */
+        public int cardCanWin(Card card, int index) {
+            final boolean debug = true;
+            
+            // If the player is leading, always return 0.
+            if (turn == leader) {
+                if (debug) {
+                    System.out.println(card + " winnable = 0");
+                    System.out.println("   card is led");
+                }
+                return 0;
+            }
+            
+            // If the card does not match the led suit or trump suit, return -1.
+            if (card.getSuit() != players.get(leader).getTrick().getSuit()
+                    && card.getSuit() != trump.getSuit()) {
+                if (debug) {
+                    System.out.println(card + " winnable = -1:");
+                    System.out.println("   card is not led suit or trump");
+                }
+                return -1;
+            }
+            
+            Hashtable<String, Integer> counts = new Hashtable<>();
+            for (Player player : players) {
+                String cardName = player.getTrick().toString();
+                if (counts.get(cardName) == null) {
+                    counts.put(cardName, 1);
+                } else {
+                    counts.put(cardName, counts.get(cardName) + 1);
+                }
+            }
+            
+            // If the matching copy of this card is in the trick already, return -1.
+            if (counts.get(card.toString()) != null && counts.get(card.toString()) == 1) {
+                if (debug) {
+                    System.out.println(card + " winnable = -1:");
+                    System.out.println("   card is canceled");
+                }
+                return -1;
+            }
+            
+            int requiredCancels = 0;
+
+            for (int i = 0; i < players.size(); i++) {
+                Card c = players.get(i).getTrick();
+                
+                // If c is not canceled...
+                if (counts.get(c.toString()) == 1) {
+                    // If c beats card...
+                    if (c.isGreaterThan(card, trump.getSuit())) {
+                        // If c cannot be canceled, we can return -1 immediately. Otherwise, increment
+                        // requiredCancels.
+                        boolean uncancelableBecauseSeenAlready = 
+                                deck.matchingCardsLeft(c, new LinkedList<>()) == deck.getD() - 1;
+                        boolean uncancelableBecauseIHaveIt = 
+                                players.get(turn).getHand().stream().anyMatch(c1 -> c1.equals(c));
+                        if (uncancelableBecauseSeenAlready) {
+                            if (debug) {
+                                System.out.println(card + " winnable = -1:");
+                                System.out.println("   card is beat by " + c + ", which was seen already");
+                            }
+                            return -1;
+                        } else if (uncancelableBecauseIHaveIt) {
+                            if (debug) {
+                                System.out.println(card + " winnable = -1:");
+                                System.out.println("   card is beat by " + c + ", which is in my hand");
+                            }
+                            return -1;
+                        }
+                        
+                        requiredCancels++;
+                    }
+                }
+            }
+            
+            int N = (int) players.stream().filter(p -> !p.isKicked()).count();
+            int playersLeft = (leader - turn - 1 + N) % N;
+            // If there are more cards to be canceled than there are players left to play in the trick,
+            // then return -1.
+            if (requiredCancels > playersLeft) {
+                if (debug) {
+                    System.out.println(card + " winnable = -1:");
+                    System.out.println("   " + playersLeft + " remaining players cannot cancel " + requiredCancels + " cards");
+                }
+                return -1;
+            } else {
+                if (debug) {
+                    System.out.println(card + " winnable = " + requiredCancels);
+                }
+                return requiredCancels;
+            }
+        }
+        
+        public Integer[] cancelsRequired(Player whoIsAsking, Card card) {
+            Integer[] ans = new Integer[players.size()];
+            
+            List<CancelsRequiredHelperTrick> trick = new LinkedList<>();
+            for (Player player : trickOrder) {
+                trick.add(new CancelsRequiredHelperTrick(player, player.getTrick()));
+            }
+            
+            CancelsRequiredHelperTrick hypo = new CancelsRequiredHelperTrick(players.get(turn), card);
+            
+            int ledSuit = players.get(leader).getTrick().getSuit();
+            if (turn == leader) {
+                trick.add(hypo);
+            } else if (card.getSuit() == ledSuit || card.getSuit() == trump.getSuit()) {
+                ListIterator<CancelsRequiredHelperTrick> iter = trick.listIterator();
+                boolean spotFound = false;
+                boolean canceled = false;
+                while (iter.hasNext() && !spotFound && !canceled) {
+                    Card next = iter.next().card;
+                    if (next.equals(card)) {
+                        canceled = true;
+                        iter.remove();
+                    } else {
+                        spotFound = !next.isGreaterThan(card, ledSuit, trump.getSuit());
+                    }
+                }
+                if (!canceled) {
+                    if (spotFound) {
+                        iter.previous();
+                    }
+                    iter.add(hypo);
+                }
+            }
+            
+            if (trick.isEmpty()) {
+                ans[leader] = 0;
+            }
+            
+            Set<Integer> myHand = whoIsAsking.getHand().stream().map(Card::toNumber).collect(Collectors.toSet());
+            
+            int i = 0;
+            int maxCancels = (leader - turn + players.size() - 1) % players.size();
+            for (CancelsRequiredHelperTrick t : trick) {
+                ans[t.player.getIndex()] = i;
+                
+                if (options.getD() == 1) {
+                    break;
+                }
+                
+                boolean uncancelableBecauseSeenAlready = 
+                        deck.matchingCardsLeft(t.card, new LinkedList<>()) == deck.getD() - 1;
+                boolean uncancelableBecauseInMyHand = 
+                        myHand.contains(t.card.toNumber());
+                if (uncancelableBecauseSeenAlready || uncancelableBecauseInMyHand || i == maxCancels) {
+                    break;
+                }
+                
+                i++;
+            }
+            
+            for (i = 0; i < players.size(); i++) {
+                int j = (i + leader) % players.size();
+                if (ans[j] == null) {
+                    if (i <= (turn - leader + players.size()) % players.size()) {
+                        ans[j] = -2;
+                    } else {
+                        ans[j] = -1;
+                    }
+                }
+            }
+            
+            return ans;
+        }
+        
+        public IndicesRelativeTo getIndicesRelativeTo(int index) {
+            return new IndicesRelativeTo(index);
+        }
+        
+        private class CancelsRequiredHelperTrick {
+            public Player player;
+            public Card card;
+            
+            public CancelsRequiredHelperTrick(Player player, Card card) {
+                this.player = player;
+                this.card = card;
+            }
+        }
+        
+        public class IndicesRelativeTo implements Iterable<Integer> {
+            public class IndicesRelativeToIterator implements Iterator<Integer> {
+                @Override
+                public boolean hasNext() {
+                    return next != start || current == -1;
+                }
+
+                @Override
+                public Integer next() {
+                    current = next;
+                    next = OhHellCore.this.nextUnkicked(current);
+                    return current;
+                }
+            }
+            
+            private int start;
+            private int current;
+            private int next;
+            
+            public IndicesRelativeTo(int index) {
+                start = index;
+                current = -1;
+                next = index;
+            }
+
+            @Override
+            public Iterator<Integer> iterator() {
+                return new IndicesRelativeToIterator();
+            }
         }
     }
 }

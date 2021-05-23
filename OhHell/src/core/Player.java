@@ -1,26 +1,32 @@
 package core;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 public abstract class Player {
     private String name;
     private String id;
     private int index = 0;
+    private int place;
     private int team = 0;
     private int score;
-    private int place;
     private int bid;
     private int taken;
+    
+    private boolean bidded = false;
+    private Card lastTrick;
+    private Card trick;
+    
+    private boolean kicked = false;
+    
+    private List<Card> played = new LinkedList<>();
+    private boolean[] shownOut = new boolean[4];
     
     private List<Card> hand;
     private List<List<Card>> hands = new ArrayList<>();
     private List<Integer> bids = new ArrayList<>();
     private List<Integer> takens = new ArrayList<>();
     private List<Integer> scores = new ArrayList<>();
-    
-    private boolean bidded = false;
-    private Card lastTrick;
-    private Card trick;
     
     private boolean handRevealed = false;
     private boolean isClaiming = false;
@@ -32,16 +38,75 @@ public abstract class Player {
 
     private boolean joined = false;
     private boolean disconnected = false;
-    private boolean kicked = false;
     private boolean kibitzer = false;
 
     private List<Player> kickVotes = new ArrayList<>();
     
+    public class PlayerData {
+        public String getName() {
+            return Player.this.getName();
+        }
+        
+        public String getId() {
+            return Player.this.getId();
+        }
+        
+        public int getIndex() {
+            return Player.this.getIndex();
+        }
+        
+        public int getTeam() {
+            return Player.this.getTeam();
+        }
+        
+        public int getScore() {
+            return Player.this.getScore();
+        }
+        
+        public int getBid() {
+            return Player.this.getBid();
+        }
+        
+        public int getTaken() {
+            return Player.this.getTaken();
+        }
+        
+        public boolean hasBid() {
+            return Player.this.hasBid();
+        }
+        
+        public Card getLastTrick() {
+            return Player.this.getLastTrick();
+        }
+        
+        public Card getTrick() {
+            return Player.this.getTrick();
+        }
+        
+        public boolean hasPlayed() {
+            return !getTrick().isEmpty();
+        }
+        
+        public boolean isKicked() {
+            return Player.this.isKicked();
+        }
+        
+        public List<Card> getCardsPlayed() {
+            return played;
+        }
+        
+        public boolean shownOut(int suitNumber) {
+            return shownOut[suitNumber];
+        }
+    }
+    private PlayerData data;
+    
     public Player() {
-        name = "";
+        this("");
     }
     
     public Player(String name) {
+        data = new PlayerData();
         this.name = name;
     }
     
@@ -147,7 +212,7 @@ public abstract class Player {
     }
     
     public int getTaken() {
-        return taken;
+        return this.taken;
     }
     
     public void addTaken() {
@@ -224,6 +289,21 @@ public abstract class Player {
 
     public void setTrick(Card trick) {
         this.trick = trick;
+    }
+    
+    public void recordCardPlay(Card card) {
+        setTrick(card);
+        removeCard(card);
+        played.add(card);
+    }
+    
+    public void recordShownOut(int suit) {
+        shownOut[suit] = true;
+    }
+    
+    public void clearPlayed() {
+        played = new LinkedList<>();
+        shownOut = new boolean[4];
     }
 
     public boolean isJoined() {
@@ -316,6 +396,10 @@ public abstract class Player {
     
     public void setAcceptedClaim(boolean acceptedClaim) {
         this.acceptedClaim = acceptedClaim;
+    }
+    
+    public PlayerData getPlayerData() {
+        return data;
     }
     
     public void commandStart(GameOptions options) {}

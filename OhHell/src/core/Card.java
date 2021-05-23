@@ -6,9 +6,13 @@ import java.util.List;
 
 public class Card {
     private int num = 0;
-    private String suit = "";
+    // -1=empty, 0=clubs, 1=diamonds, 2=hearts, 3=spades
+    private int suit = -1;
     
-    public Card(int num, String suit) {
+    private static int[] rowCode = {2, 1, 3, 0};
+    private static int[] rowCodeInv = {3, 1, 0, 2};
+    
+    public Card(int num, int suit) {
         this.num = num;
         this.suit = suit;
     }
@@ -31,13 +35,13 @@ public class Card {
             num = 2 + (int)(code.charAt(0) - '2');
         }
         if (code.charAt(1) == 'C') {
-            suit = "clubs";
+            suit = 0;
         } else if (code.charAt(1) == 'D') {
-            suit = "diamonds";
+            suit = 1;
         } else if (code.charAt(1) == 'H') {
-            suit = "hearts";
+            suit = 2;
         } else if (code.charAt(1) == 'S') {
-            suit = "spades";
+            suit = 3;
         }
     }
     
@@ -46,20 +50,7 @@ public class Card {
         if (num == 1) {
             num = 14;
         }
-        switch (number / 13) {
-        case 0:
-            suit = "hearts";
-            return;
-        case 1:
-            suit = "diamonds";
-            return;
-        case 2:
-            suit = "spades";
-            return;
-        case 3:
-            suit = "clubs";
-            return;
-        }
+        suit = rowCode[number / 13];
     }
     
     public Card() {}
@@ -72,7 +63,7 @@ public class Card {
         for (List<Card> hand : hands) {
             for (Card card : hand) {
                 if (!card.isEmpty()) {
-                    ans.get(card.getSuitNumber() - 1).add(card);
+                    ans.get(card.getSuit()).add(card);
                 }
             }
         }
@@ -99,30 +90,23 @@ public class Card {
         } else if (num == 14) {
             out += "A";
         }
-        if (suit.equals("clubs")) {
+        if (suit == 0) {
             out += "C";
-        } else if (suit.equals("diamonds")) {
+        } else if (suit == 1) {
             out += "D";
-        } else if (suit.equals("hearts")) {
+        } else if (suit == 2) {
             out += "H";
-        } else if (suit.equals("spades")) {
+        } else if (suit == 3) {
             out += "S";
         }
         return out;
     }
     
     public int toNumber() {
-        if (suit.equals("hearts")) {
-            return (num - 1) % 13;
-        } else if (suit.equals("diamonds")) {
-            return (num - 1) % 13 + 13;
-        } else if (suit.equals("spades")) {
-            return (num - 1) % 13 + 26;
-        } else if (suit.equals("clubs")) {
-            return (num - 1) % 13 + 39;
-        } else {
+        if (isEmpty()) {
             return 52;
         }
+        return (num - 1) % 13 + 13 * rowCodeInv[suit];
     }
     
     public boolean isEmpty() {
@@ -138,44 +122,39 @@ public class Card {
     }
     
     public int getAdjustedNum(Card trump) {
-        if (trump.getSuit().equals(suit) && trump.getNum() >= num) {
+        if (trump.getSuit() == suit && trump.getNum() >= num) {
             return num + 1;
         } else {
             return num;
         }
     }
     
-    public String getSuit() {
+    public int getSuit() {
         return suit;
     }
     
-    public boolean isGreaterThan(Card card, String trumpSuit) {
-        return (card.getSuit().equals(suit) && num > card.getNum()) 
-                || (suit.equals(trumpSuit) && !card.getSuit().equals(trumpSuit))
+    public boolean isGreaterThan(Card card, int trumpSuit) {
+        return (card.getSuit() == suit && num > card.getNum()) 
+                || (suit == trumpSuit && card.getSuit() != trumpSuit)
                 || card.isEmpty();
     }
     
+    public boolean isGreaterThan(Card card, int ledSuit, int trumpSuit) {
+        return (suit == ledSuit || suit == trumpSuit) && !card.isGreaterThan(this, trumpSuit);
+    }
+    
     public boolean isGreaterThanSort(Card card) {
-        int s1 = getSuitNumber();
-        int s2 = card.getSuitNumber();
+        int s1 = suit;
+        int s2 = card.getSuit();
         return (s1 > s2) || (s1 == s2 && num > card.getNum());
     }
     
+    @Deprecated
     public int getSuitNumber() {
-        if (suit.equals("clubs")) {
-            return 1;
-        } else if (suit.equals("diamonds")) {
-            return 2;
-        } else if (suit.equals("spades")) {
-            return 3;
-        } else if (suit.equals("hearts")) {
-            return 4;
-        } else {
-            return 0;
-        }
+        return suit + 1;
     }
     
     public boolean equals(Card c) {
-        return (c.getNum() == num) && c.getSuit().equals(suit);
+        return c.getNum() == num && c.getSuit() == suit;
     }
 }

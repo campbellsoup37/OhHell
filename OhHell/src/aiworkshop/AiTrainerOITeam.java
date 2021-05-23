@@ -3,24 +3,29 @@ import java.awt.Color;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import client.GameClient;
+import core.AiKernel;
 import core.AiStrategyModule;
 import core.AiTrainer;
+import core.GameCoordinator;
 import core.GameOptions;
 import core.OhHellCore;
-import core.Player;
 import ml.Learner;
-import strategyOI.AiStrategyModuleOI;
-import strategyOI.ImmediateValueLearner;
-import strategyOI.OverallValueLearner;
+import strategyOITeam.AiStrategyModuleOITeam;
+import strategyOITeam.ImmediateValueLearner;
+import strategyOITeam.OverallValueLearner;
+import strategyOITeam.TeammateTakesLearner;
 
-public class AiTrainerOI extends AiTrainer {
+public class AiTrainerOITeam extends AiTrainer {
     private Dashboard dash;
     
     private OverallValueLearner ovl;
     private ImmediateValueLearner ivl;
+    private TeammateTakesLearner ttl;
     private Color ovlColor = Color.PINK;
     private Color ivlColor = Color.CYAN;
     
@@ -30,90 +35,94 @@ public class AiTrainerOI extends AiTrainer {
     }
     
     public void run() {
-        int N = 10;
-        boolean doubleDeck = true;
-        int reps = 1000000;
+        int N = 6;
+        int D = 2;
+        int[][] teams = {
+                {0, 1},
+                {2, 3},
+                {4, 5}
+        };
+        int reps = 1;
         boolean verbose = true;
         boolean forMathematica = false;
         boolean printError = true;
         boolean showDash = true;
-        boolean showClient = false;
+        boolean showClient = true;
         
         double ovlEta = 1;
         double ivlEta = 1;
         double scale = 1;
         int groupingSize = 1;
         
-        boolean openFromFile = true;
+        boolean openFromFile = false;
         boolean saveToFile = false;
         int saveEvery = 100;
-
-        int D = doubleDeck ? 2 : 1;
-        int maxH = Math.min(10, (52 * D - 1) / N);
-        int maxCancels = (N - 1) / 2;
-        int[] ovlLayers = {
-                maxH              // Cards left in hand
-                + (maxH + 1) * N  // Bids - takens
-                + 4               // Number of voids
-                + 13 * D          // Trump left
-                
-                + 2               // Card is trump
-                + 13 * D          // That suit left
-                + 13 * D          // Card's adjusted number
-                + (D - 1),        // Matching cards left
-                40,               // Hidden layer
-                1                 // Card's predicted value
-        };
-        int[] ivlLayers = {
-                (maxH + 1) * (N - 1) // Bids - takens
-                + 13 * D             // Trump left
-                
-                + 2                  // Trump was led
-                + 13 * D             // Led suit left
-                
-                + 2                  // Card is trump
-                + 13 * D             // Card's adjusted number
-                + (D - 1)            // Matching cards left
-                
-                + maxCancels,        // Required cancels
-                30,                  // Hidden layer
-                1                    // Card's predicted value
-        };
         
-        String folder = "resources/ai workshop/OhHellAIModels/OI/";
+        String folder = "resources/ai workshop/OhHellAIModels/OIT/";
 
         ovlEta *= scale;
         ivlEta *= scale;
         
-        String ovlFileSuffix = "o" + ovlLayers[1] + "";
-        for (int i = 2; i < ovlLayers.length - 1; i++) {
+        int[] ovlLayers = {0};
+        int[] ivlLayers = {50};
+        int[] ttlLayers = {0};
+        
+        String ovlFileSuffix = "o" + ovlLayers[0] + "";
+        for (int i = 1; i < ovlLayers.length; i++) {
             ovlFileSuffix += "_" + ovlLayers[i];
         }
-        String ivlFileSuffix = "i" + ivlLayers[1] + "";
-        for (int i = 2; i < ivlLayers.length - 1; i++) {
+        String ivlFileSuffix = "i" + ivlLayers[0] + "";
+        for (int i = 1; i < ivlLayers.length; i++) {
             ivlFileSuffix += "_" + ivlLayers[i];
         }
-        String fileSuffix = ovlFileSuffix + ivlFileSuffix;
+        String ttlFileSuffix = "t" + ttlLayers[0] + "";
+        for (int i = 1; i < ttlLayers.length; i++) {
+            ttlFileSuffix += "_" + ttlLayers[i];
+        }
+        String fileSuffix = ovlFileSuffix + ivlFileSuffix + ttlFileSuffix;
         
-        ovl = new OverallValueLearner(ovlLayers, OverallValueLearner.getActFuncs(ovlLayers.length - 1));
-        ovl.setTrainer(this);
-        ivl = new ImmediateValueLearner(ivlLayers, ImmediateValueLearner.getActFuncs(ivlLayers.length - 1));
-        ivl.setTrainer(this);
+        ovl = null;
+        //ovl.setTrainer(this);
+        ivl = new ImmediateValueLearner(N, D, ivlLayers[0]);
+        //ivl.setTrainer(this);
+        ttl = null;
+        //ttl.setTrainer(this);
         
         if (openFromFile) {
             ovl.openFromFile(folder + "ovlN" + N + "D" + D + fileSuffix + ".txt");
             ivl.openFromFile(folder + "ivlN" + N + "D" + D + fileSuffix + ".txt");
+            int x = 1 / 0;
         }
+        
+        GameCoordinator coordinator = new GameCoordinator() {};
+        
+        GameOptions options = new GameOptions(N);
+        options.setD(D);
+        options.setRobotDelay(0);
+        options.setTeams(true);
+        coordinator.updateOptions(options);
+        
+        Map<Integer, Integer> teamMap = new HashMap<>();
+        for (int i = 0; i < teams.length; i++) {
+            for (int j : teams[i]) {
+                teamMap.put(j, i);
+            }
+        }
+        coordinator.reteamPlayers(teamMap);
         
         OhHellCore core = new OhHellCore(false);
-        List<Player> players = new ArrayList<>();
-        core.setPlayers(players);
         core.setAiTrainer(this);
-        
-        List<AiStrategyModule> aiStrategyModules = new ArrayList<>(N);
-        for (int i = 0; i < N; i++) {
-            aiStrategyModules.add(new AiStrategyModuleOI(core, N, D, ovl, ivl));
-        }
+        core.overrideAiKernel(new AiKernel(core) {
+            @Override
+            public List<AiStrategyModule> createDefaultAiStrategyModules(int N) {
+                List<AiStrategyModule> aiStrategyModules = new ArrayList<>(N);
+                for (int i = 0; i < N; i++) {
+                    aiStrategyModules.add(new AiStrategyModuleOITeam(N, core.getCoreData(), ovl, ivl, ttl, AiTrainerOITeam.this));
+                }
+                return aiStrategyModules;
+            }
+        });
+        coordinator.startNewCore(core);
         
         int M = 10000;
         int[] toAve = {1, 100};
@@ -137,10 +146,6 @@ public class AiTrainerOI extends AiTrainer {
             dash.setGraphColor(2, 0, ivlColor);
         }
         
-        GameOptions options = new GameOptions(N);
-        options.setD(D);
-        options.setRobotDelay(0);
-        
         GameClient client = null;
         if (showClient) {
             client = new GameClient();
@@ -151,9 +156,9 @@ public class AiTrainerOI extends AiTrainer {
         long[] times = new long[R];
         for (int g = 1; g <= reps; g++) {
             if (showClient) {
-                client.openGame(core, options, aiStrategyModules);
+                client.openGame(coordinator, options);
             } else {
-                core.startGame(options, aiStrategyModules);
+                core.startGame(options);
             }
             
             try {
@@ -202,7 +207,7 @@ public class AiTrainerOI extends AiTrainer {
             StringBuilder log = new StringBuilder();
             
             if (g % toAve[0] == 0 && verbose) {
-                log.append("OI N=" + N + ", D=" + (doubleDeck ? 2 : 1) + "\n");
+                log.append("OI N=" + N + ", D=" + D + "\n");
                 log.append(g + "/" + reps + ": \n");
                 log.append("     Best score: " + bestScore + " (" + overallBest + ")\n");
                 bestScore = Integer.MIN_VALUE;
@@ -268,7 +273,7 @@ public class AiTrainerOI extends AiTrainer {
     }
     
     public static void main(String[] args) {
-        AiTrainer ait = new AiTrainerOI();
+        AiTrainer ait = new AiTrainerOITeam();
         ait.start();
     }
 }

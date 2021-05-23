@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -143,8 +144,12 @@ public abstract class GameCoordinator {
     }
     
     public void startGame(GameOptions options) {
+        startGame(options, null);
+    }
+    
+    public void startGame(GameOptions options, List<AiStrategyModule> aiStrategyModules) {
         this.options = options;
-        core.startGame(options, null);
+        core.startGame(options);
     }
     
     public void joinPlayer(Player player, String id) {
@@ -236,9 +241,11 @@ public abstract class GameCoordinator {
         }
     }
     
-    public void reteamPlayers(HashMap<Player, Integer> map) {
-        for (Player player : map.keySet()) {
-            int team = map.get(player);
+    public void reteamPlayers(Map<Integer, Integer> map) {
+        List<Player> playersChanged = new LinkedList<>();
+        for (Map.Entry<Integer, Integer> entry : map.entrySet()) {
+            Player player = players.get(entry.getKey());
+            int team = entry.getValue();
             if (team == -1) {
                 Set<Integer> teams = new HashSet<>();
                 for (Player p : players) {
@@ -256,21 +263,22 @@ public abstract class GameCoordinator {
                 team = i;
             }
             player.setTeam(team);
+            playersChanged.add(player);
         }
         
         for (Player p : players) {
-            p.commandUpdatePlayers(new LinkedList<>(map.keySet()));
+            p.commandUpdatePlayers(playersChanged);
         }
         for (Player p : kibitzers) {
-            p.commandUpdatePlayers(new LinkedList<>(map.keySet()));
+            p.commandUpdatePlayers(playersChanged);
         }
         
         updateTeams();
     }
     
     public void reteamPlayer(int index, int team) {
-        HashMap<Player, Integer> map = new HashMap<>();
-        map.put(players.get(index), team);
+        Map<Integer, Integer> map = new HashMap<>();
+        map.put(index, team);
         reteamPlayers(map);
     }
     
@@ -320,12 +328,14 @@ public abstract class GameCoordinator {
         if (!properDivisors.isEmpty()) {
             int numTeams = properDivisors.get(random.nextInt(properDivisors.size()));
             int playersPerTeam = players.size() / numTeams;
-            List<Player> playersToChoose = new ArrayList<>(players.size());
-            playersToChoose.addAll(players);
-            HashMap<Player, Integer> map = new HashMap<>();
+            List<Integer> playersToChoose = new ArrayList<>(players.size());
+            for (int i = 0; i < players.size(); i++) {
+                playersToChoose.add(i);
+            }
+            Map<Integer, Integer> map = new HashMap<>();
             for (int i = 0; i < numTeams; i++) {
                 for (int j = 0; j < playersPerTeam; j++) {
-                    Player player = playersToChoose.remove(random.nextInt(playersToChoose.size()));
+                    int player = playersToChoose.remove(random.nextInt(playersToChoose.size()));
                     map.put(player, i);
                 }
             }

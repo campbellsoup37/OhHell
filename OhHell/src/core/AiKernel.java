@@ -57,14 +57,12 @@ public class AiKernel {
         return !aiPlayers.isEmpty();
     }
     
-    public List<AiPlayer> createAiPlayers(int N, GameOptions options, List<AiStrategyModule> aiStrategyModules, 
+    public List<AiPlayer> createAiPlayers(int N, GameOptions options, 
             List<Player> dummies, int delay) {
         aiPlayers.clear();
         this.options = options;
         
-        if (aiStrategyModules == null) {
-            aiStrategyModules = createDefaultAiStrategyModules(N);
-        }
+        List<AiStrategyModule> aiStrategyModules = createDefaultAiStrategyModules(N);
         for (int i = 0; i < options.getNumRobots(); i++) {
             AiPlayer player = new AiPlayer(
                         firstNames.get(random.nextInt(firstNames.size())) + " Bot", 
@@ -88,7 +86,7 @@ public class AiKernel {
         List<AiStrategyModule> aiStrategyModules = new ArrayList<>(options.getNumRobots());
         for (int i = 0; i < options.getNumRobots(); i++) {
             AiStrategyModule aiStrategyModule = new AiStrategyModuleOI(core, N, ovl, ivl);
-            aiStrategyModule.setOptions(options);
+            aiStrategyModule.setCoreData(core.getCoreData());
             aiStrategyModules.add(aiStrategyModule);
         }
         return aiStrategyModules;
@@ -155,11 +153,17 @@ public class AiKernel {
     }
     
     public void makeBid(AiPlayer player) {
-        player.getAiStrategyModule().makeBid();
+        int bid = player.getAiStrategyModule().makeBid();
+        if (bid != -1) {
+            core.incomingBid(player, bid);
+        }
     }
     
     public void makePlay(AiPlayer player) {
-        player.getAiStrategyModule().makePlay();
+        Card card = player.getAiStrategyModule().makePlay();
+        if (card != null) {
+            core.incomingPlay(player, card);
+        }
     }
     
     public void processClaimRequest(AiPlayer player, int index) {
