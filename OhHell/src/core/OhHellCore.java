@@ -171,8 +171,11 @@ public class OhHellCore {
         }
         
         // Sort team members
+        int realIndex = 0;
         for (Team team : teams.values()) {
             team.setMembers(new ArrayList<>());
+            team.setRealIndex(realIndex);
+            realIndex++;
         }
         for (Player player : players) {
             teams.get(player.getTeam()).addMember(player);
@@ -910,13 +913,13 @@ public class OhHellCore {
             return players.get(index).getPlayerData();
         }
         
-        public Player.PlayerData getTeamData(int index) {
-            return teams.get(index).getPlayerData();
+        public Team.TeamData getTeamData(int index) {
+            return teams.get(index).getTeamData();
         }
         
         public List<Integer> getTeam(int teamNumber) {
             return new ArrayList<>(teams.get(teamNumber).getMembers().stream()
-                    .map(Player::getTeam)
+                    .map(Player::getIndex)
                     .collect(Collectors.toList()));
         }
         
@@ -956,8 +959,8 @@ public class OhHellCore {
             return deck.adjustedCardValueSmall(card, additionalPlayeds);
         }
         
-        public int cardsLeftOfSuit(Card card, List<List<Card>> additionalPlayeds) {
-            return deck.cardsLeftOfSuit(card, additionalPlayeds);
+        public int cardsLeftOfSuit(int suit, List<List<Card>> additionalPlayeds) {
+            return deck.cardsLeftOfSuit(suit, additionalPlayeds);
         }
         
         public int matchingCardsLeft(Card card, List<List<Card>> additionalPlayeds) {
@@ -1220,6 +1223,10 @@ public class OhHellCore {
             return new IndicesRelativeTo(index);
         }
         
+        public int nextUnkicked(int index) {
+            return OhHellCore.this.nextUnkicked(index);
+        }
+        
         private class CancelsRequiredHelperTrick {
             public Player player;
             public Card card;
@@ -1250,6 +1257,8 @@ public class OhHellCore {
             private int next;
             
             public IndicesRelativeTo(int index) {
+                index = OhHellCore.this.nextUnkicked(index - 1);
+                
                 start = index;
                 current = -1;
                 next = index;

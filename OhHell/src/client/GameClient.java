@@ -76,7 +76,7 @@ public class GameClient extends JFrame {
     private boolean updateChecked = false;
     private String newVersion;
     
-    private String username = "";
+    private String username = "player";
     private String hostName = "localhost";
     private String port = "6066";
     
@@ -1566,12 +1566,14 @@ public class GameClient extends JFrame {
                 .getLocation().toURI()).getPath();
     }
     
-    public void openGame(GameCoordinator coordinator, GameOptions options) {
+    public void openGame(GameCoordinator coordinator, GameOptions options, boolean stoppers) {
         spConnect(coordinator);
         if (!myPlayer.isKibitzer()) {
             toggleKibitzer();
         }
-        stopperSelected = true;
+        if (stoppers) {
+            stopperSelected = true;
+        }
         devSpeedOption.setSelected(true);
         updateGameOptions(options);
         coordinator.startGame(options);

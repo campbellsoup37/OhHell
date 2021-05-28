@@ -4,6 +4,23 @@ import java.util.List;
 
 public class Team extends Player {
     private List<Player> members;
+    private int realIndex;
+    
+    public class TeamData extends Team.PlayerData {
+        public int getRealIndex() {
+            return realIndex;
+        }
+    }
+    private TeamData data;
+    
+    public Team() {
+        this("");
+    }
+    
+    public Team(String name) {
+        super(name);
+        data = new TeamData();
+    }
     
     @Override
     public boolean isTeam() {
@@ -29,6 +46,15 @@ public class Team extends Player {
     public int getTaken() {
         return members.stream().map(Player::getTaken).reduce(0, (a, b) -> a + b);
     }
+    
+    public TeamData getTeamData() {
+        return data;
+    }
+    
+    @Override
+    public PlayerData getPlayerData() {
+        return data;
+    }
 
     public List<Player> getMembers() {
         return members;
@@ -40,5 +66,13 @@ public class Team extends Player {
     
     public void addMember(Player player) {
         this.members.add(player);
+    }
+
+    public int getRealIndex() {
+        return realIndex;
+    }
+
+    public void setRealIndex(int realIndex) {
+        this.realIndex = realIndex;
     }
 }

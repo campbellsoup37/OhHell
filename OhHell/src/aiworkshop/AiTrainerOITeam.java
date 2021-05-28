@@ -28,6 +28,7 @@ public class AiTrainerOITeam extends AiTrainer {
     private TeammateTakesLearner ttl;
     private Color ovlColor = Color.PINK;
     private Color ivlColor = Color.CYAN;
+    private Color ttlColor = Color.ORANGE;
     
     @Override
     public boolean backprop() {
@@ -42,15 +43,17 @@ public class AiTrainerOITeam extends AiTrainer {
                 {2, 3},
                 {4, 5}
         };
-        int reps = 1;
+        int reps = 1000000;
         boolean verbose = true;
         boolean forMathematica = false;
         boolean printError = true;
         boolean showDash = true;
-        boolean showClient = true;
+        boolean showClient = false;
+        boolean stoppers = false;
         
         double ovlEta = 1;
         double ivlEta = 1;
+        double ttlEta = 1;
         double scale = 1;
         int groupingSize = 1;
         
@@ -63,9 +66,9 @@ public class AiTrainerOITeam extends AiTrainer {
         ovlEta *= scale;
         ivlEta *= scale;
         
-        int[] ovlLayers = {0};
+        int[] ovlLayers = {50};
         int[] ivlLayers = {50};
-        int[] ttlLayers = {0};
+        int[] ttlLayers = {50};
         
         String ovlFileSuffix = "o" + ovlLayers[0] + "";
         for (int i = 1; i < ovlLayers.length; i++) {
@@ -81,12 +84,14 @@ public class AiTrainerOITeam extends AiTrainer {
         }
         String fileSuffix = ovlFileSuffix + ivlFileSuffix + ttlFileSuffix;
         
-        ovl = null;
-        //ovl.setTrainer(this);
-        ivl = new ImmediateValueLearner(N, D, ivlLayers[0]);
-        //ivl.setTrainer(this);
-        ttl = null;
-        //ttl.setTrainer(this);
+        int T = teams.length;
+        
+        ovl = new OverallValueLearner(N, T, D, ivlLayers[0]);
+        ovl.setTrainer(this);
+        ivl = new ImmediateValueLearner(N, T, D, ivlLayers[0]);
+        ivl.setTrainer(this);
+        ttl = new TeammateTakesLearner(N, T, D, ivlLayers[0]);
+        ttl.setTrainer(this);
         
         if (openFromFile) {
             ovl.openFromFile(folder + "ovlN" + N + "D" + D + fileSuffix + ".txt");
@@ -117,7 +122,7 @@ public class AiTrainerOITeam extends AiTrainer {
             public List<AiStrategyModule> createDefaultAiStrategyModules(int N) {
                 List<AiStrategyModule> aiStrategyModules = new ArrayList<>(N);
                 for (int i = 0; i < N; i++) {
-                    aiStrategyModules.add(new AiStrategyModuleOITeam(N, core.getCoreData(), ovl, ivl, ttl, AiTrainerOITeam.this));
+                    aiStrategyModules.add(new AiStrategyModuleOITeam(N, T, core.getCoreData(), ovl, ivl, ttl, AiTrainerOITeam.this));
                 }
                 return aiStrategyModules;
             }
@@ -136,14 +141,16 @@ public class AiTrainerOITeam extends AiTrainer {
         if (showDash) {
             dash = new Dashboard();
             dash.execute();
-            dash.setGraphCount(3);
+            dash.setGraphCount(4);
             dash.setGraphLabel(0, "Average score");
             dash.setGraphLabel(1, "OVL mean squared error");
             dash.setGraphLabel(2, "IVL mean squared error");
+            dash.setGraphLabel(3, "TTL mean squared error");
             dash.setGraphColor(0, 0, Color.RED);
             dash.setGraphColor(0, 1, Color.DARK_GRAY);
             dash.setGraphColor(1, 0, ovlColor);
             dash.setGraphColor(2, 0, ivlColor);
+            dash.setGraphColor(3, 0, ttlColor);
         }
         
         GameClient client = null;
@@ -156,7 +163,7 @@ public class AiTrainerOITeam extends AiTrainer {
         long[] times = new long[R];
         for (int g = 1; g <= reps; g++) {
             if (showClient) {
-                client.openGame(coordinator, options);
+                client.openGame(coordinator, options, stoppers);
             } else {
                 core.startGame(options);
             }
@@ -236,6 +243,7 @@ public class AiTrainerOITeam extends AiTrainer {
                 }
                 List<double[]> ovlError = ovl.doEpoch(ovlEta, ovlEta, printError);
                 List<double[]> ivlError = ivl.doEpoch(ivlEta, ivlEta, printError);
+                List<double[]> ttlError = ttl.doEpoch(ttlEta, ttlEta, printError);
                 if (printError) {
                     if (dash != null) {
                         dash.addGraphData(0, 0, aves[0]);
@@ -244,6 +252,7 @@ public class AiTrainerOITeam extends AiTrainer {
                         }
                         dash.addGraphData(1, 0, ovlError.get(0)[0]);
                         dash.addGraphData(2, 0, ivlError.get(0)[0]);
+                        dash.addGraphData(3, 0, ttlError.get(0)[0]);
                         dash.updateLog();
                     }
                 }
@@ -261,7 +270,15 @@ public class AiTrainerOITeam extends AiTrainer {
     @Override
     public void notifyDatumNumber(Learner l, int datumNumber, int datumTotal) {
         if (dash != null) {
-            dash.updateDatum(datumNumber, datumTotal, l == ovl ? ovlColor : ivlColor);
+            Color color = null;
+            if (l == ovl) {
+                color = ovlColor;
+            } else if (l == ivl) {
+                color = ivlColor;
+            } else if (l == ttl) {
+                color = ttlColor;
+            }
+            dash.updateDatum(datumNumber, datumTotal, color);
         }
     }
     

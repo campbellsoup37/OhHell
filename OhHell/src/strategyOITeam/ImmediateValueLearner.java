@@ -1,26 +1,29 @@
 package strategyOITeam;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import core.Card;
 import ml.ActivationFunction;
-import ml.BasicVector;
+import ml.CrossEntropy;
 import ml.Feature;
 import ml.Vector;
 import ml.Learner;
-import ml.MeanSquaredError;
 import ml.ReLuFunction;
 import ml.SoftmaxFunction;
+import ml.SparseVector;
 
 public class ImmediateValueLearner extends Learner {
-    private Hashtable<Card, List<Vector>> ins = new Hashtable<>();
-    private Hashtable<Card, Double> outs = new Hashtable<>();
-    private LinkedList<LinkedList<Vector>> dataAsList;
+    int N;
+    private Map<Card, Vector> insLevel1 = new HashMap<>();
+    private Map<Card, Vector> insLevel2 = new HashMap<>();
+    private LinkedList<LinkedList<Vector>> dataAsList = new LinkedList<>();
     
-    public ImmediateValueLearner(int N, int D, int d1) {
+    public ImmediateValueLearner(int N, int T, int D, int d1) {
+        this.N = N;
         int maxH = Math.min(10, (52 * D - 1) / N);
         int maxCancels = (N - 1) / 2;
         
@@ -31,6 +34,7 @@ public class ImmediateValueLearner extends Learner {
         features.add(new Feature("Led suit unseen", 0, 13 * D - 1));
         features.add(new Feature("Lead is trump", 0, 1));
         for (int j = 0; j < N; j++) {
+            features.add(new Feature(j + " Team number", 0, T - 1));
             features.add(new Feature(j + " Bid", 0, maxH));
             features.add(new Feature(j + " Taken", 0, maxH - 1));
             features.add(new Feature(j + " Team wants", 0, maxH));
@@ -38,7 +42,7 @@ public class ImmediateValueLearner extends Learner {
             features.add(new Feature(j + " Lead void", 0, 1));
             features.add(new Feature(j + " Is trump", 0, 1));
             features.add(new Feature(j + " Adjusted number", 0, 13 * D));
-            features.add(new Feature(j + " Matches unseen", 0, D));
+            features.add(new Feature(j + " Matches unseen", 0, D - 1));
             features.add(new Feature(j + " Required cancels", -2, maxCancels));
             features.add(new Feature(j + " Led", 0, 1));
         }
@@ -59,16 +63,24 @@ public class ImmediateValueLearner extends Learner {
         buildLayers(ds, actFuncs);
     }
     
-    public void putIn(Card c, Vector in) {
-        if (ins.get(c) == null) {
-            ins.put(c, new LinkedList<>());
-        }
-        ins.get(c).add(in);
+    public double[] evaluate(Card card, Vector in) {
+        insLevel1.put(card, in);
+        return testValue(in).get(1).toArray();
     }
     
-    public void putOut(Card c, int out) {
-        if (ins.get(c) != null) {
-            outs.put(c, (double) out);
+    public void elevateIns(Card card) {
+        insLevel2.put(card, insLevel1.get(card));
+        insLevel1 = new HashMap<>();
+    }
+    
+    public void flushIns(int winner) {
+        if (!insLevel2.isEmpty()) {
+            for (Vector in : insLevel2.values()) {
+                SparseVector out = new SparseVector();
+                out.addOneHot("Winner", winner, -1, N - 1);
+                dataAsList.add(new LinkedList<>(Arrays.asList(in, out)));
+            }
+            insLevel2 = new HashMap<>();
         }
     }
     
@@ -85,26 +97,13 @@ public class ImmediateValueLearner extends Learner {
         return dataAsList.size();
     }
     
-    public void makeDataList() {
-        dataAsList = new LinkedList<>();
-        for (Card c : ins.keySet()) {
-            for (Vector in : ins.get(c)) {
-                dataAsList.add(new LinkedList<>(Arrays.asList(
-                        in, 
-                        (Vector) new BasicVector(new double[] {outs.get(c)})
-                        )));
-            }
-        }
-        ins = new Hashtable<>();
-        outs = new Hashtable<>();
-    }
-    
     public List<double[]> doEpoch(double wEta, double bEta, boolean computeSizes) {
-        makeDataList();
         if (dataAsList.isEmpty()) {
             return null;
         } else {
-            return super.doEpoch(wEta, bEta, dataAsList.size(), new MeanSquaredError(), computeSizes, computeSizes);
+            List<double[]> ans = super.doEpoch(wEta, bEta, dataAsList.size(), new CrossEntropy(), computeSizes, computeSizes);
+            dataAsList = new LinkedList<>();
+            return ans;
         }
     }
     

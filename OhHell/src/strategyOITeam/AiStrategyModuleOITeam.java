@@ -18,6 +18,7 @@ import ml.Vector;
 
 public class AiStrategyModuleOITeam extends AiStrategyModule {
     OhHellCore.CoreData coreData;
+    private int T;
     private int maxH;
     private int maxCancels;
     private OverallValueLearner ovl;
@@ -25,8 +26,12 @@ public class AiStrategyModuleOITeam extends AiStrategyModule {
     private TeammateTakesLearner ttl;
     private AiTrainer aiTrainer;
     
-    public AiStrategyModuleOITeam(int N, OhHellCore.CoreData coreData, OverallValueLearner ovl, ImmediateValueLearner ivl, TeammateTakesLearner ttl, AiTrainer aiTrainer) {
+    private int myBid;
+    private Card myPlay;
+    
+    public AiStrategyModuleOITeam(int N, int T, OhHellCore.CoreData coreData, OverallValueLearner ovl, ImmediateValueLearner ivl, TeammateTakesLearner ttl, AiTrainer aiTrainer) {
         this.coreData = coreData;
+        this.T = T;
         maxH = Math.min(10, (52 * coreData.getD() - 1) / N);
         maxCancels = (N - 1) / 2;
         this.ovl = ovl;
@@ -39,21 +44,41 @@ public class AiStrategyModuleOITeam extends AiStrategyModule {
     
     @Override
     public int makeBid() {
-        //double[] qs = getQs(player.getHand().size(), null, (coreData.getDealer() + 1) % N);
-        //int myBid = chooseBid(qs);
+        loadSlowFeatures(true);
+        double[] qs = getQs(player.getHand().size(), null, coreData.nextUnkicked(coreData.getDealer()));
+        myBid = chooseBid(qs);
         
-        int myBid = new java.util.Random().nextInt(player.getHand().size() + 1);
+        if (aiTrainer != null && aiTrainer.backprop()) {
+            ovl.elevateIns(null);
+        }
         
         return myBid;
     }
     
     @Override
     public Card makePlay() {
-        Map<Card, Double> makingProbs = getMakingProbs();
-        Card myPlay = choosePlay(makingProbs);
+        //System.out.println(player.getName() + " playing");
+        
+        myPlay = null;
+        
+        if (player.getHand().size() == 1) {
+            myPlay = player.getHand().get(0);
+        } else {
+            Map<Card, Double> makingProbs = getMakingProbs();
+            myPlay = choosePlay(makingProbs);
+        }
         
         if (myPlay == null) {
             throw new IllegalAIStateException("Failed to choose a card.");
+        }
+        
+        if (aiTrainer != null && aiTrainer.backprop() && player.getHand().size() > 1) {
+            if (ttl.problem(myPlay)) {
+                System.out.println(":?");
+            }
+            ivl.elevateIns(myPlay);
+            ovl.elevateIns(myPlay);
+            ttl.elevateIns1(myPlay);
         }
         
         return myPlay;
@@ -62,7 +87,7 @@ public class AiStrategyModuleOITeam extends AiStrategyModule {
     // Probability estimates
     
     public Map<Card, Double> getMakingProbs() {
-        List<Card> canPlay = coreData.whatCanIPlay(player);
+        loadSlowFeatures(false);
         
         Map<Card, Double> makingProbs = new HashMap<>();
         for (Card card : canPlay) {
@@ -88,8 +113,7 @@ public class AiStrategyModuleOITeam extends AiStrategyModule {
     }
     
     public double[] prPlayersWinTrick(Card card, Integer[] requiredCancels) {
-        Vector in = getIvlIn(card, requiredCancels);
-        return ivl.testValue(in).get(1).toArray();
+        return ivl.evaluate(card, getIvlIn(card, requiredCancels));
     }
 
     public double prMakingIfPlayerWinsTrick(Card card, int index) {
@@ -116,7 +140,7 @@ public class AiStrategyModuleOITeam extends AiStrategyModule {
         
         // Iterate through all combinations of takens that add to wants
         double p = 0;
-        Double[][] probMemo = new Double[myTeam.size()][teamWants];
+        Double[][] probMemo = new Double[myTeam.size()][teamWants + 1];
         for (Partition part = new Partition(myTeam.size(), teamWants); !part.isEnd(); part.increment()) {
             double term = 1;
             for (int i = 0; i < myTeam.size(); i++) {
@@ -132,26 +156,25 @@ public class AiStrategyModuleOITeam extends AiStrategyModule {
         return p;
     }
     
-    private double[] qsMemo = null;
+    private double[][] teamQsMemo;
     public void clearQsMemo() {
-        qsMemo = null;
+        teamQsMemo = new double[coreData.getN(true)][];
     }
     
     public double prPlayerTakesExactly(int index, int toTake, int maxForMemo, Card card, int prevIndex) {
-        if (index == player.getIndex()) {
-            if (qsMemo == null) {
-                qsMemo = getQs(maxForMemo, card, prevIndex);
+        if (teamQsMemo[index] == null) {
+            if (index == player.getIndex()) {
+                teamQsMemo[index] = getQs(maxForMemo, card, prevIndex);
+            } else {
+                teamQsMemo[index] = ttl.evaluate(
+                        card, 
+                        prevIndex, 
+                        index, 
+                        getTtlIn(index, card, prevIndex),
+                        coreData.getPlayerData(index).getTaken() + (index == prevIndex ? 1 : 0));
             }
-            return qsMemo[toTake];
-        } else {
-            Vector in = getTtlIn(index, toTake, card, prevIndex);
-            
-            if (aiTrainer != null && aiTrainer.backprop()) {
-                //ttl.putIn(index, coreData.getPlayerData(index).getTaken(), in); TODO
-            }
-            
-            return 0;//ttl.testValue(in).get(1).get(0); TODO
         }
+        return teamQsMemo[index][toTake];
     }
     
     public double[] getQs(int max, Card card, int index) {
@@ -160,17 +183,14 @@ public class AiStrategyModuleOITeam extends AiStrategyModule {
     }
     
     public double[] getPs(Card card, int index) {
-        double[] ps = new double[player.getHand().size()];
+        double[] ps = new double[player.getHand().size() - (card == null ? 0 : 1)];
         
         int l = 0;
         for (Card c : player.getHand()) {
-            Vector in = getOvlIn(c, card, index);
-            ps[l] = ovl.testValue(in).get(1).get(0);
-            
-            if (aiTrainer != null && aiTrainer.backprop()) {
-                ovl.putIn(c, in);
+            if (c == card) {
+                continue;
             }
-            
+            ps[l] = getP(c, card, index);
             l++;
         }
 
@@ -178,6 +198,97 @@ public class AiStrategyModuleOITeam extends AiStrategyModule {
     }
     
     // Neural network functions
+    
+    // Memo
+    // Basic
+    List<Card> canPlay;
+    List<List<Card>> additionalPlayeds;
+    
+    // By suit
+    Integer[] unseen;
+    private int getUnseen(int suit) {
+        if (unseen[suit] == null) {
+            unseen[suit] = coreData.cardsLeftOfSuit(suit, additionalPlayeds);
+        }
+        return unseen[suit];
+    }
+    
+    // By player
+    int[] teamWant;
+    int[] trickAdjustedNumbers;
+    int[] trickMatchesUnseen;
+    
+    // OVL
+    int[] suitCounts;
+    int voidCount;
+    int[][] handAdjustedNumbers;
+    int[][] handMatchesUnseen;
+    Double[][][] ovlMemo;
+    Vector[][][] ovlMemoIns;
+    private double getP(Card card, Card myCard, int index) {
+        int voidInc = myCard != null && suitCounts[myCard.getSuit()] == 1 ? 1 : 0;
+        if (ovlMemo[card.getSuit()][card.getNum() - 2][voidInc] == null) {
+            Vector in = getOvlIn(card, myCard, index);
+            ovlMemo[card.getSuit()][card.getNum() - 2][voidInc] = ovl.evaluate(
+                    myCard, card, in);
+            ovlMemoIns[card.getSuit()][card.getNum() - 2][voidInc] = in;
+        }
+        ovl.putIn(myCard, card, ovlMemoIns[card.getSuit()][card.getNum() - 2][voidInc]);
+        return ovlMemo[card.getSuit()][card.getNum() - 2][voidInc];
+    }
+    
+    public void loadSlowFeatures(boolean biddingOnly) {
+        List<Card> myHand = player.getHand();
+        List<Card> trick = coreData.getTrick();
+        additionalPlayeds = Arrays.asList(myHand, trick);
+        unseen = new Integer[4];
+        
+        int M = coreData.getN(true);
+        teamWant = new int[M];
+        for (int i : coreData.getIndicesRelativeTo(0)) {
+            Player.PlayerData playerData = coreData.getPlayerData(i);
+            if (!playerData.getTrick().isEmpty()) {
+                teamWant[i] = coreData.teamWants(playerData.getTeam());
+            }
+        }
+        
+        suitCounts = new int[4];
+        for (Card card : myHand) {
+            suitCounts[card.getSuit()]++;
+        }
+        voidCount = 0;
+        for (int count : suitCounts) {
+            if (count == 0) {
+                voidCount++;
+            }
+        }
+        
+        handAdjustedNumbers = new int[4][13];
+        handMatchesUnseen = new int[4][13];
+        for (Card card : myHand) {
+            handAdjustedNumbers[card.getSuit()][card.getNum() - 2] = coreData.adjustedCardValue(card, additionalPlayeds);
+            handMatchesUnseen[card.getSuit()][card.getNum() - 2] = coreData.matchingCardsLeft(card, additionalPlayeds);
+        }
+        
+        ovlMemo = new Double[4][13][2];
+        ovlMemoIns = new Vector[4][13][2];
+        
+        if (!biddingOnly) {
+            canPlay = coreData.whatCanIPlay(player);
+            
+            trickAdjustedNumbers = new int[M];
+            trickMatchesUnseen = new int[M];
+            for (int i : coreData.getIndicesRelativeTo(0)) {
+                Player.PlayerData playerData = coreData.getPlayerData(i);
+                Card card = playerData.getTrick();
+                
+                if (!card.isEmpty()) {
+                    trickAdjustedNumbers[i] = coreData.adjustedCardValue(card, additionalPlayeds);
+                    trickMatchesUnseen[i] = coreData.matchingCardsLeft(card, additionalPlayeds);
+                }
+            }
+        }
+    }
     
     public Vector getIvlIn(Card myCard, Integer[] requiredCancels) {
         SparseVector vec = new SparseVector();
@@ -187,75 +298,121 @@ public class AiStrategyModuleOITeam extends AiStrategyModule {
         Card trump = coreData.getTrump();
         Card lead = iAmLeading ? myCard : coreData.getPlayerData(coreData.getLeader()).getTrick();
         
-        List<Card> myHand = player.getHand();
-        List<Card> trick = coreData.getTrick();
-        List<List<Card>> additionalPlayeds = Arrays.asList(myHand, trick);
-        
         // Features
         vec.addOneHot("Initial hand size", coreData.getRoundDetails().getHandSize(), 1, maxH);
         vec.addOneHot("Current hand size", player.getHand().size() - 1, 0, maxH - 1);
-        vec.addOneHot(
-                "Trump unseen", 
-                coreData.cardsLeftOfSuit(trump, additionalPlayeds), 
-                0, 13 * coreData.getD() - 1);
-        vec.addOneHot(
-                "Led suit unseen", 
-                coreData.cardsLeftOfSuit(lead, additionalPlayeds), 
-                0, 13 * coreData.getD() - 1);
-        vec.addOneHot("Lead is trump", lead.getSuit() == coreData.getTrump().getSuit() ? 1 : 0, 0, 1);
+        vec.addOneHot("Trump unseen", getUnseen(trump.getSuit()), 0, 13 * coreData.getD() - 1);
+        vec.addOneHot("Led suit unseen", getUnseen(lead.getSuit()), 0, 13 * coreData.getD() - 1);
+        vec.addOneHot("Lead is trump", lead.getSuit() == trump.getSuit() ? 1 : 0, 0, 1);
         int j = 0;
         for (int i : coreData.getIndicesRelativeTo(player.getIndex())) {
             Player.PlayerData playerData = coreData.getPlayerData(i);
             
-            int bidFeat = 0;
-            int takenFeat = 0;
-            int teamWantsFeat = 0;
-            int trumpVoidFeat = 0;
-            int leadVoidFeat = 0;
             int isTrumpFeat = 0;
             int adjustedNumberFeat = 0;
             int matchingCardsLeftFeat = 0;
             int requiredCancelsFeat = requiredCancels[i];
             int ledFeat = 0;
             
-            if (!(playerData.hasPlayed() || i == player.getIndex())) {
-                bidFeat = playerData.getBid();
-                takenFeat = playerData.getTaken();
-                teamWantsFeat = coreData.teamWants(playerData.getTeam());
-                trumpVoidFeat = playerData.shownOut(trump.getSuit()) ? 1 : 0;
-                leadVoidFeat = playerData.shownOut(lead.getSuit()) ? 1 : 0;
-            } else {
+            if (playerData.hasPlayed() || i == player.getIndex()) {
                 Card card = i == player.getIndex() ? myCard : playerData.getTrick();
                 isTrumpFeat = card.getSuit() == trump.getSuit() ? 1 : 0;
-                adjustedNumberFeat = coreData.adjustedCardValue(card, additionalPlayeds);
-                matchingCardsLeftFeat = coreData.matchingCardsLeft(card, additionalPlayeds);
+                adjustedNumberFeat = trickAdjustedNumbers[i];
+                matchingCardsLeftFeat = trickMatchesUnseen[i];
                 ledFeat = card == lead ? 1 : 0;
             }
 
-            vec.addOneHot(j + " Bid", bidFeat, 0, maxH);
-            vec.addOneHot(j + " Taken", takenFeat, 0, maxH - 1);
-            vec.addOneHot(j + " Team wants", teamWantsFeat, 0, maxH);
-            vec.addOneHot(j + " Trump void", trumpVoidFeat, 0, 1);
-            vec.addOneHot(j + " Lead void", leadVoidFeat, 0, 1);
+            vec.addOneHot(j + " Team number", coreData.getTeamData(playerData.getTeam()).getRealIndex(), 0, T - 1);
+            vec.addOneHot(j + " Bid", playerData.getBid(), 0, maxH);
+            vec.addOneHot(j + " Taken", playerData.getTaken(), 0, maxH - 1);
+            vec.addOneHot(j + " Team wants", teamWant[i], 0, maxH);
+            vec.addOneHot(j + " Trump void", playerData.shownOut(trump.getSuit()) ? 1 : 0, 0, 1);
+            vec.addOneHot(j + " Lead void", playerData.shownOut(lead.getSuit()) ? 1 : 0, 0, 1);
             vec.addOneHot(j + " Is trump", isTrumpFeat, 0, 1);
             vec.addOneHot(j + " Adjusted number", adjustedNumberFeat, 0, 13 * coreData.getD());
-            vec.addOneHot(j + " Matches unseen", matchingCardsLeftFeat, 0, coreData.getD());
+            vec.addOneHot(j + " Matches unseen", matchingCardsLeftFeat, 0, coreData.getD() - 1);
             vec.addOneHot(j + " Required cancels", requiredCancelsFeat, -2, maxCancels);
             vec.addOneHot(j + " Led", ledFeat, 0, 1);
             j++;
         }
-        
-        vec.print();
+
+        //System.out.println("IVL");
+        //vec.print();
         
         return vec;
     }
     
     public Vector getOvlIn(Card card, Card myCard, int leaderIndex) {
-        return null; //TODO
+        SparseVector vec = new SparseVector();
+        
+        // Some basic data
+        Card trump = coreData.getTrump();
+        
+        // Features
+        vec.addOneHot("Initial hand size", coreData.getRoundDetails().getHandSize(), 1, maxH);
+        vec.addOneHot("Current hand size", player.getHand().size() - (myCard == null ? 0 : 1), 0, maxH);
+        vec.addOneHot("Void count", voidCount + (myCard != null && suitCounts[myCard.getSuit()] == 1 ? 1 : 0), 0, 3);
+        vec.addOneHot("Trump unseen", getUnseen(trump.getSuit()), 0, 13 * coreData.getD() - 1);
+        vec.addOneHot("Card's suit unseen", getUnseen(card.getSuit()), 0, 13 * coreData.getD() - 1);
+        vec.addOneHot("Card is trump", card.getSuit() == trump.getSuit() ? 1 : 0, 0, 1);
+        vec.addOneHot("Card's adjusted number", handAdjustedNumbers[card.getSuit()][card.getNum() - 2], 0, 13 * coreData.getD());
+        vec.addOneHot("Card's matches unseen", handMatchesUnseen[card.getSuit()][card.getNum() - 2], 0, coreData.getD() - 1);
+        int j = 0;
+        for (int i : coreData.getIndicesRelativeTo(player.getIndex())) {
+            Player.PlayerData playerData = coreData.getPlayerData(i);
+
+            vec.addOneHot(j + " Team number", coreData.getTeamData(playerData.getTeam()).getRealIndex(), 0, T - 1);
+            vec.addOneHot(j + " Bid", playerData.hasBid() ? playerData.getBid() : -1, -1, maxH);
+            vec.addOneHot(j + " Taken", playerData.getTaken(), 0, maxH - 1);
+            vec.addOneHot(j + " Team wants", teamWant[i], 0, maxH);
+            vec.addOneHot(j + " Trump void", playerData.shownOut(trump.getSuit()) ? 1 : 0, 0, 1);
+            vec.addOneHot(j + " Card's suit void", playerData.shownOut(card.getSuit()) ? 1 : 0, 0, 1);
+            //vec.addOneHot(j + " Will be on lead", playerData.getIndex() == leaderIndex ? 1 : 0, 0, 1);
+            j++;
+        }
+
+        //System.out.println("OVL");
+        //vec.print();
+        
+        return vec;
     }
     
-    public Vector getTtlIn(int index, int toTake, Card myCard, int leaderIndex) {
-        return null; //TODO
+    public Vector getTtlIn(int index, Card myCard, int leaderIndex) {
+        SparseVector vec = new SparseVector();
+        
+        // Some basic data
+        Card trump = coreData.getTrump();
+        
+        Player.PlayerData teammateData = coreData.getPlayerData(index);
+        int teammateVoidCount = 0;
+        for (int i = 0; i < 3; i++) {
+            if (teammateData.shownOut(i)) {
+                teammateVoidCount++;
+            }
+        }
+        
+        // Features
+        vec.addOneHot("Initial hand size", coreData.getRoundDetails().getHandSize(), 1, maxH);
+        vec.addOneHot("Current hand size", player.getHand().size() - 1, 0, maxH - 1);
+        vec.addOneHot("Void count", teammateVoidCount, 0, 3);
+        vec.addOneHot("Trump unseen", getUnseen(trump.getSuit()), 0, 13 * coreData.getD() - 1);
+        int j = 0;
+        for (int i : coreData.getIndicesRelativeTo(index)) {
+            Player.PlayerData playerData = coreData.getPlayerData(i);
+
+            vec.addOneHot(j + " Team number", coreData.getTeamData(playerData.getTeam()).getRealIndex(), 0, T - 1);
+            vec.addOneHot(j + " Bid", playerData.getBid(), 0, maxH);
+            vec.addOneHot(j + " Taken", playerData.getTaken(), 0, maxH - 1);
+            vec.addOneHot(j + " Team wants", teamWant[i], 0, maxH);
+            vec.addOneHot(j + " Trump void", playerData.shownOut(trump.getSuit()) ? 1 : 0, 0, 1);
+            vec.addOneHot(j + " Will be on lead", playerData.getIndex() == leaderIndex ? 1 : 0, 0, 1);
+            j++;
+        }
+        
+        //System.out.println("TTL");
+        //vec.print();
+        
+        return vec;
     }
     
     // Final decision makers
@@ -346,6 +503,28 @@ public class AiStrategyModuleOITeam extends AiStrategyModule {
         }
         
         return bestPlays.get(coreData.getRandom().nextInt(bestPlays.size()));
+    }
+    
+    // Learning callbacks
+    
+    @Override
+    public void addTrickData(Card winner, List<Card> trick) {
+        if (winner == myPlay) {
+            ivl.flushIns(player.getIndex());
+            ovl.flushIns(winner);
+            ttl.elevateIns2(player.getIndex());
+        }
+    }
+    
+    @Override
+    public void endOfRound(int score) {
+        if (!ttl.insFlushed()) {
+            Map<Integer, Integer> takens = new HashMap<>();
+            for (int i : coreData.getIndicesRelativeTo(0)) {
+                takens.put(i, coreData.getPlayerData(i).getTaken());
+            }
+            ttl.flushIns(takens);
+        }
     }
     
     // Utility

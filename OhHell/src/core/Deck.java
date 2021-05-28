@@ -84,15 +84,19 @@ public class Deck {
     }
     
     public int cardsLeftOfSuit(Card card, List<List<Card>> additionalPlayeds) {
+        return cardsLeftOfSuit(card.getSuit(), additionalPlayeds);
+    }
+    
+    public int cardsLeftOfSuit(int suit, List<List<Card>> additionalPlayeds) {
         int count = 0;
         for (List<Card> additionalPlayed : additionalPlayeds) {
             for (Card c : additionalPlayed) {
-                if (c != null && c.getSuit() == card.getSuit()) {
+                if (c != null && c.getSuit() == suit) {
                     count++;
                 }
             }
         }
-        return 13 * D - played.get(card.getSuit()).size() - count;
+        return 13 * D - played.get(suit).size() - count;
     }
     
     public int adjustedCardValueSmall(Card card, List<List<Card>> additionalPlayeds) {
