@@ -343,7 +343,7 @@ public class CanvasScoreSheet extends CanvasInteractable {
                 
                 int j = 0;
                 for (ClientPlayer p : ((ClientTeam) player).getMembers()) {
-                    if (p.equals(myPlayer)) {
+                    if (p == myPlayer) {
                         graphics.setFont(GraphicsTools.fontBold);
                     } else {
                         graphics.setFont(GraphicsTools.font);
@@ -369,7 +369,7 @@ public class CanvasScoreSheet extends CanvasInteractable {
                 GraphicsTools.drawBox(graphics, currentX + 2, y() + margin, fullWid - 4, scoreVSpacing, 20, GraphicsTools.colors[player.getIndex()]);
                 graphics.setColor(Color.BLACK);
             }
-            if (player.equals(myPlayer) || player.isTeam()) {
+            if (player == myPlayer || player.isTeam()) {
                 graphics.setFont(GraphicsTools.fontBold);
             } else {
                 graphics.setFont(GraphicsTools.font);

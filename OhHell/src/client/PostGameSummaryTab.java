@@ -184,7 +184,7 @@ public class PostGameSummaryTab extends CanvasInteractable {
                     double maxProb = 0;
                     for (Card card : probs.keySet()) {
                         maxProb = Math.max(probs.get(card), maxProb);
-                        if (card.equals(player.getPlays().get(i).get(k).getCard())) {
+                        if (card.matches(player.getPlays().get(i).get(k).getCard())) {
                             myProb = probs.get(card);
                         }
                     }

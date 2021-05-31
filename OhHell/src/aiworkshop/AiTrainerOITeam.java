@@ -1,6 +1,9 @@
 package aiworkshop;
 import java.awt.Color;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -30,26 +33,42 @@ public class AiTrainerOITeam extends AiTrainer {
     private Color ivlColor = Color.CYAN;
     private Color ttlColor = Color.ORANGE;
     
+    private BufferedWriter logFile = null;
+    
     @Override
     public boolean backprop() {
         return true;
     }
     
+    @Override
+    public BufferedWriter logFile() {
+        return logFile;
+    }
+    
     public void run() {
-        int N = 6;
+        int N = 10;
         int D = 2;
         int[][] teams = {
                 {0, 1},
                 {2, 3},
-                {4, 5}
+                {4, 5},
+                {6, 7},
+                {8, 9}
         };
         int reps = 1000000;
         boolean verbose = true;
         boolean forMathematica = false;
         boolean printError = true;
         boolean showDash = true;
+        
         boolean showClient = false;
-        boolean stoppers = false;
+        boolean stoppers = true;
+        
+//        try {
+//            logFile = new BufferedWriter(new FileWriter("C:/Users/campb/Desktop/ohlogs/oit_log.txt"));
+//        } catch (IOException e1) {
+//            e1.printStackTrace();
+//        }
         
         double ovlEta = 1;
         double ivlEta = 1;
@@ -57,9 +76,9 @@ public class AiTrainerOITeam extends AiTrainer {
         double scale = 1;
         int groupingSize = 1;
         
-        boolean openFromFile = false;
-        boolean saveToFile = false;
-        int saveEvery = 100;
+        boolean openFromFile = true;
+        boolean saveToFile = true;
+        int saveEvery = 10;
         
         String folder = "resources/ai workshop/OhHellAIModels/OIT/";
 
@@ -94,9 +113,9 @@ public class AiTrainerOITeam extends AiTrainer {
         ttl.setTrainer(this);
         
         if (openFromFile) {
-            ovl.openFromFile(folder + "ovlN" + N + "D" + D + fileSuffix + ".txt");
-            ivl.openFromFile(folder + "ivlN" + N + "D" + D + fileSuffix + ".txt");
-            int x = 1 / 0;
+            ovl.openFromFile(folder + "ovlN" + N + "D" + D + "T" + T + fileSuffix + ".txt");
+            ivl.openFromFile(folder + "ivlN" + N + "D" + D + "T" + T + fileSuffix + ".txt");
+            ttl.openFromFile(folder + "ttlN" + N + "D" + D + "T" + T + fileSuffix + ".txt");
         }
         
         GameCoordinator coordinator = new GameCoordinator() {};
@@ -144,8 +163,8 @@ public class AiTrainerOITeam extends AiTrainer {
             dash.setGraphCount(4);
             dash.setGraphLabel(0, "Average score");
             dash.setGraphLabel(1, "OVL mean squared error");
-            dash.setGraphLabel(2, "IVL mean squared error");
-            dash.setGraphLabel(3, "TTL mean squared error");
+            dash.setGraphLabel(2, "IVL cross entropy error");
+            dash.setGraphLabel(3, "TTL cross entropy error");
             dash.setGraphColor(0, 0, Color.RED);
             dash.setGraphColor(0, 1, Color.DARK_GRAY);
             dash.setGraphColor(1, 0, ovlColor);
@@ -162,6 +181,8 @@ public class AiTrainerOITeam extends AiTrainer {
         int R = 20;
         long[] times = new long[R];
         for (int g = 1; g <= reps; g++) {
+            log("Game started {\n", 0);
+            
             if (showClient) {
                 client.openGame(coordinator, options, stoppers);
             } else {
@@ -173,6 +194,8 @@ public class AiTrainerOITeam extends AiTrainer {
                     sleep(Integer.MAX_VALUE);
                 }
             } catch (InterruptedException e) {}
+            
+            log("}\n", 0);
             
             for (int k = 0; k < toAve.length; k++) {
                 aves[k] -= scores[(g - 1 + M - toAve[k]) % M] / toAve[k];
@@ -241,18 +264,23 @@ public class AiTrainerOITeam extends AiTrainer {
                 if (dash != null) {
                     dash.updateEpoch(g / groupingSize);
                 }
-                List<double[]> ovlError = ovl.doEpoch(ovlEta, ovlEta, printError);
-                List<double[]> ivlError = ivl.doEpoch(ivlEta, ivlEta, printError);
-                List<double[]> ttlError = ttl.doEpoch(ttlEta, ttlEta, printError);
+                List<double[]> ovlError = null, ivlError = null, ttlError = null;
+                if (backprop()) {
+                    ovlError = ovl.doEpoch(ovlEta, ovlEta, printError);
+                    ivlError = ivl.doEpoch(ivlEta, ivlEta, printError);
+                    ttlError = ttl.doEpoch(ttlEta, ttlEta, printError);
+                }
                 if (printError) {
                     if (dash != null) {
                         dash.addGraphData(0, 0, aves[0]);
                         if (g >= toAve[1]) {
                             dash.addGraphData(0, 1, aves[1]);
                         }
-                        dash.addGraphData(1, 0, ovlError.get(0)[0]);
-                        dash.addGraphData(2, 0, ivlError.get(0)[0]);
-                        dash.addGraphData(3, 0, ttlError.get(0)[0]);
+                        if (backprop()) {
+                            dash.addGraphData(1, 0, ovlError.get(0)[0]);
+                            dash.addGraphData(2, 0, ivlError.get(0)[0]);
+                            dash.addGraphData(3, 0, ttlError.get(0)[0]);
+                        }
                         dash.updateLog();
                     }
                 }
@@ -260,10 +288,17 @@ public class AiTrainerOITeam extends AiTrainer {
             
             if (g % saveEvery == 0) {
                 if (saveToFile) {
-                    ovl.saveToFile(new File(folder + "ovlN" + N + "D" + D + fileSuffix + ".txt"));
-                    ivl.saveToFile(new File(folder + "ivlN" + N + "D" + D + fileSuffix + ".txt"));
+                    ovl.saveToFile(new File(folder + "ovlN" + N + "D" + D + "T" + T + fileSuffix + ".txt"));
+                    ivl.saveToFile(new File(folder + "ivlN" + N + "D" + D + "T" + T + fileSuffix + ".txt"));
+                    ttl.saveToFile(new File(folder + "ttlN" + N + "D" + D + "T" + T + fileSuffix + ".txt"));
                 }
             }
+        }
+        
+        try {
+            logFile().close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
     

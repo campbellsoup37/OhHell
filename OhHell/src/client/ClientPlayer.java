@@ -313,7 +313,7 @@ public class ClientPlayer {
     
     public void removeCard(Card card) {
         for (int i = 0; i < hand.size(); i++) {
-            if (hand.get(i).equals(card) || i == hand.size() - 1) {
+            if (hand.get(i).matches(card) || i == hand.size() - 1) {
                 hand.remove(i);
                 return;
             }

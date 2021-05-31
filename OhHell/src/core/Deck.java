@@ -126,7 +126,7 @@ public class Deck {
             }
             for (List<Card> additionalPlayed : additionalPlayeds) {
                 for (Card c : additionalPlayed) {
-                    if (c != null && c.equals(card)) {
+                    if (c != null && c.matches(card)) {
                         count++;
                     }
                 }

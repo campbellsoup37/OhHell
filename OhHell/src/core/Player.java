@@ -246,7 +246,7 @@ public abstract class Player {
         }
         // Then check for equality as cards
         for (Card c : hand) {
-            if (c.equals(card)) {
+            if (c.matches(card)) {
                 hand.remove(c);
                 return;
             }

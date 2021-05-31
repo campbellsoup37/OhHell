@@ -486,12 +486,12 @@ public class OhHellCore {
             System.out.println(
                     "ERROR: Player \"" + player.getName() + "\" attempted to play out of turn.");
             return;
-        } else if (player.getHand().stream().noneMatch(c -> c.equals(card))) {
+        } else if (player.getHand().stream().noneMatch(c -> c.matches(card))) {
             System.out.println(
                     "ERROR: Player \"" + player.getName() + "\" attempted to play " + card
                     + ", but they do not have that card.");
             return;
-        } else if (data.whatCanIPlay(player).stream().noneMatch(c -> c.equals(card))) {
+        } else if (data.whatCanIPlay(player).stream().noneMatch(c -> c.matches(card))) {
             System.out.println(
                     "ERROR: Player \"" + player.getName() + "\" attempted to play " + card
                     + ", failing to follow suit.");
@@ -518,7 +518,7 @@ public class OhHellCore {
             boolean canceled = false;
             while (iter.hasNext() && !spotFound && !canceled) {
                 Card next = iter.next().getTrick();
-                if (next.equals(card)) {
+                if (next.matches(card)) {
                     canceled = true;
                     iter.remove();
                 } else {
@@ -1107,7 +1107,7 @@ public class OhHellCore {
                         boolean uncancelableBecauseSeenAlready = 
                                 deck.matchingCardsLeft(c, new LinkedList<>()) == deck.getD() - 1;
                         boolean uncancelableBecauseIHaveIt = 
-                                players.get(turn).getHand().stream().anyMatch(c1 -> c1.equals(c));
+                                players.get(turn).getHand().stream().anyMatch(c1 -> c1.matches(c));
                         if (uncancelableBecauseSeenAlready) {
                             if (debug) {
                                 System.out.println(card + " winnable = -1:");
@@ -1164,7 +1164,7 @@ public class OhHellCore {
                 boolean canceled = false;
                 while (iter.hasNext() && !spotFound && !canceled) {
                     Card next = iter.next().card;
-                    if (next.equals(card)) {
+                    if (next.matches(card)) {
                         canceled = true;
                         iter.remove();
                     } else {

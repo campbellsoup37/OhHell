@@ -94,7 +94,7 @@ public class HumanPlayer extends Player {
                 + player.isDisconnected() + ":"
                 + player.isKicked() + ":"
                 + player.isKibitzer() + ":"
-                + player.equals(player) + ":"
+                + (this == player) + ":"
                 + player.getTeam() + ":";
     }
     

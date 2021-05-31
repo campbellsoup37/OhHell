@@ -73,6 +73,10 @@ public class ImmediateValueLearner extends Learner {
         insLevel1 = new HashMap<>();
     }
     
+    public void deleteIns() {
+        insLevel1 = new HashMap<>();
+    }
+    
     public void flushIns(int winner) {
         if (!insLevel2.isEmpty()) {
             for (Vector in : insLevel2.values()) {

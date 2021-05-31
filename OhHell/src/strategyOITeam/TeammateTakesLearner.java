@@ -66,10 +66,6 @@ public class TeammateTakesLearner extends Learner {
         return testValue(in).get(1).toArray();
     }
     
-    public boolean problem(Card card) {
-        return !insLevel1.containsKey(card);
-    }
-    
     public void elevateIns1(Card card) {
         for (Map.Entry<Integer, AnnotatedVector> entry : insLevel1.get(card).entrySet()) {
             if (!insLevel2.containsKey(entry.getKey())) {
@@ -94,6 +90,10 @@ public class TeammateTakesLearner extends Learner {
             System.out.println(" ]");
         }
         System.out.println("---------------------");*/
+        insLevel1 = new HashMap<>();
+    }
+    
+    public void deleteIns() {
         insLevel1 = new HashMap<>();
     }
     

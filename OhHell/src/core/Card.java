@@ -9,6 +9,7 @@ public class Card {
     // -1=empty, 0=clubs, 1=diamonds, 2=hearts, 3=spades
     private int suit = -1;
     
+    private static int[] handCode = {0, 1, 3, 2};
     private static int[] rowCode = {2, 1, 3, 0};
     private static int[] rowCodeInv = {3, 1, 0, 2};
     
@@ -144,8 +145,8 @@ public class Card {
     }
     
     public boolean isGreaterThanSort(Card card) {
-        int s1 = suit;
-        int s2 = card.getSuit();
+        int s1 = handCode[suit];
+        int s2 = handCode[card.getSuit()];
         return (s1 > s2) || (s1 == s2 && num > card.getNum());
     }
     
@@ -154,7 +155,9 @@ public class Card {
         return suit + 1;
     }
     
-    public boolean equals(Card c) {
+    // Note this used to be equals, but I want to not override equals because I want maps to 
+    // distinguish matching cards.
+    public boolean matches(Card c) {
         return c.getNum() == num && c.getSuit() == suit;
     }
 }

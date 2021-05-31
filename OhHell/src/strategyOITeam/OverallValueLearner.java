@@ -17,8 +17,9 @@ import ml.ReLuFunction;
 import ml.SigmoidFunction;
 
 public class OverallValueLearner extends Learner {
-    Map<Card, AnnotatedVector> insLevel1 = new HashMap<>();
-    List<AnnotatedVector> insLevel2 = new LinkedList<>();
+    Map<Card, Map<Integer, Map<Card, Vector>>> insLevel1 = new HashMap<>();
+    Map<Integer, Map<Card, Vector>> insLevel2 = new HashMap<>();
+    Map<Card, List<Vector>> insLevel3 = new HashMap<>();
     private LinkedList<LinkedList<Vector>> dataAsList = new LinkedList<>();
     
     public OverallValueLearner(int N, int T, int D, int d1) {
@@ -40,7 +41,7 @@ public class OverallValueLearner extends Learner {
             features.add(new Feature(j + " Team wants", 0, maxH));
             features.add(new Feature(j + " Trump void", 0, 1));
             features.add(new Feature(j + " Card's suit void", 0, 1));
-            //features.add(new Feature(j + " On lead", 0, 1));
+            features.add(new Feature(j + " On lead", 0, 1));
         }
         setFeatures(features);
         
@@ -59,16 +60,27 @@ public class OverallValueLearner extends Learner {
         buildLayers(ds, actFuncs);
     }
     
-    public double evaluate(Card card1, Card card2, Vector in) {
-        putIn(card1, card2, in);
+    public double evaluate(Card card1, int index, Card card2, Vector in) {
+        putIn(card1, index, card2, in);
         return testValue(in).get(1).get(0);
     }
     
-    public void putIn(Card card1, Card card2, Vector in) {
-        insLevel1.put(card1, new AnnotatedVector(in, card1));
+    public void putIn(Card card1, int index, Card card2, Vector in) {
+        if (!insLevel1.containsKey(card1)) {
+            insLevel1.put(card1, new HashMap<>());
+        }
+        Map<Integer, Map<Card, Vector>> nextLevel = insLevel1.get(card1);
+        if (!nextLevel.containsKey(index)) {
+            nextLevel.put(index, new HashMap<>());
+        }
+        nextLevel.get(index).put(card2, in);
     }
     
-    public void elevateIns(Card card) {
+    public void deleteIns() {
+        insLevel1 = new HashMap<>();
+    }
+    
+    public void elevateIns1(Card card) {
         /*System.out.println("---------------------");
         for (Card card1 : insLevel1.keySet()) {
             for (Card card2 : insLevel1.get(card1).keySet()) {
@@ -76,17 +88,43 @@ public class OverallValueLearner extends Learner {
             }
         }
         System.out.println("---------------------");*/
-        insLevel2.add(insLevel1.get(card));
+        for (Map.Entry<Integer, Map<Card, Vector>> entry : insLevel1.get(card).entrySet()) {
+            int index = entry.getKey();
+            if (!insLevel2.containsKey(index)) {
+                insLevel2.put(index, new HashMap<>());
+            }
+            insLevel2.get(index).putAll(entry.getValue());
+        }
         insLevel1 = new HashMap<>();
     }
     
-    public void flushIns(Card winner) {
-        if (!insLevel2.isEmpty()) {
-            for (AnnotatedVector av : insLevel2) {
-                Vector out = new BasicVector(new double[] {av.card == winner ? 1 : 0});
-                dataAsList.add(new LinkedList<>(Arrays.asList(av.in, out)));
+    public void elevateIns2(int index) {
+        /*System.out.println("---------------------");
+        for (int i : insLevel2.keySet()) {
+            for (Card card2 : insLevel2.get(i).keySet()) {
+                System.out.println(i + " " + card2);
             }
-            insLevel2 = new LinkedList<>();
+        }
+        System.out.println("---------------------");*/
+        if (!insLevel2.isEmpty()) {
+            for (Map.Entry<Card, Vector> entry : insLevel2.get(index).entrySet()) {
+                Card card2 = entry.getKey();
+                if (!insLevel3.containsKey(card2)) {
+                    insLevel3.put(card2, new LinkedList<>());
+                }
+                insLevel3.get(card2).add(entry.getValue());
+            }
+            insLevel2 = new HashMap<>();
+        }
+    }
+    
+    public void flushIns(Card card, boolean won) {
+        if (!insLevel3.isEmpty()) {
+            for (Vector in : insLevel3.get(card)) {
+                Vector out = new BasicVector(new double[] {won ? 1 : 0});
+                dataAsList.add(new LinkedList<>(Arrays.asList(in, out)));
+            }
+            insLevel3.remove(card);
         }
     }
     
@@ -116,15 +154,5 @@ public class OverallValueLearner extends Learner {
     @Override
     public String toString() {
         return "OIT/OVL";
-    }
-    
-    private class AnnotatedVector {
-        Vector in;
-        Card card;
-        
-        public AnnotatedVector(Vector in, Card card) {
-            this.in = in;
-            this.card = card;
-        }
     }
 }

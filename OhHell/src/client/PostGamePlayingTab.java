@@ -161,7 +161,7 @@ public class PostGamePlayingTab extends CanvasInteractable {
                     hand.addAll(players.get(k).getHands().get(i));
                     for (int j1 = 0; j1 < j; j1++) {
                         for (Card card : hand) {
-                            if (card.equals(players.get(k).getPlays().get(i).get(j1).getCard())) {
+                            if (card.matches(players.get(k).getPlays().get(i).get(j1).getCard())) {
                                 hand.remove(card);
                                 break;
                             }
@@ -175,7 +175,7 @@ public class PostGamePlayingTab extends CanvasInteractable {
                         ci.claimed = players.get(k).getPlays().get(i).get(j).isClaimed();
                         if (!ci.claimed) {
                             ci.prob = players.get(k).getMakingProbs().get(i).get(j).get(card);
-                            if (card.equals(players.get(k).getPlays().get(i).get(j).getCard())
+                            if (card.matches(players.get(k).getPlays().get(i).get(j).getCard())
                                     && !playFound) {
                                 ci.played = true;
                                 playFound = true;
