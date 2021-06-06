@@ -14,6 +14,7 @@
         <javaElement handleIdentifier="=OhHell/src&lt;core"/>
         <folder path="/OhHell/resources/core"/>
         <javaElement handleIdentifier="=OhHell/src&lt;common"/>
+        <javaElement handleIdentifier="=OhHell/src&lt;strategyOITeam"/>
         <javaElement handleIdentifier="=OhHell/src&lt;client"/>
         <folder path="/OhHell/resources/client"/>
         <javaElement handleIdentifier="=OhHell/src&lt;ml"/>
