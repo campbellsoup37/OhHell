@@ -114,7 +114,7 @@ public class SinglePlayerPlayer extends Player {
     @Override
     public void commandUpdateRounds(List<RoundDetails> rounds, int roundNumber) {
         client.updateRounds(rounds.stream()
-                .map(r -> new int[] {r.getDealer().getIndex(), r.getHandSize()})
+                .map(r -> new int[] {r.getDealer(), r.getHandSize()})
                 .collect(Collectors.toList()), 
                 roundNumber);
     }

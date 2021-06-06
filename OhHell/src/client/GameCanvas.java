@@ -244,6 +244,7 @@ public class GameCanvas extends OhcCanvas {
         paintTrump(graphics);
         paintPlayers(graphics);
         paintTaken(graphics);
+        paintTeamInfo(graphics);
 
         if (currentTime == 0) {
             currentTime = System.nanoTime();
@@ -303,6 +304,34 @@ public class GameCanvas extends OhcCanvas {
             drawCard(graphics, new Card(), x - 2, y - 2, trumpCardScale * scaleFix, true, true);
             drawCard(graphics, state == GameState.PREGAME || trump == null ? new Card() : trump, x, y,
                     trumpCardScale * scaleFix, true, false);
+        }
+    }
+    
+    public void paintTeamInfo(Graphics graphics) {
+        if ((state == GameState.BIDDING || state == GameState.PLAYING)
+                && client.getGameOptions().isTeams()
+                && !myPlayer.isKibitzer()) {
+            int bid = teams.get(myPlayer.getTeam()).getBid();
+            int taken = teams.get(myPlayer.getTeam()).getTaken();
+            if (bid == taken && state == GameState.PLAYING) {
+                graphics.setColor(new Color(175, 255, 175));
+            } else if (bid < taken) {
+                graphics.setColor(new Color(255, 175, 175));
+            } else {
+                graphics.setColor(new Color(225, 225, 225, 180));
+            }
+            double width = 120;
+            double height = 60;
+            double x = getWidth() - scoreWidth - 20 - width;
+            double y = getHeight() - 20 - height;
+            GraphicsTools.drawBox(graphics, x, y, width, height, 20, GraphicsTools.colors[myPlayer.getTeam()]);
+            graphics.setColor(Color.BLACK);
+            graphics.setFont(GraphicsTools.fontBold);
+            GraphicsTools.drawStringJustified(graphics, "Team bid: ", x + 10, y + height / 3, 0, 1);
+            GraphicsTools.drawStringJustified(graphics, "Team taken: ", x + 10, y + 2 * height / 3, 0, 1);
+            GraphicsTools.drawStringJustified(graphics, "" + bid, x + width - 12, y + height / 3, 2, 1);
+            GraphicsTools.drawStringJustified(graphics, "" + taken, x + width - 12, y + 2 * height / 3, 2, 1);
+            graphics.setFont(GraphicsTools.font);
         }
     }
 
@@ -560,6 +589,10 @@ public class GameCanvas extends OhcCanvas {
     
     @Override
     public void rightClick(int x, int y) {
+        if (client.getClientState() == ClientState.FILE_VIEWER) {
+            return;
+        }
+        
         if (!myPlayer.isKibitzer()) {
             preselectedCards.clear();
         } else {
@@ -2525,6 +2558,7 @@ public class GameCanvas extends OhcCanvas {
                 for (String teamInfo : content) {
                     String[] info = teamInfo.split(Recorder.splitPreceder + Recorder.commandDelimiter2);
                     int teamNumber = Integer.parseInt(info[0]);
+                    players.get(index).setTeam(teamNumber);
                     if (!teamMap.containsKey(teamNumber)) {
                         teamMap.put(teamNumber, new LinkedList<>());
                     }

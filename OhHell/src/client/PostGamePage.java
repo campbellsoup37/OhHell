@@ -94,8 +94,10 @@ public class PostGamePage extends CanvasInteractable {
             ticks.add(round[1] + "");
         }
         
+        boolean isTeams = canvas.getGameOptions().isTeams();
+        
         // Score plot
-        PostGamePlotTab scorePlot = new PostGamePlotTab(sortedPlayers) {
+        PostGamePlotTab scorePlot = new PostGamePlotTab(sortedPlayers, isTeams) {
             @Override
             public int x() {
                 return page.x()
@@ -125,12 +127,12 @@ public class PostGamePage extends CanvasInteractable {
             List<Integer> scoresAug = new LinkedList<>();
             scoresAug.add(0);
             scoresAug.addAll(player.getScores());
-            scorePlot.getPlot().addIntData(player.getName(), scoresAug);
+            scorePlot.getPlot().addIntData(isTeams ? player.getTeam() : player.getIndex(), player.getName(), scoresAug);
         }
         scorePlot.getPlot().setTicks(ticks);
         
         // Win % plot
-        PostGamePlotTab winProbPlot = new PostGamePlotTab(sortedPlayers) {
+        PostGamePlotTab winProbPlot = new PostGamePlotTab(sortedPlayers, isTeams) {
             @Override
             public int x() {
                 return page.x()
@@ -162,7 +164,10 @@ public class PostGamePage extends CanvasInteractable {
             probs.add(new ArrayList<>(players.get(0).getScores().size()));
             probs.get(k).add(100D / players.size());
         }
-        BootstrapAggregator winModel = new BootstrapAggregator("resources/models/wbN" + players.size() + "D" + canvas.getGameOptions().getD() + ".txt");
+        
+        int N = players.size();
+        int D = canvas.getGameOptions().getD();
+        BootstrapAggregator winModel = new BootstrapAggregator(String.format("resources/models/N%d/D%d/T0/wb.txt", N, D));
         for (int j = 0; j < players.get(0).getScores().size(); j++) {
             double[] in = new double[players.size() + 1];
             for (int k = 0; k < players.size(); k++) {
@@ -180,7 +185,7 @@ public class PostGamePage extends CanvasInteractable {
             } else {
                 probs.get(k).set(players.get(0).getScores().size(), 0D);
             }
-            winProbPlot.getPlot().addData(k, CanvasPlot.circlePoint, players.get(k).getName(), probs.get(k));
+            winProbPlot.getPlot().addData(isTeams ? players.get(k).getTeam() : k, CanvasPlot.circlePoint, players.get(k).getName(), probs.get(k));
         }
         ///////////////
 //        probs = new ArrayList<>(players.size());

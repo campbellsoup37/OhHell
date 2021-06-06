@@ -5,14 +5,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
-
-import strategyOI.AiStrategyModuleOI;
-import strategyOI.ImmediateValueLearner;
-import strategyOI.OverallValueLearner;
 
 /**
  * This class contains the AI. Functions makeBid and makePlay are used to bid and play cards on 
@@ -62,7 +60,17 @@ public class AiKernel {
         aiPlayers.clear();
         this.options = options;
         
-        List<AiStrategyModule> aiStrategyModules = createDefaultAiStrategyModules(N);
+        int D = options.getD();
+        int T = 0;
+        if (options.isTeams()) {
+            Set<Integer> teamNumbers = new HashSet<>();
+            for (Player dummy : dummies) {
+                teamNumbers.add(dummy.getTeam());
+            }
+            T = teamNumbers.size();
+        }
+        
+        List<AiStrategyModule> aiStrategyModules = createDefaultAiStrategyModules(N, D, T);
         for (int i = 0; i < options.getNumRobots(); i++) {
             AiPlayer player = new AiPlayer(
                         firstNames.get(random.nextInt(firstNames.size())) + " Bot", 
@@ -79,23 +87,54 @@ public class AiKernel {
         return aiPlayers;
     }
     
-    public List<AiStrategyModule> createDefaultAiStrategyModules(int N) {
-        int D = core.getDeck().getD();
-        OverallValueLearner ovl = new OverallValueLearner("resources/models/" + "ovlN" + N + "D" + D + ".txt");
-        ImmediateValueLearner ivl = new ImmediateValueLearner("resources/models/" + "ivlN" + N + "D" + D + ".txt");
+    public List<AiStrategyModule> createDefaultAiStrategyModules(int N, int D, int T) {
+        if (T != 0) {
+            try {
+                return createAiStrategyModulesOIT(N, D, T);
+            } catch(Exception e) {
+                System.out.println(String.format("Failed to load OIT for N=%d, D=%d, T=%d. Falling back to OI.", N, D, T));
+            }
+        }
+        
+        try {
+            return createAiStrategyModulesOI(N, D);
+        } catch(Exception e) {
+            System.out.println(String.format("Failed to load OI for N=%d, D=%d.", N, D));
+            throw e;
+        }
+    }
+    
+    public List<AiStrategyModule> createAiStrategyModulesOI(int N, int D) {
+        strategyOI.OverallValueLearner ovl = new strategyOI.OverallValueLearner(String.format("resources/models/N%d/D%d/T0/ovl.txt", N, D));
+        strategyOI.ImmediateValueLearner ivl = new strategyOI.ImmediateValueLearner(String.format("resources/models/N%d/D%d/T0/ivl.txt", N, D));
         List<AiStrategyModule> aiStrategyModules = new ArrayList<>(options.getNumRobots());
         for (int i = 0; i < options.getNumRobots(); i++) {
-            AiStrategyModule aiStrategyModule = new AiStrategyModuleOI(core, N, ovl, ivl);
+            AiStrategyModule aiStrategyModule = new strategyOI.AiStrategyModuleOI(core, N, ovl, ivl);
             aiStrategyModule.setCoreData(core.getCoreData());
             aiStrategyModules.add(aiStrategyModule);
         }
         return aiStrategyModules;
     }
     
-    public void reloadAiStrategyModules(int N, List<AiStrategyModule> aiStrategyModules) {
+    public List<AiStrategyModule> createAiStrategyModulesOIT(int N, int D, int T) {
+        strategyOITeam.OverallValueLearner ovl = new strategyOITeam.OverallValueLearner(N, T, D, 0);
+        strategyOITeam.ImmediateValueLearner ivl = new strategyOITeam.ImmediateValueLearner(N, T, D, 0);
+        strategyOITeam.TeammateTakesLearner ttl = new strategyOITeam.TeammateTakesLearner(N, T, D, 0);
+        
+        ovl.openFromFile(String.format("resources/models/N%d/D%d/T%d/ovl.txt", N, D, T));
+        ivl.openFromFile(String.format("resources/models/N%d/D%d/T%d/ivl.txt", N, D, T));
+        ttl.openFromFile(String.format("resources/models/N%d/D%d/T%d/ttl.txt", N, D, T));
+        List<AiStrategyModule> aiStrategyModules = new ArrayList<>(N);
+        for (int i = 0; i < N; i++) {
+            aiStrategyModules.add(new strategyOITeam.AiStrategyModuleOITeam(N, T, core.getCoreData(), ovl, ivl, ttl, null));
+        }
+        return aiStrategyModules;
+    }
+    
+    public void reloadAiStrategyModules(int N, int D, int T, List<AiStrategyModule> aiStrategyModules) {
         aiPlayers.removeIf(Player::isKicked);
         if (aiStrategyModules == null) {
-            aiStrategyModules = createDefaultAiStrategyModules(N);
+            aiStrategyModules = createDefaultAiStrategyModules(N, D, T);
         }
         for (int i = 0; i < aiPlayers.size(); i++) {
             aiPlayers.get(i).setAiStrategyModule(aiStrategyModules.get(i));

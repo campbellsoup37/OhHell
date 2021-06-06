@@ -171,6 +171,16 @@ public class OhHellCore {
         }
         
         // Sort team members
+        if (teams.isEmpty()) {
+            for (Player player : players) {
+                if (!teams.containsKey(player.getTeam())) {
+                    Team team = new Team();
+                    team.setIndex(player.getTeam());
+                    team.setName("Team " + team.getIndex());
+                    teams.put(player.getTeam(), team);
+                }
+            }
+        }
         int realIndex = 0;
         for (Team team : teams.values()) {
             team.setMembers(new ArrayList<>());
@@ -236,16 +246,19 @@ public class OhHellCore {
     }
     
     public void updateRounds() {
-        rounds.removeIf(r -> r.getHandSize() == 1 && r.getDealer().isKicked() && !r.isRoundOver());
+        rounds.removeIf(r -> r.getDealer() != -1 && r.getHandSize() == 1 && players.get(r.getDealer()).isKicked() && !r.isRoundOver());
         
         List<RoundDetails> remainingRounds = rounds.stream()
                 .filter(r -> !r.isRoundOver())
                 .collect(Collectors.toList());
-        int dIndex = remainingRounds.get(0).getDealer().getIndex() - 1;
+        int dIndex = -1;
+        if (remainingRounds.get(0).getDealer() != -1) {
+            dIndex = players.get(remainingRounds.get(0).getDealer()).getIndex() - 1;
+        }
         
         for (RoundDetails r : remainingRounds) {
             dIndex = nextUnkicked(dIndex);
-            r.setDealer(players.get(dIndex));
+            r.setDealer(dIndex);
         }
         
         for (Player player : players) {
@@ -452,7 +465,7 @@ public class OhHellCore {
     }
     
     public int getDealer() {
-        return rounds.get(roundNumber).getDealer().getIndex();
+        return rounds.get(roundNumber).getDealer();
     }
     
     public List<Card> getTrick() {
@@ -503,10 +516,15 @@ public class OhHellCore {
         }
         
         int ledSuit = players.get(leader).getTrick().getSuit();
+        if (player.getIndex() == leader) {
+            ledSuit = card.getSuit();
+        }
         
         player.recordCardPlay(card);
-        if (player.getIndex() != leader && card.getSuit() != ledSuit) {
+        if (card.getSuit() != ledSuit) {
             player.recordShownOut(ledSuit);
+        } else {
+            player.recordHadSuit(ledSuit);
         }
         
         // Insert in trick order
@@ -681,7 +699,11 @@ public class OhHellCore {
     
     public void restartRound() {
         if (aiKernel.hasAiPlayers()) {
-            reloadAiStrategyModules((int) players.stream().filter(p -> !p.isKicked()).count());
+            reloadAiStrategyModules(
+                    (int) players.stream().filter(p -> !p.isKicked()).count(),
+                    options.getD(),
+                    data.getT()
+                    );
         }
         for (Player player : players) {
             player.commandRedeal();
@@ -692,8 +714,8 @@ public class OhHellCore {
         deal();
     }
     
-    public void reloadAiStrategyModules(int N) {
-        aiKernel.reloadAiStrategyModules(N, null);
+    public void reloadAiStrategyModules(int N, int D, int T) {
+        aiKernel.reloadAiStrategyModules(N, D, T, null);
     }
     
     public static int trickWinner(List<Card> trick, Card trump) {
@@ -905,6 +927,10 @@ public class OhHellCore {
             return options.isTeams();
         }
         
+        public int getT() {
+            return teams.size();
+        }
+        
         public Random getRandom() {
             return random;
         }
@@ -958,13 +984,24 @@ public class OhHellCore {
         public int adjustedCardValue(Card card, List<List<Card>> additionalPlayeds) {
             return deck.adjustedCardValueSmall(card, additionalPlayeds);
         }
+        public int adjustedCardValue(Card card, List<List<Card>> additionalPlayeds, boolean ignorePlayed) {
+            return deck.adjustedCardValueSmall(card, additionalPlayeds, ignorePlayed);
+        }
         
         public int cardsLeftOfSuit(int suit, List<List<Card>> additionalPlayeds) {
             return deck.cardsLeftOfSuit(suit, additionalPlayeds);
         }
         
+        public int cardsLeftOfSuit(int suit, List<List<Card>> additionalPlayeds, boolean ignorePlayed) {
+            return deck.cardsLeftOfSuit(suit, additionalPlayeds, ignorePlayed);
+        }
+        
         public int matchingCardsLeft(Card card, List<List<Card>> additionalPlayeds) {
             return deck.matchingCardsLeft(card, additionalPlayeds);
+        }
+        
+        public int matchingCardsLeft(Card card, List<List<Card>> additionalPlayeds, boolean ignorePlayed) {
+            return deck.matchingCardsLeft(card, additionalPlayeds, ignorePlayed);
         }
         
         // Used in bidding. Returns the highest makeable bid (max 0) for the given player.
@@ -1183,7 +1220,11 @@ public class OhHellCore {
                 ans[leader] = 0;
             }
             
-            Set<Integer> myHand = whoIsAsking.getHand().stream().map(Card::toNumber).collect(Collectors.toSet());
+            Set<Integer> myHand = whoIsAsking.getHand().stream()
+                    .filter(c -> c != card)
+                    .map(Card::toNumber)
+                    .collect(Collectors.toSet());
+            
             
             int i = 0;
             int maxCancels = (leader - turn + players.size() - 1) % players.size();

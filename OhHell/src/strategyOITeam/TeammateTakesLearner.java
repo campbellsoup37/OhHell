@@ -12,6 +12,7 @@ import ml.ActivationFunction;
 import ml.CrossEntropy;
 import ml.Feature;
 import ml.Learner;
+import ml.MeanSquaredError;
 import ml.ReLuFunction;
 import ml.SoftmaxFunction;
 import ml.SparseVector;
@@ -29,9 +30,13 @@ public class TeammateTakesLearner extends Learner {
         
         List<Feature> features = new ArrayList<>();
         features.add(new Feature("Initial hand size", 1, maxH));
-        features.add(new Feature("Current hand size", 0, maxH - 1));
+        features.add(new Feature("Current hand size", 0, maxH));
         features.add(new Feature("Void count", 0, 3));
         features.add(new Feature("Trump unseen", 0, 13 * D - 1));
+        for (int j = 0; j < maxH; j++) {
+            features.add(new Feature(j + " Card played", 0, 1));
+            features.add(new Feature(j + " Card strength", 0, 1));
+        }
         for (int j = 0; j < N; j++) {
             features.add(new Feature(j + " Team number", 0, T - 1));
             features.add(new Feature(j + " Bid", 0, maxH));
@@ -67,6 +72,10 @@ public class TeammateTakesLearner extends Learner {
     }
     
     public void elevateIns1(Card card) {
+        if (!insLevel1.containsKey(card)) {
+            return;
+        }
+        
         for (Map.Entry<Integer, AnnotatedVector> entry : insLevel1.get(card).entrySet()) {
             if (!insLevel2.containsKey(entry.getKey())) {
                 insLevel2.put(entry.getKey(), new LinkedList<>());
@@ -98,6 +107,10 @@ public class TeammateTakesLearner extends Learner {
     }
     
     public void elevateIns2(int winner) {
+        if (!insLevel2.containsKey(winner)) {
+            return;
+        }
+        
         if (!insLevel2.isEmpty()) {
             insLevel3.addAll(insLevel2.get(winner));
             /*System.out.println("---------------------");

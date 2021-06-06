@@ -12,6 +12,7 @@ import ml.CrossEntropy;
 import ml.Feature;
 import ml.Vector;
 import ml.Learner;
+import ml.MeanSquaredError;
 import ml.ReLuFunction;
 import ml.SoftmaxFunction;
 import ml.SparseVector;

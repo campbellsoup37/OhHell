@@ -130,7 +130,7 @@ public class HumanPlayer extends Player {
     @Override
     public void commandUpdateRounds(List<RoundDetails> rounds, int roundNumber) {
         thread.sendCommand(rounds.stream()
-                .map(r -> r.getDealer().getIndex() + ":" + r.getHandSize() + ":")
+                .map(r -> r.getDealer() + ":" + r.getHandSize() + ":")
                 .reduce("UPDATEROUNDS:" + roundNumber + ":", 
                         (sofar, cString) -> sofar + cString));
     }

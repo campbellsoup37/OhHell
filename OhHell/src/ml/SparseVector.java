@@ -61,6 +61,12 @@ public class SparseVector implements Vector {
         totalSize += max - min;
     }
     
+    public void addValue(String feature, double val) {
+        entries.add(new SparseVectorEntry(totalSize, val));
+        chunks.put(feature, new SparseVectorChunk(feature, totalSize, 0, 0, 1, false));
+        totalSize++;
+    }
+    
     public void modifyChunk(String feature, int newVal) {
         SparseVectorChunk chunk = chunks.get(feature);
         if (chunk == null) {
@@ -191,19 +197,27 @@ public class SparseVector implements Vector {
 
     @Override
     public void print() {
-        double[] vec = toArray();
-        for (SparseVectorChunk chunk : chunks.values()) {
-            System.out.print(chunk.feature + ": ");
-            if (chunk.isDiscrete) {
-                System.out.print(chunk.val + " (min " + chunk.min + ", max " + chunk.max + ") ");
-            }
-            for (int j = 0; j < chunk.size; j++) {
-                System.out.print((int) vec[chunk.offset + j] + " ");
-            }
-            
-            System.out.println();
+        for (String line : printL()) {
+            System.out.println(line);
         }
         System.out.println();
+    }
+    
+    @Override
+    public List<String> printL() {
+        List<String> ans = new LinkedList<>();
+        double[] vec = toArray();
+        for (SparseVectorChunk chunk : chunks.values()) {
+            String line = chunk.feature + ": ";
+            if (chunk.isDiscrete) {
+                line += chunk.val + " (min " + chunk.min + ", max " + chunk.max + ") ";
+            }
+            for (int j = 0; j < chunk.size; j++) {
+                line += vec[chunk.offset + j] + " ";
+            }
+            ans.add(line);
+        }
+        return ans;
     }
     
     private class SparseVectorChunk {

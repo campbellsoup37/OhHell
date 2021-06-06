@@ -14,7 +14,7 @@ public class Feature {
     }
     
     public Feature(String name, int l0, int l1) {
-        if (l1 - l0 <= 0) {
+        if (l1 - l0 < 0) {
             throw new MLException("Invalid range from " + l0 + " to " + l1 + ".");
         }
         this.setName(name);

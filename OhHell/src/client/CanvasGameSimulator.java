@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import core.AiKernel;
 import core.AiStrategyModule;
 import core.Card;
 import core.GameOptions;
@@ -57,20 +58,27 @@ public class CanvasGameSimulator {
             }
             
             @Override
-            public void reloadAiStrategyModules(int N) {
-                getAiKernel().reloadAiStrategyModules(N, createAiStrategyModules(N, options));
+            public void reloadAiStrategyModules(int N, int D, int T) {
+                getAiKernel().reloadAiStrategyModules(N, D, T, createAiStrategyModules(N, options));
             }
         };
         players = new ArrayList<>(cPlayers.size());
         core.setPlayers(players);
         
-        core.startGame(options, createAiStrategyModules(cPlayers.size(), options));
+        core.overrideAiKernel(new AiKernel(core) {
+            @Override
+            public List<AiStrategyModule> createDefaultAiStrategyModules(int N, int D, int T) {
+                return createAiStrategyModules(N, options);
+            }
+        });
+        
+        core.startGame(options);
     }
     
     public List<AiStrategyModule> createAiStrategyModules(int N, GameOptions options) {
         int D = options.getD();
-        OverallValueLearner ovl = new OverallValueLearner("resources/models/" + "ovlN" + N + "D" + D + ".txt");
-        ImmediateValueLearner ivl = new ImmediateValueLearner("resources/models/" + "ivlN" + N + "D" + D + ".txt");
+        OverallValueLearner ovl = new OverallValueLearner(String.format("resources/models/N%d/D%d/T0/ovl.txt", N, D));
+        ImmediateValueLearner ivl = new ImmediateValueLearner(String.format("resources/models/N%d/D%d/T0/ivl.txt", N, D));
         List<AiStrategyModule> aiStrategyModules = new ArrayList<>(cPlayers.size());
         for (int i = 0; i < cPlayers.size(); i++) {
             AiStrategyModule aiStrategyModule = new AiStrategyModuleOI(core, N, D, ovl, ivl) {

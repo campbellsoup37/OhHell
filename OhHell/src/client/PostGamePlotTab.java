@@ -8,13 +8,15 @@ import common.GraphicsTools;
 
 public class PostGamePlotTab extends CanvasInteractable {
     private List<ClientPlayer> sortedPlayers;
+    private boolean isTeams;
     private CanvasPlot plot;
     
     private double maxValueWidth = Integer.MIN_VALUE;
     private boolean widthMemo = false;
     
-    public PostGamePlotTab(List<ClientPlayer> sortedPlayers) {
+    public PostGamePlotTab(List<ClientPlayer> sortedPlayers, boolean isTeams) {
         this.sortedPlayers = sortedPlayers;
+        this.isTeams = isTeams;
         PostGamePlotTab tab = this;
         plot = new CanvasPlot() {
             @Override
@@ -75,7 +77,7 @@ public class PostGamePlotTab extends CanvasInteractable {
         graphics.setFont(GraphicsTools.font);
         for (int i = 0; i < sortedPlayers.size(); i++) {
             ClientPlayer player = sortedPlayers.get(i);
-            graphics.setColor(GraphicsTools.colors[player.getIndex()]);
+            graphics.setColor(GraphicsTools.colors[isTeams ? player.getTeam() : player.getIndex()]);
             graphics.fillOval(
                     (int) (x() + GameCanvas.finalScoreInnerMargin - GraphicsTools.pointSize / 2), 
                     (int) (y() + 30 + 15 * (i + 1) - GraphicsTools.pointSize / 2), 

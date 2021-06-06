@@ -1,20 +1,20 @@
 package core;
 public class RoundDetails {
-    private Player dealer;
+    private int dealer;
     private int handSize;
     private boolean roundOver;
     
     public RoundDetails(int handSize) {
-        dealer = new DummyPlayer(0);
+        dealer = -1;
         this.handSize = handSize;
         roundOver = false;
     }
 
-    public Player getDealer() {
+    public int getDealer() {
         return dealer;
     }
 
-    public void setDealer(Player dealer) {
+    public void setDealer(int dealer) {
         this.dealer = dealer;
     }
 

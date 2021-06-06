@@ -79,11 +79,15 @@ public class CanvasPlot extends CanvasInteractable {
     private double mouseY;
     
     public void addIntData(String name, List<Integer> intData) {
+        addIntData(datas.size(), name, intData);
+    }
+    
+    public void addIntData(int colorIndex, String name, List<Integer> intData) {
         List<Double> data = new ArrayList<>(intData.size());
         for (Integer y : intData) {
             data.add((double) y);
         }
-        addData(name, data);
+        addData(colorIndex, name, data);
     }
     
     public void setBoxed(boolean boxed) {
@@ -100,6 +104,10 @@ public class CanvasPlot extends CanvasInteractable {
     
     public void addData(String name, List<Double> data) {
         addData(datas.size(), circlePoint, name, data);
+    }
+    
+    public void addData(int colorIndex, String name, List<Double> data) {
+        addData(colorIndex, circlePoint, name, data);
     }
     
     public void addData(int colorIndex, PointStyle pointStyle, String name, List<Double> data) {

@@ -1,9 +1,6 @@
 package aiworkshop;
 import java.awt.Color;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -33,28 +30,20 @@ public class AiTrainerOITeam extends AiTrainer {
     private Color ivlColor = Color.CYAN;
     private Color ttlColor = Color.ORANGE;
     
-    private BufferedWriter logFile = null;
-    
     @Override
     public boolean backprop() {
         return true;
     }
     
     @Override
-    public BufferedWriter logFile() {
-        return logFile;
+    public boolean logging() {
+        return false;
     }
     
     public void run() {
-        int N = 10;
+        int N = 4;
         int D = 2;
-        int[][] teams = {
-                {0, 1},
-                {2, 3},
-                {4, 5},
-                {6, 7},
-                {8, 9}
-        };
+        int T = 2;
         int reps = 1000000;
         boolean verbose = true;
         boolean forMathematica = false;
@@ -64,30 +53,28 @@ public class AiTrainerOITeam extends AiTrainer {
         boolean showClient = false;
         boolean stoppers = true;
         
-//        try {
-//            logFile = new BufferedWriter(new FileWriter("C:/Users/campb/Desktop/ohlogs/oit_log.txt"));
-//        } catch (IOException e1) {
-//            e1.printStackTrace();
-//        }
-        
         double ovlEta = 1;
         double ivlEta = 1;
         double ttlEta = 1;
-        double scale = 1;
-        int groupingSize = 1;
+        double scale = 0.01;
+        int groupingSize = 20;
         
         boolean openFromFile = true;
         boolean saveToFile = true;
-        int saveEvery = 10;
+        int saveEvery = 20;
         
         String folder = "resources/ai workshop/OhHellAIModels/OIT/";
+        
+        if (logging()) {
+            reps = 1;
+        }
 
         ovlEta *= scale;
         ivlEta *= scale;
         
         int[] ovlLayers = {50};
-        int[] ivlLayers = {50};
-        int[] ttlLayers = {50};
+        int[] ivlLayers = {100};
+        int[] ttlLayers = {100};
         
         String ovlFileSuffix = "o" + ovlLayers[0] + "";
         for (int i = 1; i < ovlLayers.length; i++) {
@@ -103,7 +90,14 @@ public class AiTrainerOITeam extends AiTrainer {
         }
         String fileSuffix = ovlFileSuffix + ivlFileSuffix + ttlFileSuffix;
         
-        int T = teams.length;
+        int[][] teams = new int[T][N / T];
+        int ind = 0;
+        for (int i = 0; i < T; i++) {
+            for (int j = 0; j < N / T; j++) {
+                teams[i][j] = ind;
+                ind++;
+            }
+        }
         
         ovl = new OverallValueLearner(N, T, D, ivlLayers[0]);
         ovl.setTrainer(this);
@@ -113,9 +107,13 @@ public class AiTrainerOITeam extends AiTrainer {
         ttl.setTrainer(this);
         
         if (openFromFile) {
-            ovl.openFromFile(folder + "ovlN" + N + "D" + D + "T" + T + fileSuffix + ".txt");
-            ivl.openFromFile(folder + "ivlN" + N + "D" + D + "T" + T + fileSuffix + ".txt");
-            ttl.openFromFile(folder + "ttlN" + N + "D" + D + "T" + T + fileSuffix + ".txt");
+            try {
+                ovl.openFromFile(folder + "ovlN" + N + "D" + D + "T" + T + fileSuffix + ".txt");
+                ivl.openFromFile(folder + "ivlN" + N + "D" + D + "T" + T + fileSuffix + ".txt");
+                ttl.openFromFile(folder + "ttlN" + N + "D" + D + "T" + T + fileSuffix + ".txt");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         
         GameCoordinator coordinator = new GameCoordinator() {};
@@ -138,7 +136,7 @@ public class AiTrainerOITeam extends AiTrainer {
         core.setAiTrainer(this);
         core.overrideAiKernel(new AiKernel(core) {
             @Override
-            public List<AiStrategyModule> createDefaultAiStrategyModules(int N) {
+            public List<AiStrategyModule> createDefaultAiStrategyModules(int N, int D, int T) {
                 List<AiStrategyModule> aiStrategyModules = new ArrayList<>(N);
                 for (int i = 0; i < N; i++) {
                     aiStrategyModules.add(new AiStrategyModuleOITeam(N, T, core.getCoreData(), ovl, ivl, ttl, AiTrainerOITeam.this));
@@ -181,8 +179,6 @@ public class AiTrainerOITeam extends AiTrainer {
         int R = 20;
         long[] times = new long[R];
         for (int g = 1; g <= reps; g++) {
-            log("Game started {\n", 0);
-            
             if (showClient) {
                 client.openGame(coordinator, options, stoppers);
             } else {
@@ -194,8 +190,6 @@ public class AiTrainerOITeam extends AiTrainer {
                     sleep(Integer.MAX_VALUE);
                 }
             } catch (InterruptedException e) {}
-            
-            log("}\n", 0);
             
             for (int k = 0; k < toAve.length; k++) {
                 aves[k] -= scores[(g - 1 + M - toAve[k]) % M] / toAve[k];
@@ -237,7 +231,7 @@ public class AiTrainerOITeam extends AiTrainer {
             StringBuilder log = new StringBuilder();
             
             if (g % toAve[0] == 0 && verbose) {
-                log.append("OI N=" + N + ", D=" + D + "\n");
+                log.append("OIT N=" + N + ", D=" + D + ", T=" + T + "\n");
                 log.append(g + "/" + reps + ": \n");
                 log.append("     Best score: " + bestScore + " (" + overallBest + ")\n");
                 bestScore = Integer.MIN_VALUE;
@@ -293,12 +287,6 @@ public class AiTrainerOITeam extends AiTrainer {
                     ttl.saveToFile(new File(folder + "ttlN" + N + "D" + D + "T" + T + fileSuffix + ".txt"));
                 }
             }
-        }
-        
-        try {
-            logFile().close();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
     

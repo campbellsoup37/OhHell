@@ -50,7 +50,6 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
 
-import core.AiStrategyModule;
 import core.Card;
 import core.GameCoordinator;
 import core.GameOptions;

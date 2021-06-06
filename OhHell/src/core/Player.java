@@ -21,6 +21,7 @@ public abstract class Player {
     
     private List<Card> played = new LinkedList<>();
     private boolean[] shownOut = new boolean[4];
+    private boolean[] hadSuit = new boolean[4];
     
     private List<Card> hand;
     private List<List<Card>> hands = new ArrayList<>();
@@ -95,8 +96,12 @@ public abstract class Player {
             return played;
         }
         
-        public boolean shownOut(int suitNumber) {
-            return shownOut[suitNumber];
+        public boolean shownOut(int suit) {
+            return shownOut[suit];
+        }
+        
+        public boolean voidDealt(int suit) {
+            return shownOut[suit] && !hadSuit[suit];
         }
     }
     private PlayerData data;
@@ -301,9 +306,14 @@ public abstract class Player {
         shownOut[suit] = true;
     }
     
+    public void recordHadSuit(int suit) {
+        hadSuit[suit] = true;
+    }
+    
     public void clearPlayed() {
         played = new LinkedList<>();
         shownOut = new boolean[4];
+        hadSuit = new boolean[4];
     }
 
     public boolean isJoined() {

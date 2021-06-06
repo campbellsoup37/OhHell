@@ -163,12 +163,22 @@ public class BasicVector implements Vector {
 
     @Override
     public void print() {
-        for (double[] vec : subVecs) {
-            for (double v : vec) {
-                System.out.print(v + " ");
-            }
-            System.out.println();
+        for (String line : printL()) {
+            System.out.println(line);
         }
         System.out.println();
+    }
+    
+    @Override
+    public List<String> printL() {
+        List<String> ans = new LinkedList<>();
+        for (double[] vec : subVecs) {
+            String line = "";
+            for (double v : vec) {
+                line += v + " ";
+            }
+            ans.add(line);
+        }
+        return ans;
     }
 }

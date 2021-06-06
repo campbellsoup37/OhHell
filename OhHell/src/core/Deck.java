@@ -88,6 +88,10 @@ public class Deck {
     }
     
     public int cardsLeftOfSuit(int suit, List<List<Card>> additionalPlayeds) {
+        return cardsLeftOfSuit(suit, additionalPlayeds, false);
+    }
+    
+    public int cardsLeftOfSuit(int suit, List<List<Card>> additionalPlayeds, boolean ignorePlayed) {
         int count = 0;
         for (List<Card> additionalPlayed : additionalPlayeds) {
             for (Card c : additionalPlayed) {
@@ -96,14 +100,20 @@ public class Deck {
                 }
             }
         }
-        return 13 * D - played.get(suit).size() - count;
+        return 13 * D - (ignorePlayed ? 0 : played.get(suit).size()) - count;
     }
     
     public int adjustedCardValueSmall(Card card, List<List<Card>> additionalPlayeds) {
+        return adjustedCardValueSmall(card, additionalPlayeds, false);
+    }
+    
+    public int adjustedCardValueSmall(Card card, List<List<Card>> additionalPlayeds, boolean ignorePlayed) {
         int val = (card.getNum() - 2) * D;
-        for (Card c : played.get(card.getSuit())) {
-            if (c.getNum() >= card.getNum()) {
-                val++;
+        if (!ignorePlayed) {
+            for (Card c : played.get(card.getSuit())) {
+                if (c.getNum() >= card.getNum()) {
+                    val++;
+                }
             }
         }
         for (List<Card> additionalPlayed : additionalPlayeds) {
@@ -117,12 +127,18 @@ public class Deck {
     }
     
     public int matchingCardsLeft(Card card, List<List<Card>> additionalPlayeds) {
+        return matchingCardsLeft(card, additionalPlayeds, false);
+    }
+    
+    public int matchingCardsLeft(Card card, List<List<Card>> additionalPlayeds, boolean ignorePlayed) {
         if (D == 1) {
             return 0;
         } else {
             int count = 0;
-            if (playCounts.get(card.toString()) != null) {
-                count += playCounts.get(card.toString());
+            if (!ignorePlayed) {
+                if (playCounts.get(card.toString()) != null) {
+                    count += playCounts.get(card.toString());
+                }
             }
             for (List<Card> additionalPlayed : additionalPlayeds) {
                 for (Card c : additionalPlayed) {

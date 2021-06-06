@@ -30,4 +30,6 @@ public interface Vector {
     public boolean entrywiseEquals(Vector v);
     
     public void print();
+    
+    public List<String> printL();
 }

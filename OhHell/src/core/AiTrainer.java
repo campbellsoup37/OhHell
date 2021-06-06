@@ -12,6 +12,10 @@ public class AiTrainer extends Trainer {
         return false;
     }
     
+    public boolean logging() {
+        return false;
+    }
+    
     public List<Player> getPlayers() {
         return players;
     }

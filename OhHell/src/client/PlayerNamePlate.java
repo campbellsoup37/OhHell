@@ -106,7 +106,9 @@ public class PlayerNamePlate extends CanvasInteractable {
                 
                 if (player.getBidTimer() < 1) {
                     graphics.setColor(new Color(255, 255, 255, 180));
-                } else if (canvas.getState() == GameState.BIDDING || canvas.getState() == GameState.PLAYING && player.getBid() > player.getTaken()) {
+                } else if (canvas.getGameOptions().isTeams()
+                        || canvas.getState() == GameState.BIDDING 
+                        || canvas.getState() == GameState.PLAYING && player.getBid() > player.getTaken()) {
                     graphics.setColor(new Color(175, 175, 175, 180));
                 } else if (player.getBid() == player.getTaken()) {
                     graphics.setColor(new Color(175, 255, 175));
