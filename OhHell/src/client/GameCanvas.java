@@ -1514,7 +1514,7 @@ public class GameCanvas extends OhcCanvas {
                                     List<String> split = Arrays.asList(content.split("d", 2));
                                     try {
                                         maxValue = Integer.parseInt(split.get(0));
-                                        numDice = Integer.parseInt(split.get(0));
+                                        numDice = Integer.parseInt(split.get(1));
                                     } catch (NumberFormatException | IndexOutOfBoundsException e2) {
                                         numDice = 0;
                                     }
