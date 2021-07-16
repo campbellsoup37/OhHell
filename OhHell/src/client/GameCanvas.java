@@ -1506,12 +1506,12 @@ public class GameCanvas extends OhcCanvas {
                                     client.renameTeam(args.get(0));
                                 }
                             } else if (command.equals("roll") && commandContent.length == 2) {
-                                int maxValue;
+                                int maxValue = 0;
                                 int numDice = 1;
                                 try {
                                     maxValue = Integer.parseInt(content);
-                                } catch (NumberFormatException e) {
-                                    List<String> split = content.split("d", 2);
+                                } catch (NumberFormatException nfe) {
+                                    List<String> split = Arrays.asList(content.split("d", 2));
                                     try {
                                         maxValue = Integer.parseInt(split.get(0));
                                         numDice = Integer.parseInt(split.get(0));
@@ -1524,7 +1524,8 @@ public class GameCanvas extends OhcCanvas {
                                     for (int i = 0; i < numDice; ++i) {
                                         rndValue += random.nextInt(maxValue);
                                     }
-                                    client.sendChat("", "Rolled "+Integer.toString(numDice) + "d" + Integer.toString(maxValue) + " and got " + Integer.toString(rndValue));
+                                    client.sendChat("", "Rolled " + Integer.toString(numDice) + "d"
+                                            + Integer.toString(maxValue) + " and got " + Integer.toString(rndValue));
                                 } else {
                                     addChatLine("<b style=\"color:red\">Invalid dice roll input</b>");
                                     refreshChat();
