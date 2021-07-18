@@ -1505,6 +1505,31 @@ public class GameCanvas extends OhcCanvas {
                                 if (args.size() >= 1) {
                                     client.renameTeam(args.get(0));
                                 }
+                            } else if (command.equals("roll") && commandContent.length == 2) {
+                                int maxValue = 0;
+                                int numDice = 1;
+                                try {
+                                    maxValue = Integer.parseInt(content);
+                                } catch (NumberFormatException nfe) {
+                                    List<String> split = Arrays.asList(content.split("d", 2));
+                                    try {
+                                        maxValue = Integer.parseInt(split.get(1));
+                                        numDice = Integer.parseInt(split.get(0));
+                                    } catch (NumberFormatException | IndexOutOfBoundsException e2) {
+                                        numDice = 0;
+                                    }
+                                }
+                                if (numDice > 0) {
+                                    int rndValue = numDice;
+                                    for (int i = 0; i < numDice; ++i) {
+                                        rndValue += random.nextInt(maxValue);
+                                    }
+                                    client.sendChat("", "Rolled " + Integer.toString(numDice) + "d"
+                                            + Integer.toString(maxValue) + " and got " + Integer.toString(rndValue));
+                                } else {
+                                    addChatLine("<b style=\"color:red\">Invalid dice roll input</b>");
+                                    refreshChat();
+                                }
                             } else if (!command.isEmpty()) {
                                 addChatLine("<b style=\"color:red\">Invalid command</b>");
                                 refreshChat();
